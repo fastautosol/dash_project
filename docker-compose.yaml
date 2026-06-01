@@ -1,0 +1,185 @@
+version: "3.9"
+services:
+  postgresql:
+    image: pgvector/pgvector:pg17
+    container_name: n8n-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    command: >
+      postgres
+      -c max_connections=100
+      -c shared_buffers=256MB
+      -c effective_cache_size=512MB
+      -c work_mem=8MB
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${SERVICE_USER_POSTGRES}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      POSTGRES_DB: ${POSTGRES_DB:-n8n}
+      TZ: ${TZ:-Europe/Berlin}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    mem_limit: 1500m
+    cpus: 1.0
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      n8n-shared-net:
+        aliases:
+          - postgresql
+
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.22.5
+    container_name: n8n
+    restart: unless-stopped
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    expose:
+      - "5678"
+    environment:
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+      N8N_EDITOR_BASE_URL: https://${SERVICE_FQDN_N8N}
+      WEBHOOK_URL: https://${SERVICE_FQDN_N8N}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Berlin}
+      TZ: ${TZ:-Europe/Berlin}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_MIGRATE_FS_STORAGE_PATH: "true"
+
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgresql
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB:-n8n}
+      DB_POSTGRESDB_SCHEMA: public
+      DB_POSTGRESDB_USER: ${SERVICE_USER_POSTGRES}
+      DB_POSTGRESDB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+
+      EXECUTIONS_MODE: regular
+      EXECUTIONS_DATA_PRUNE: true
+      EXECUTIONS_DATA_MAX_AGE: 72
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: 1000
+    volumes:
+      - n8n-data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 90s
+    mem_limit: 2500m
+    cpus: 1.0
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+
+  python-dash-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dash
+    container_name: python-dash-app
+    restart: unless-stopped
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    expose:
+      - "8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-n8n}
+      DB_USER: ${SERVICE_USER_POSTGRES}
+      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      PYTHONUNBUFFERED: "1"
+      TZ: ${TZ:-Europe/Berlin}
+      UVICORN_WORKERS: 1
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+    mem_limit: 1500m
+    cpus: 1.0
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+
+  crypto-webhook-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: crypto-webhook-bot
+    restart: unless-stopped
+    depends_on:
+      n8n:
+        condition: service_healthy
+    environment:
+      N8N_WEBHOOK_URL: https://${SERVICE_FQDN_N8N}/webhook/crypto-alert
+      PYTHONUNBUFFERED: "1"
+      TZ: ${TZ:-Europe/Berlin}
+    command: ["python", "crypto-bot.py"]
+    mem_limit: 500m
+    cpus: 0.5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+
+  xstock-webhook-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: xstock-webhook-bot
+    restart: unless-stopped
+    depends_on:
+      n8n:
+        condition: service_healthy
+    environment:
+      N8N_WEBHOOK_URL: https://${SERVICE_FQDN_N8N}/webhook/xstock-alert
+      PYTHONUNBUFFERED: "1"
+      TZ: ${TZ:-Europe/Berlin}
+    command: ["python", "xstock-bot.py"]
+    mem_limit: 500m
+    cpus: 0.5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+volumes:
+  n8n-data:
+    driver: local
+  postgresql-data:
+    driver: local
+networks:
+  n8n-shared-net:
+    driver: bridge

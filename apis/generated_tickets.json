@@ -1,0 +1,2814 @@
+[
+    {
+        "message": "I ordered a product online and it arrived damaged. I want a full refund immediately, or I’m taking my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was never received. I’ve checked my email and tracking info—no updates. Please refund me right away.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The item I ordered is completely wrong. It’s not what was described, and I’m not happy. Refund me now.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a defective product. The description said it was new and working, but it’s broken. I want a refund or replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I ordered a product that arrived late, and now it’s unusable. I’m disappointed and need a refund.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged twice. I didn’t authorize it, and I want my money back. Fix this now.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is missing parts. It’s not functional, and I’m not satisfied. Refund me please.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was damaged in transit. The packaging was broken, and the item is unusable. I want a refund.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address. I didn’t authorize this, and I need my money back.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is not what I expected. It’s not as described, and I’m not happy. Refund me now.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was stolen from my home. I need a refund and a replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged for an extra item I didn’t order. I want my money back and a refund for the extra charge.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived late, and I can’t use it. I want a refund or replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was damaged beyond repair. I want a full refund.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong location. I need my money back and a replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is not working as advertised. I want a refund or replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not as described. It’s not what I expected, and I want my money back.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged for an incorrect item. I want a refund and a replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived damaged, and I can’t use it. I want a refund or replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was stolen from my home. I need a full refund and compensation.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t get it back. I want my money back.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is defective and unusable. I want a refund or replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not what I ordered. I want a refund and a replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged twice, and I didn’t authorize it. I want my money back immediately.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived late, and I can’t use it. I need a refund or replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was damaged in transit. I want a full refund and compensation.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t retrieve it. I want my money back.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is not working as described. I want a refund or replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not as advertised. I want my money back and a replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged for an incorrect item. I need a refund and a replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived damaged, and I can’t use it. I want a refund or replacement.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was stolen from my home. I need a full refund and compensation.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t get it back. I want my money back now.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is defective and unusable. I want a refund or replacement immediately.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not what I expected. I want a refund and a replacement right away.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged twice, and I didn’t authorize it. I want my money back today.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived late, and I can’t use it. I need a refund or replacement ASAP.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was damaged beyond repair. I want a full refund and compensation.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t retrieve it. I need my money back now.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is not working as advertised. I want a refund or replacement immediately.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not as described. I want my money back and a replacement right away.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged for an incorrect item. I need a refund and a replacement ASAP.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived damaged, and I can’t use it. I want a refund or replacement today.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was stolen from my home. I need a full refund and compensation ASAP.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t get it back. I want my money back now, or I’m leaving reviews.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is defective and unusable. I want a refund or replacement immediately, or I’m taking my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not what I expected. I want a refund and a replacement right away, or I’m canceling my account.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged twice, and I didn’t authorize it. I want my money back today, or I’m reporting this to the authorities.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived late, and I can’t use it. I need a refund or replacement ASAP, or I’m leaving negative reviews.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was damaged in transit. I want a full refund and compensation immediately, or I’m taking my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t retrieve it. I need my money back now, or I’m canceling my account.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is not working as advertised. I want a refund or replacement immediately, or I’m leaving my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not as described. I want my money back and a replacement right away, or I’m reporting this to the Better Business Bureau.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged for an incorrect item. I need a refund and a replacement ASAP, or I’m leaving negative reviews.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived damaged, and I can’t use it. I want a refund or replacement today, or I’m canceling my account.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was stolen from my home. I need a full refund and compensation immediately, or I’m taking my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t get it back. I want my money back now, or I’m leaving my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is defective and unusable. I want a refund or replacement immediately, or I’m reporting this to the authorities.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not what I expected. I want a refund and a replacement right away, or I’m canceling my account permanently.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged twice, and I didn’t authorize it. I want my money back today, or I’m leaving my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived late, and I can’t use it. I need a refund or replacement ASAP, or I’m leaving negative reviews and complaints.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was damaged beyond repair. I want a full refund and compensation immediately, or I’m taking my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t retrieve it. I need my money back now, or I’m canceling my account and not returning.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is not working as advertised. I want a refund or replacement immediately, or I’m leaving my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not as described. I want my money back and a replacement right away, or I’m reporting this to the BBB.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged for an incorrect item. I need a refund and a replacement ASAP, or I’m leaving negative feedback and reviews.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived damaged, and I can’t use it. I want a refund or replacement today, or I’m canceling my account and not coming back.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was stolen from my home. I need a full refund and compensation immediately, or I’m taking my business elsewhere permanently.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t get it back. I want my money back now, or I’m leaving my business elsewhere forever.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered is defective and unusable. I want a refund or replacement immediately, or I’m reporting this to the authorities and leaving a bad review.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was not what I expected. I want a refund and a replacement right away, or I’m canceling my account and not returning.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was charged twice, and I didn’t authorize it. I want my money back today, or I’m leaving my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "The product I ordered arrived late, and I can’t use it. I need a refund or replacement ASAP, or I’m leaving negative reviews and complaints.",
+        "intent": "refund request"
+    },
+    {
+        "message": "I received a product that was damaged in transit. I want a full refund and compensation immediately, or I’m taking my business elsewhere.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order was shipped to the wrong address, and I can’t retrieve it. I need my money back now, or I’m canceling my account and not returning.",
+        "intent": "refund request"
+    },
+    {
+        "message": "My order (123456789) was supposed to arrive yesterday but it's still not here. I've been waiting for this for weeks and it's not even in the warehouse yet. I'm furious and want a refund or replacement immediately!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received a notification that my order (ABC789) was delayed due to 'unexpected supply chain issues,' but it's been over a month and I haven’t heard anything. This is unacceptable—where is my product?",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Order #45678) on the 15th and it’s still not here. The tracking says it’s ‘in transit’ but I haven’t seen it. I’m really disappointed and need an update ASAP.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Ref: 98765) was supposed to arrive last week, but it’s been delayed again. I’ve called customer service multiple times and they keep saying ‘we’re working on it.’ This is ridiculous!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Order ID: 12345) and it’s been delayed for over two weeks. The tracking says it’s ‘in transit,’ but I’ve seen nothing. I’m really frustrated and need a resolution soon.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Order #67890) was delayed due to ‘high demand,’ but it’s been over a month and I haven’t heard anything. This is unfair—where is my product?",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Ref: 54321) was supposed to arrive last week, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really disappointed and need an update now.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Order #09876) and it’s been delayed for weeks. The customer service rep said they’d follow up, but I haven’t heard anything. This is unacceptable—I need a solution!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 76543) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated and need a refund or replacement.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 112233) was delayed due to ‘logistical issues,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is not good enough!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #43210) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed and need an update soon.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 998877) and it’s been delayed for weeks. The customer service rep said they’d contact me, but I haven’t heard anything. This is unacceptable—I need a resolution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 554433) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated and need a refund or replacement.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 665544) was delayed due to ‘supply chain issues,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is not acceptable!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #12345) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed and need an update soon.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 776655) and it’s been delayed for weeks. The customer service rep said they’d follow up, but I haven’t heard anything. This is unacceptable—I need a solution!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 887766) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated and need a refund or replacement.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 998877) was delayed due to ‘high demand,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is not good enough!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #332211) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed—I need an update now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 443322) and it’s been delayed for weeks. The customer service rep said they’d contact me, but I haven’t heard anything. This is unacceptable—I need a resolution fast!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 221100) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated and need a refund or replacement immediately.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 110099) was delayed due to ‘logistical delays,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is not acceptable!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #665544) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed—I need an update ASAP.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 776655) and it’s been delayed for weeks. The customer service rep said they’d follow up, but I haven’t heard anything. This is unacceptable—I need a solution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 887766) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated—I need a refund or replacement today!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 998877) was delayed due to ‘supply chain issues,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is not good enough—I need help!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #554433) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed—I need an update soon!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 665544) and it’s been delayed for weeks. The customer service rep said they’d contact me, but I haven’t heard anything. This is unacceptable—I need a resolution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 443322) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated—I need a refund or replacement today!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 332211) was delayed due to ‘high demand,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is not acceptable—I need help!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #221100) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed—I need an update ASAP.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 110099) and it’s been delayed for weeks. The customer service rep said they’d follow up, but I haven’t heard anything. This is unacceptable—I need a solution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 009988) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated—I need a refund or replacement today!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 887766) was delayed due to ‘logistical issues,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is unacceptable—I need help!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #776655) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed—I need an update now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 665544) and it’s been delayed for weeks. The customer service rep said they’d contact me, but I haven’t heard anything. This is unacceptable—I need a resolution fast!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 554433) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated—I need a refund or replacement today!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 443322) was delayed due to ‘supply chain issues,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is not good enough—I need help!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #332211) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed—I need an update ASAP.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 221100) and it’s been delayed for weeks. The customer service rep said they’d follow up, but I haven’t heard anything. This is unacceptable—I need a solution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 110099) was supposed to arrive yesterday, but it’s still not here. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’m really frustrated—I need a refund or replacement today!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email saying my order (Ref: 009988) was delayed due to ‘unexpected delays,’ but it’s been over a month. I’ve called customer service, but they keep saying ‘we’re working on it.’ This is not acceptable—I need help!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #98765) was supposed to arrive last week, but it’s been delayed again. I’ve tracked it and it’s still ‘in transit.’ I’m really disappointed—I need an update soon!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 65432) and it’s been delayed for weeks. The customer service rep said they’d contact me, but I haven’t heard anything. I’m really frustrated—I need a resolution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 12345) is still not here after being delayed for over two weeks. The tracking says it’s ‘in transit,’ but I haven’t received anything. I’m disappointed and need a response.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received a notification about my order (Ref: 67890) being delayed, but it’s been over a month. I’ve checked the tracking multiple times, but nothing has arrived. This is unacceptable—I need a solution.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #45678) was supposed to arrive last week, but it’s still not here. The customer service team has been unresponsive, and I’m really frustrated. I need an update or a refund.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 98765) and it’s been delayed for weeks. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’ve called customer service, but they haven’t provided any updates. This is not good enough.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 12345) was supposed to arrive yesterday, but it’s still not here. The tracking shows it’s ‘in transit,’ but I haven’t received anything. I’m really disappointed—I need a resolution soon.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email about my order (Ref: 67890) being delayed due to ‘supply chain issues,’ but it’s been over a month. I’ve checked the tracking, and it’s still not here. I’m really frustrated—I need help!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #45678) was supposed to arrive last week, but it’s been delayed again. The customer service rep said they’d follow up, but I haven’t heard anything. This is unacceptable—I need a solution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 98765) and it’s been delayed for weeks. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’ve called customer service multiple times, but they keep saying ‘we’re working on it.’ This is not acceptable!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 12345) was supposed to arrive yesterday, but it’s still not here. The tracking shows it’s ‘in transit,’ but I haven’t received anything. I’m really disappointed—I need a refund or replacement.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email about my order (Ref: 67890) being delayed due to ‘logistical delays,’ but it’s been over a month. I’ve checked the tracking, and it’s still not here. I’m really frustrated—I need an update soon!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #45678) was supposed to arrive last week, but it’s been delayed again. The customer service rep said they’d contact me, but I haven’t heard anything. This is unacceptable—I need a resolution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I ordered (Ref: 98765) and it’s been delayed for weeks. The tracking says it’s ‘in transit,’ but I haven’t seen it. I’ve called customer service, but they haven’t provided any updates. I’m really frustrated—I need help!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order ID: 12345) was supposed to arrive yesterday, but it’s still not here. The tracking shows it’s ‘in transit,’ but I haven’t received anything. I’m disappointed—I need an update ASAP.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I received an email about my order (Ref: 67890) being delayed due to ‘high demand,’ but it’s been over a month. I’ve checked the tracking, and it’s still not here. I’m really disappointed—I need a solution now!",
+        "intent": "late delivery"
+    },
+    {
+        "message": "My order (Order #45678) was supposed to arrive last week, but it’s been delayed again. The customer service rep said they’d follow up, but I haven’t heard anything. This is unacceptable—I need a refund or replacement.",
+        "intent": "late delivery"
+    },
+    {
+        "message": "I just received a damaged item and it’s completely unusable! I paid for it and now I’m completely disappointed. Can you help me get a replacement or refund? I’m really upset about this.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a cracked screen on the phone. I’ve already tried calling customer service, but they’re not responding. This is ridiculous—when will they fix this?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The box was opened during shipping, and now my new laptop is bent. I don’t know how to fix this—can you send a replacement or refund me?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a pair of shoes, and they arrived with a hole in them. I paid full price, and I’m not happy. Can you replace them or give me my money back?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a damaged product, and the company hasn’t responded to my emails. This is unacceptable—I expect a replacement or refund immediately.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order came with a broken item, and the customer service rep said they’d look into it. It’s been a week, and I still haven’t heard anything. What’s going on?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t help. I’m going to have to return it myself, and I’m not sure how to do that either.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t addressed it. I’m frustrated and need a solution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the customer service team is ignoring my messages. This is unacceptable—I want my money back now.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The product I ordered arrived damaged, and the company hasn’t responded. I’m going to have to cancel my subscription, and I’m not happy with this service.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a damaged item, and the company won’t help. I’ve tried calling and emailing, but they’re not responding. This is terrible—when will they fix this?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the company won’t replace it. I’m going to have to return it myself, and I’m not sure how to do that either.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my messages, and I’m not happy. I need a refund or replacement immediately.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t help. I’m going to have to cancel my subscription, and I’m not happy with this service.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a damaged product, and the company hasn’t addressed it. I’m frustrated and need a solution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the customer service team is ignoring my messages. This is unacceptable—I want my money back now.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my emails, and I’m not happy. Can you help me get a replacement?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I received was damaged, and the company won’t replace it. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my calls, and I’m not happy. Can you fix this for me?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the company hasn’t addressed it. I’m frustrated and need a solution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t responded. I’m going to have to cancel my subscription, and I’m not happy with this service.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t help. I’m going to have to return it myself, and I’m not sure how to do that either.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my messages, and I’m not happy. Can you help me get a refund?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the customer service team is ignoring my emails. This is unacceptable—I want my money back now.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a damaged product, and the company hasn’t addressed it. I’m frustrated and need a solution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t replace it. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my calls, and I’m not happy. Can you fix this for me?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the company hasn’t responded to my messages. I’m going to have to cancel my subscription, and I’m not happy.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t responded. I’m frustrated and need a solution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t help. I’m going to have to return it myself, and I’m not sure how to do that either.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my emails, and I’m not happy. Can you help me get a replacement?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the customer service team is ignoring my messages. This is unacceptable—I want my money back now.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a damaged product, and the company hasn’t addressed it. I’m frustrated and need a resolution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t replace it. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my calls, and I’m not happy. Can you help me sort this out?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the company hasn’t responded to my messages. I’m going to have to cancel my subscription, and I’m not happy.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t responded. I’m frustrated and need a solution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t help. I’m going to have to return it myself, and I’m not sure how to do that either.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my emails, and I’m not happy. Can you assist me with this?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the customer service team is ignoring my messages. This is unacceptable—I want my money back now.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t responded. I’m going out of my way to return it, and I’m not happy with this experience.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t replace it. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my calls, and I’m not happy. Can you help me resolve this?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the company hasn’t responded to my messages. I’m going to have to cancel my subscription, and I’m disappointed.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t addressed it. I’m frustrated and need a resolution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t help. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my emails, and I’m not happy. Can you help me get a replacement?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the customer service team is ignoring my messages. I’m not happy—I want a solution now.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t responded. I’m frustrated and need a resolution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t replace it. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. The company hasn’t responded to my calls, and I’m not happy. Can you assist me with this?",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the company hasn’t responded to my emails. I’m going to have to cancel my subscription, and I’m disappointed.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t addressed it. I’m frustrated and need a resolution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t help. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. Can you help me get a refund or replacement? I’m not happy with this experience.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the company hasn’t responded to my messages. I’m going to have to cancel my subscription, and I’m not happy.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t responded. I’m frustrated and need a resolution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t replace it. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. Can you help me sort this out? I’m not happy with the service I received.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My order arrived with a damaged item, and the customer service team is ignoring my messages. I’m not happy—I want my money back now.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I received a defective product, and the company hasn’t responded. I’m frustrated and need a resolution—refund or replacement, I don’t care.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "The item I ordered arrived damaged, and the company won’t help. I’m going to have to return it myself, and I’m not sure how to do that.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "I ordered a product, and it arrived damaged. Can you help me get a refund or replacement? I’m disappointed in the service I received.",
+        "intent": "damaged item"
+    },
+    {
+        "message": "My billing was incorrectly charged for $120 last month, and I haven’t received any confirmation. This is unacceptable!",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for a service I canceled months ago. Please fix this immediately or I’ll be leaving reviews.",
+        "intent": "billing error"
+    },
+    {
+        "message": "The payment for my subscription was deducted twice this week. Can you verify and correct this error right away?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve tried contacting you multiple times, but my billing issue remains unresolved. I need a resolution ASAP.",
+        "intent": "billing error"
+    },
+    {
+        "message": "My bank statement shows a charge I didn’t authorize. How do I dispute this and get my money back?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been paying for this service for years, and suddenly, my payment failed. I need to know why and how to fix it.",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment for my subscription was processed twice. Can you cancel the duplicate charge and refund me?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a notification for a charge I didn’t make. How do I reverse this and prevent future issues?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My credit card was charged for an item I never ordered. I want this reversed and my account secured.",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been trying to reach support for weeks, but my billing error keeps getting ignored. I expect a response today.",
+        "intent": "billing error"
+    },
+    {
+        "message": "The subscription renewal was processed without my approval. Can you cancel it and refund my last payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for a service I canceled, and I haven’t received any confirmation. Fix this now.",
+        "intent": "billing error"
+    },
+    {
+        "message": "My payment failed, and now I’m locked out of my account. Please help me resolve this billing issue immediately.",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a product I never purchased. How do I get this reversed and my account protected?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment was processed late, and I’m missing my subscription. Can you verify and reapply the payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a notification for a charge I didn’t authorize. How do I dispute this and prevent future fraud?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My subscription was auto-renewed without my consent. Can you cancel it and refund my last payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been trying to contact support for days, but my billing error keeps getting overlooked. I need action now.",
+        "intent": "billing error"
+    },
+    {
+        "message": "The payment for my service was deducted twice this month. Can you cancel the duplicate charge and refund me?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for a service I canceled years ago. Please resolve this immediately.",
+        "intent": "billing error"
+    },
+    {
+        "message": "My bank statement shows a charge I didn’t make. How do I dispute this and get my money back?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment for my subscription was processed late, and I’m missing my service. Can you fix this?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a product I never ordered. How do I get this reversed and my account secured?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My subscription was auto-renewed without my approval. Can you cancel it and refund my last payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a notification for a charge I didn’t authorize. How do I dispute this and prevent future issues?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The payment for my service was deducted twice this month. Can you cancel the duplicate charge?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been trying to contact support for weeks, but my billing error keeps getting ignored. I expect a response today.",
+        "intent": "billing error"
+    },
+    {
+        "message": "My credit card was charged for an item I never purchased. I want this reversed and my account protected.",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for a service I canceled. Can you verify and correct this error?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment for my subscription was processed late. Can you reapply it and fix the issue?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a product I never ordered. How do I dispute this charge?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My subscription was auto-renewed without my consent. Can you cancel it and refund my payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a notification for a charge I didn’t authorize. How do I get this reversed?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The payment for my service was deducted twice. Can you cancel the duplicate charge and refund me?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been trying to contact support for days, but my billing issue remains unresolved. I need action now.",
+        "intent": "billing error"
+    },
+    {
+        "message": "My bank statement shows a charge I didn’t make. How do I dispute this and prevent future fraud?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment for my subscription was processed late, and I’m missing my service. Can you fix this?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for a service I canceled. Please resolve this immediately and refund me.",
+        "intent": "billing error"
+    },
+    {
+        "message": "My credit card was charged for an item I never purchased. I want this reversed and my account secured.",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a product I never ordered. How do I get this reversed and my payment refunded?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The payment for my service was deducted twice. Can you cancel the duplicate charge and refund me?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a notification for a charge I didn’t authorize. How do I dispute this and prevent future issues?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My subscription was auto-renewed without my consent. Can you cancel it and refund my last payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been trying to contact support for weeks, but my billing error keeps getting ignored. I expect a response today.",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment for my subscription was processed late. Can you verify and reapply it?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for a service I canceled. Can you correct this error and refund me?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My bank statement shows a charge I didn’t make. How do I dispute this and get my money back?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a product I never ordered. How do I reverse this charge?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The payment for my service was deducted twice. Can you cancel the duplicate charge?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a notification for a charge I didn’t authorize. How do I get this reversed?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My subscription was auto-renewed without my approval. Can you cancel it and refund my payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a service I canceled. Can you verify and correct this billing error?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment for my subscription was processed late. Can you fix this and reapply it?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for a product I never ordered. How do I dispute this?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My credit card was charged for an unauthorized item. Can you reverse this charge?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been trying to contact support for days, but my billing issue remains unresolved. I need a resolution now.",
+        "intent": "billing error"
+    },
+    {
+        "message": "The payment for my service was deducted twice. Can you cancel the duplicate charge and refund me?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a notification for a charge I didn’t authorize. How do I get this reversed and secure my account?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My subscription was auto-renewed without my consent. Can you cancel it and refund my last payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a product I never ordered. How do I dispute this charge and get my money back?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment for my subscription was processed late. Can you verify and reapply it?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for a service I canceled. Can you correct this error and refund me?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My bank statement shows a charge I didn’t make. How do I dispute this and prevent future fraud?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a product I never purchased. Can you reverse this charge and refund me?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The payment for my service was deducted twice. Can you cancel the duplicate charge?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a notification for a charge I didn’t authorize. How do I dispute this and get my money back?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My subscription was auto-renewed without my consent. Can you cancel it and refund my payment?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’ve been charged for a service I canceled. Can you verify and correct this billing error?",
+        "intent": "billing error"
+    },
+    {
+        "message": "The last payment for my subscription was processed late. Can you fix this and reapply it?",
+        "intent": "billing error"
+    },
+    {
+        "message": "I’m getting a recurring charge for an item I never ordered. How do I dispute this?",
+        "intent": "billing error"
+    },
+    {
+        "message": "My credit card was charged for an unauthorized purchase. Can you reverse this charge?",
+        "intent": "billing error"
+    },
+    {
+        "message": "Thank you so much for your amazing support! Your quick response saved me from a major headache. Really appreciate it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for fixing my order so fast. You guys are the best!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m so grateful for your help today. The way you handled my issue was beyond professional. Really appreciate it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are amazing! My order arrived exactly as promised, and the packaging was perfect. Thank you!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m blown away by how quickly you resolved my problem. Really appreciate the effort you put in. Keep up the great work!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a shoutout for your excellent service. My order was processed in record time, and I’m so happy with it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are a lifesaver! My package arrived on time, and the customer service was top-notch. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how smoothly your team handled my recent purchase. Everything went perfectly. Thank you!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say thanks for your quick response and helpful advice. You made a stressful situation much easier. Really appreciate it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Your customer service is top-tier! My order was delivered faster than expected, and the packaging was flawless. Thank you!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m so grateful for your help today. You made my day much better. Really appreciate the effort you put in!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a big thank you for your quick response and assistance. You guys are the best!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really happy with my recent purchase. The customer service was outstanding, and I’ll definitely be coming back!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are amazing! My order was processed and shipped in record time. Thank you so much for your help!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for your quick and helpful response. You made my day so much easier. Really appreciate it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how well your team handled my recent issue. Everything went smoothly, and I’m so happy with the outcome!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you so much for your quick response and assistance. You guys are the best at what you do!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really grateful for your help today. You made my day much better, and I’ll definitely be recommending your service to others!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a big thank you for your quick response and helpful advice. You guys are truly amazing!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m so happy with my recent purchase. The customer service was outstanding, and I’ll definitely be coming back!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are a lifesaver! My order arrived on time, and the customer service was top-notch. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for your quick response and assistance. You made my experience so much better!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how well your team handled my recent issue. Everything went perfectly, and I’m so happy with the result!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you so much for your quick and helpful response. You guys are truly amazing, and I’ll definitely be recommending your service!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really grateful for your help today. You made my day much easier, and I appreciate the effort you put in!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a shoutout for your excellent customer service. My order was processed and shipped quickly, and I’m so happy with it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are amazing! My order arrived exactly as promised, and the packaging was perfect. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really happy with my recent purchase. The customer service was outstanding, and I’ll definitely be coming back!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you for your quick response and assistance. You guys are truly the best at what you do!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for your help today. You made my day so much better, and I appreciate it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how smoothly your team handled my recent issue. Everything went perfectly, and I’m so happy with the outcome!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are a lifesaver! My package arrived on time, and the customer service was top-notch. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m grateful for your quick response and assistance. You made my experience so much better, and I’ll definitely be recommending your service!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a big thank you for your quick and helpful response. You guys are truly amazing, and I appreciate your effort!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m so happy with my recent purchase. The customer service was outstanding, and I’ll definitely be coming back!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you for your quick response and handling my issue so well. You guys are truly the best!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really grateful for your help today. You made my day much easier, and I appreciate the support!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for your quick response and assistance. You guys are truly amazing!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how well your team handled my recent issue. Everything went smoothly, and I’m so happy with the result!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are amazing! My order was processed and shipped in record time. Thank you so much for your help!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really happy with my recent purchase. The customer service was excellent, and I’ll definitely be coming back!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you for your quick response and making my day much better. You guys are truly the best!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a shoutout for your outstanding customer service. My order was delivered on time, and I’m so happy with it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m grateful for your quick response and handling my issue so professionally. You guys are truly amazing!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are a lifesaver! My package arrived on time, and the support was top-notch. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how well your team handled my recent purchase. Everything went perfectly, and I’m so happy with the result!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for your quick response and assistance. You made my experience so much better!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really grateful for your help today. You made my day much easier, and I appreciate the effort you put in!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you so much for your quick and helpful response. You guys are truly the best at what you do!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m so happy with my recent purchase. The customer service was outstanding, and I’ll definitely be recommending your service!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are amazing! My order arrived exactly as promised, and the packaging was perfect. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really happy with my recent purchase. The customer service was excellent, and I’ll definitely be coming back!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for your quick response and handling my issue so well. You guys are truly amazing!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really grateful for your help today. You made my day much better, and I appreciate the support!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you for your quick response and making my experience so smooth. You guys are truly the best!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are a lifesaver! My package arrived on time, and the customer service was top-notch. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how well your team handled my recent purchase. Everything went perfectly, and I’m so happy with the result!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a big thank you for your quick and helpful response. You guys are truly amazing, and I appreciate your effort!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m grateful for your quick response and handling my issue so professionally. You guys are truly the best!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are amazing! My order was processed and shipped in record time. Thank you so much for your help!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really happy with my recent purchase. The customer service was outstanding, and I’ll definitely be coming back!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you for your quick response and making my day much better. You guys are truly the best!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for your help today. You made my experience so much better!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really grateful for your quick response and assistance. You guys are truly amazing, and I appreciate your support!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are a lifesaver! My order arrived on time, and the customer service was top-notch. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how smoothly your team handled my recent issue. Everything went perfectly, and I’m so happy with the result!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you for your quick and helpful response. You guys are truly the best at what you do!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m grateful for your quick response and handling my issue so professionally. You guys are truly amazing!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a shoutout for your excellent customer service. My order was delivered on time, and I’m so happy with it!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are amazing! My package arrived exactly as promised, and the support was flawless. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really happy with my recent purchase. The customer service was outstanding, and I’ll definitely be coming back!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you for your quick response and making my day much better. You guys are truly the best!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m grateful for your help today. You made my experience so much easier, and I appreciate your effort!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to say a huge thank you for your quick response and assistance. You guys are truly amazing!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "You guys are a lifesaver! My order was processed and shipped in record time. Thank you so much!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really impressed with how well your team handled my recent purchase. Everything went smoothly, and I’m so happy with the result!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Thank you for your quick and helpful response. You guys are truly the best at what you do!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "I’m really grateful for your help today. You made my day much better, and I appreciate your support!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "Just wanted to give a big thank you for your quick response and handling my issue so well. You guys are truly amazing!",
+        "intent": "positive feedback"
+    },
+    {
+        "message": "My order arrived in the wrong size, and it doesn’t fit at all. Can you send me the correct one immediately?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product description said it was 12 inches wide, but it’s actually 10. How do I get the correct measurements?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I bought this item, but it’s completely different from what was shown in the pictures. Can you help?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart on your website is useless—I ordered a medium, but it’s too big. What’s the correct sizing?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a damaged item, and it’s not even the right size. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is way too small for my needs. Can you help me find a larger size or suggest alternatives?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong color. How do I get the correct one back to me?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size guide says this fits women, but it doesn’t fit at all. What’s going on?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I bought this item, but it’s not what I expected. Can you help me find the right fit?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product description said it was waterproof, but it’s not. Can you help me get a refund or replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a pair of shoes, but they’re too small. Can you send me the next size up?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is defective and doesn’t fit. How do I get a replacement or refund?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not the right size. Can you help me find the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart is confusing—I ordered a large, but it’s too small. What’s the correct sizing?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a product that doesn’t match the description. Can you help me resolve this?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is too big—I need a smaller size. Can you send me the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not what I expected. Can you help me find the right fit?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size guide is misleading—I ordered a medium, but it’s too small. What’s the correct sizing?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a damaged item, and it’s not the right size. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is too small—I need a larger size. Can you help me find the right one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong color. How do I get the correct one back to me?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart says this fits men, but it doesn’t fit at all. What’s going on?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I bought this item, but it’s not what I expected. Can you help me get a refund?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is defective and doesn’t fit. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a pair of shoes, but they’re too small. Can you send me the next size up?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is too big—I need a smaller size. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a product that doesn’t match the description. Can you help me resolve this issue?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart is confusing—I ordered a large, but it’s too small. What’s the correct fit?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not the right size. Can you help me find the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is defective and doesn’t fit. How do I get a refund or replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong size. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product description said it was waterproof, but it’s not. Can you help me get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a damaged item, and it’s not the right size. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart is misleading—I ordered a medium, but it’s too big. What’s the correct sizing?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not what I expected. Can you help me find the right fit?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is too small—I need a larger size. Can you send me the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a pair of shoes, but they’re too small. How do I get the next size?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is defective and doesn’t fit. How do I get a refund or replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a product that doesn’t match the description. Can you help me resolve this?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart says this fits women, but it doesn’t fit at all. What’s the issue?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong color. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not the right size. Can you help me find the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is too big—I need a smaller size. Can you send me the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a damaged item, and it’s not the right size. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is defective and doesn’t fit. How do I get a refund or replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a pair of shoes, but they’re too small. Can you help me get the next size?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart is confusing—I ordered a large, but it’s too small. What’s the correct fit?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not what I expected. Can you help me resolve this?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong size. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product description said it was waterproof, but it’s not. Can you help me get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a damaged item, and it’s not the right size. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart is misleading—I ordered a medium, but it’s too big. What’s the correct sizing?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not the right size. Can you help me find the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong color. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is too small—I need a larger size. Can you send me the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a product that doesn’t match the description. Can you help me resolve this?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a pair of shoes, but they’re too small. How do I get the next size?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is defective and doesn’t fit. How do I get a refund or replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong size. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart says this fits men, but it doesn’t fit at all. What’s the issue?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not what I expected. Can you help me get a refund?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a damaged item, and it’s not the right size. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is too big—I need a smaller size. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not the right size. Can you help me find the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product description said it was waterproof, but it’s not. Can you help me get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong size. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not the right size. Can you help me find the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart is confusing—I ordered a large, but it’s too small. What’s the correct fit?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a damaged item, and it’s not the right size. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is too small—I need a larger size. Can you send me the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a pair of shoes, but they’re too small. Can you help me get the next size?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong color. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is defective and doesn’t fit. How do I get a refund or replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not what I expected. Can you help me resolve this?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong size. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The size chart says this fits women, but it doesn’t fit at all. What’s the issue?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not the right size. Can you help me find the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I received a damaged item, and it’s not the right size. How do I get a replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The item is too big—I need a smaller size. Can you send me the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a pair of shoes, but they’re too small. How do I get the next size?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong color. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "The product is defective and doesn’t fit. How do I get a refund or replacement?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a product, but it’s not what I expected. Can you help me resolve this?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I ordered a shirt, but it’s the wrong size. Can you help me get the correct one?",
+        "intent": "size or product question"
+    },
+    {
+        "message": "I just bought a product and it’s broken after 2 days. I want my money back, not some generic response.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "Why is my order still stuck in ‘processing’? It’s been 5 days! I’m calling my bank about this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a package with the wrong item. The tracking says it’s here, but it’s not. Fix this now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so disappointed with your customer service. I paid for a premium feature, and it doesn’t work. Refund me.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order arrived damaged. The packaging was terrible, and the product was scratched. I’m not paying for this again.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’ve tried contacting you multiple times, but you never reply. This is unacceptable. I’m leaving your store.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I ordered a product, and it’s missing from my doorstep. The delivery guy said it was there, but it’s not. Fix this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m furious with your customer service. I paid for a subscription, and now I can’t access my account. Refund me immediately.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was late by 3 days, and you gave me no explanation. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake invoice for my order. How could you do this? I’m reporting this to my bank.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so frustrated with your slow response time. I waited 4 hours for a reply, and you still haven’t helped.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My product arrived with a missing part. The description said it was complete, but it’s not. Refund me now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’ve been trying to contact you for days, and you ignore my messages. This is not how you treat customers.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I ordered a product, and it’s not what I expected. The description was misleading. I’m not happy with this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was charged twice, and I didn’t authorize it. I’m suing you for this fraud.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so disappointed in your customer service. I paid for a warranty, and it’s not working. Refund me.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a package with the wrong color. The description said it was the correct one, but it’s not. Fix this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so angry with your customer service. I paid for a product, and it’s defective. I want a replacement or refund.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was delayed by a week, and you gave no notice. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake discount code in my email. How could you do this? I’m reporting this to your platform.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so frustrated with your customer service. I waited all day for a reply, and you still haven’t resolved my issue.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My product arrived with a scratched surface. The packaging was terrible, and the product was damaged. Refund me.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I ordered a product, and it’s not working as described. The instructions were wrong, and I’m not happy with this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so disappointed with your customer service. I paid for a subscription, and now I can’t access my account. Fix this immediately.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was late by 2 days, and you gave no explanation. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake invoice for my order. How could you do this? I’m contacting my bank about this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so angry with your customer service. I paid for a product, and it’s defective. I want a replacement or refund.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order arrived with a missing part. The description said it was complete, but it’s not. Fix this now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’ve been trying to contact you for days, and you ignore my messages. This is unacceptable behavior.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I ordered a product, and it’s not what I expected. The description was misleading. I’m not happy with this purchase.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was charged twice, and I didn’t authorize it. I’m reporting this to my bank and your platform.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so frustrated with your customer service. I waited 3 hours for a reply, and you still haven’t helped.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a package with the wrong item. The tracking says it’s here, but it’s not. Fix this immediately.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so disappointed with your customer service. I paid for a premium feature, and it’s not working. Refund me now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was delayed by a week, and you gave no notice. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake discount code in my email. How could you do this? I’m reporting this to your platform.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so angry with your customer service. I paid for a product, and it’s broken after 2 days. Refund me!",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My product arrived with a missing part. The description said it was complete, but it’s not. I want a replacement.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’ve been trying to contact you for days, and you never respond. This is not how you treat customers.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I ordered a product, and it’s not working as described. The instructions were wrong. I’m not happy with this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake invoice for my order. How could you do this? I’m contacting my bank about this fraud.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so frustrated with your customer service. I waited all day for a reply, and you still haven’t resolved my issue.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order arrived damaged. The packaging was terrible, and the product was scratched. I want a refund.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I ordered a product, and it’s not what I expected. The description was misleading. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so disappointed with your customer service. I paid for a warranty, and it’s not working. Fix this now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was late by 3 days, and you gave no explanation. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake discount code in my email. How could you do this? I’m reporting this to your platform.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so angry with your customer service. I paid for a product, and it’s defective. I want a replacement or refund.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order arrived with a missing part. The description said it’s complete, but it’s not. Fix this immediately.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’ve been trying to contact you for days, and you ignore my messages. This is unacceptable behavior.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I ordered a product, and it’s not working as described. The instructions were wrong. I’m not happy with this purchase.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake invoice for my order. How could you do this? I’m contacting my bank about this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so frustrated with your customer service. I waited 3 hours for a reply, and you still haven’t helped.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was delayed by a week, and you gave no notice. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a package with the wrong item. The tracking says it’s here, but it’s not. Fix this now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so disappointed with your customer service. I paid for a subscription, and now I can’t access my account. Refund me now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was charged twice, and I didn’t authorize it. I’m reporting this to my bank and your platform.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so angry with your customer service. I paid for a premium feature, and it’s not working. Refund me immediately.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake discount code in my email. How could you do this? I’m reporting this to your platform.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so frustrated with your customer service. I waited all day for a reply, and you still haven’t resolved my issue.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order arrived damaged. The packaging was terrible, and the product was scratched. I want a refund.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I ordered a product, and it’s not what I expected. The description was misleading. I’m not happy with this purchase.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so disappointed with your customer service. I paid for a warranty, and it’s not working. Fix this now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was late by 2 days, and you gave no explanation. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake invoice for my order. How could you do this? I’m contacting my bank about this fraud.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so angry with your customer service. I paid for a product, and it’s broken after 2 days. Refund me!",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m just here to complain. Your customer service is terrible. I’m done with you.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’ve been waiting for a reply for hours, and you’re not helping. This is unacceptable.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order is still stuck in ‘processing’ after 6 days. I’m calling my bank about this.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a product that didn’t match the description. The color was wrong. I want my money back.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so frustrated with your slow response time. I’ve sent multiple messages, and you still haven’t replied.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order arrived with a missing part. The product is unusable. I want a replacement or refund.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so disappointed with your customer service. I paid for a subscription, and now I can’t access my account. Fix this now.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I received a fake discount code in my email. How could you do this? I’m reporting this to your platform.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "My order was delayed by a week, and you gave no explanation. I’m not coming back here.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "I’m so angry with your customer service. I paid for a product, and it’s defective. I want a replacement or refund.",
+        "intent": "spam or irrelevant message"
+    },
+    {
+        "message": "Hi, my address has changed and I need to update it on my order history. Please help me fix this ASAP!",
+        "intent": "address change request"
+    },
+    {
+        "message": "I just received my package, but the address on my order is wrong. Can you correct it immediately?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is ridiculous. My shipping address is wrong again, and I’m getting frustrated. Fix it now!",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to update my address for my recent purchase. Could you please verify and update it right away?",
+        "intent": "address change request"
+    },
+    {
+        "message": "My order was shipped to the wrong address. Please correct this right now—I’m waiting for my package.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really upset about this. My address was changed, and now my order is going to the wrong place. Fix it!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please update my shipping address? It’s incorrect and causing issues with my delivery.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’ve tried contacting you multiple times, but my address still shows as incorrect. Please resolve this.",
+        "intent": "address change request"
+    },
+    {
+        "message": "My order was sent to the wrong address. I need this fixed immediately—it’s urgent!",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to update my address for my recent purchase. Could you please check and correct it?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is unacceptable. My address was wrong, and now I’m getting my package at the wrong place. Fix it!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please verify and update my shipping address? It’s incorrect and causing problems.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really frustrated with this. My order was sent to the wrong address, and I need it corrected.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please fix my address update. It’s wrong, and I’m getting my package at the wrong location.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to update my address for my recent order. Could you please correct it right away?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is a huge inconvenience. My address was wrong, and now my order is going to the wrong place. Fix it!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please check and update my shipping address? It’s incorrect and causing delays.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really upset about this. My order was sent to the wrong address, and I need it corrected immediately.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please help me update my address for my recent purchase. It’s wrong, and I need it fixed.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’ve tried contacting you, but my address still shows as incorrect. Please resolve this issue now.",
+        "intent": "address change request"
+    },
+    {
+        "message": "My order was sent to the wrong address. Could you please correct it right away?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is frustrating. My address was wrong, and now my package is going to the wrong place. Fix it!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please update my shipping address? It’s incorrect and causing issues with my delivery.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to fix my address for my recent purchase. Could you please verify and update it?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is unacceptable. My order was sent to the wrong address, and I need it corrected immediately.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please help me update my address for my recent order. It’s wrong, and I need it fixed ASAP.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really frustrated with this. My address was wrong, and now my package is going to the wrong place. Fix it now!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please check and update my shipping address? It’s incorrect and causing problems.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to correct my address for my recent purchase. Could you please verify and update it?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is a huge inconvenience. My order was sent to the wrong address—please fix it right away.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please update my address? It’s wrong, and I’m getting my package at the wrong location.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really upset about this. My order was sent to the wrong address, and I need it corrected immediately.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please help me fix my address for my recent purchase. It’s incorrect, and I need it updated now.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’ve tried contacting you, but my address is still wrong. Please resolve this issue right away.",
+        "intent": "address change request"
+    },
+    {
+        "message": "My order was sent to the wrong address. Could you please correct it ASAP?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is frustrating. My address was wrong, and now my package is going to the wrong place. Fix it!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please update my shipping address? It’s incorrect and causing delays in my delivery.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to fix my address for my recent purchase. Please verify and update it right now.",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is unacceptable. My order was sent to the wrong address—please correct it immediately.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please help me update my address for my recent order. It’s wrong, and I need it fixed ASAP.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really frustrated with this. My address was wrong, and now my package is going to the wrong place. Fix it now!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please check and update my shipping address? It’s incorrect and causing issues.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to correct my address for my recent purchase. Could you please verify and update it?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is a huge inconvenience. My order was sent to the wrong address—please fix it right away.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please update my address? It’s wrong, and I’m getting my package at the wrong location.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really upset about this. My order was sent to the wrong address, and I need it corrected immediately.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please help me fix my address for my recent purchase. It’s incorrect, and I need it updated now.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’ve tried contacting you, but my address is still wrong. Please resolve this issue right away.",
+        "intent": "address change request"
+    },
+    {
+        "message": "My order was sent to the wrong address. Could you please correct it ASAP?",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to update my address for my recent purchase. Could you please verify and correct it?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is frustrating. My address was wrong, and now my package is going to the wrong place. Fix it!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please update my shipping address? It’s incorrect and causing delays.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really upset about this. My order was sent to the wrong address—please fix it immediately.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please help me update my address for my recent order. It’s wrong, and I need it corrected ASAP.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I need to correct my address for my recent purchase. Could you please verify and update it right now?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is unacceptable. My address was wrong, and now my package is going to the wrong place. Fix it!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please check and update my shipping address? It’s incorrect and causing issues.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really frustrated with this situation. My order was sent to the wrong address—please resolve it now.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please help me update my address for my recent purchase. It’s wrong, and I need it fixed immediately.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’ve tried contacting you multiple times, but my address is still incorrect. Please fix this ASAP.",
+        "intent": "address change request"
+    },
+    {
+        "message": "My order was sent to the wrong address. Could you please correct it right away?",
+        "intent": "address change request"
+    },
+    {
+        "message": "This is a huge inconvenience. My address was wrong, and now my package is going to the wrong place. Fix it now!",
+        "intent": "address change request"
+    },
+    {
+        "message": "Could you please update my address? It’s incorrect and affecting my delivery. Please help me.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I’m really upset about this. My order was sent to the wrong address, and I need it corrected immediately.",
+        "intent": "address change request"
+    },
+    {
+        "message": "Please verify and update my shipping address. It’s wrong, and I’m getting my package at the wrong place.",
+        "intent": "address change request"
+    },
+    {
+        "message": "I received the wrong item and it’s completely useless! I ordered a [Product Name] but got [Incorrect Item]. Please fix this immediately!",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "My order arrived with the wrong product—[Product Name] instead of [Correct Item]. I’ll be in touch if you don’t resolve this soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is unacceptable. I ordered [Correct Item] but got [Wrong Item]. My money is safe, but I expect a replacement or refund ASAP.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really disappointed. My order was supposed to include [Correct Item], but I received [Wrong Item]. Can you help me correct this?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I ordered [Correct Item] and got [Wrong Item]. This is a mistake. Please send me the right product or refund me right away.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a huge inconvenience. I ordered [Correct Item] but got [Wrong Item]. I’d like to return this and get the correct one sent to me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t sort this out quickly.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a terrible mistake. I ordered [Correct Item] and got [Wrong Item]. Please fix this right now or I’ll have to escalate this.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I ordered [Correct Item] but got [Wrong Item]. This is not what I expected. Can you help me get the right product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’m very upset and need this resolved immediately.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a complete error. I ordered [Correct Item] but got [Wrong Item]. Please send me the correct product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really frustrated. I ordered [Correct Item] but got [Wrong Item]. Can you fix this for me?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a review if this isn’t resolved soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a mistake. I ordered [Correct Item] but got [Wrong Item]. Please send me the correct product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m very disappointed. I ordered [Correct Item] but got [Wrong Item]. Can you help me get the right product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t resolve this quickly.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a huge inconvenience. I ordered [Correct Item] and got [Wrong Item]. Please send me the correct product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really upset. I ordered [Correct Item] but got [Wrong Item]. Can you fix this right now?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a bad review if this isn’t resolved soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a mistake. I ordered [Correct Item] but got [Wrong Item]. Please send me the correct product or refund me immediately.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m very frustrated. I ordered [Correct Item] but got [Wrong Item]. Can you help me get the right product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t sort this out soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is unacceptable. I ordered [Correct Item] but got [Wrong Item]. Please fix this right away or I’ll have to escalate this.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really disappointed. I ordered [Correct Item] but got [Wrong Item]. Can you help me get the correct product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a negative review if this isn’t fixed soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a mistake. I ordered [Correct Item] but got [Wrong Item]. Please send me the correct product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m very upset. I ordered [Correct Item] but got [Wrong Item]. Can you fix this right now?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t resolve this quickly.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a huge inconvenience. I ordered [Correct Item] and got [Wrong Item]. Please send me the correct product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really frustrated. I ordered [Correct Item] but got [Wrong Item]. Can you help me get the right product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a bad review if this isn’t resolved soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I ordered [Correct Item] but got [Wrong Item]. This is not what I expected. Please fix this right away.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m disappointed. I ordered [Correct Item] but got [Wrong Item]. Can you help me get the correct product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t sort this out soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a mistake. I ordered [Correct Item] but got [Wrong Item]. Please send me the correct product or refund me immediately.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really upset. I ordered [Correct Item] but got [Wrong Item]. Can you fix this right now?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a review if this isn’t resolved soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I ordered [Correct Item] and got [Wrong Item]. Please help me get the right product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m frustrated. I ordered [Correct Item] but got [Wrong Item]. Can you fix this?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t resolve this quickly.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a mistake. I ordered [Correct Item] but got [Wrong Item]. Please send me the correct product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m disappointed. I ordered [Correct Item] but got [Wrong Item]. Can you help me get the right product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a bad review if this isn’t fixed soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I ordered [Correct Item] but got [Wrong Item]. Please fix this right away or I’ll escalate this.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really upset. I ordered [Correct Item] but got [Wrong Item]. Can you help me get the correct product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t sort this out soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a mistake. I ordered [Correct Item] but got [Wrong Item]. Please send me the correct product or refund me immediately.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m frustrated. I ordered [Correct Item] but got [Wrong Item]. Can you fix this?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a review if this isn’t resolved soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I ordered [Correct Item] and got [Wrong Item]. Please help me get the right product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m disappointed. I ordered [Correct Item] but got [Wrong Item]. Can you fix this?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t resolve this quickly.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really upset. I ordered [Correct Item] but got [Wrong Item]. Please fix this right away.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a bad review if this isn’t resolved soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I ordered [Correct Item] but got [Wrong Item]. Please send me the correct product or refund me.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m frustrated. I ordered [Correct Item] but got [Wrong Item]. Can you help me sort this out?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t resolve this soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "This is a mistake. I ordered [Correct Item] but got [Wrong Item]. Please fix this right now.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m disappointed. I ordered [Correct Item] but got [Wrong Item]. Can you help me get the right product?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be leaving a review if this isn’t resolved soon.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I ordered [Correct Item] and got [Wrong Item]. Please send me the correct product or refund me immediately.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I’m really upset. I ordered [Correct Item] but got [Wrong Item]. Can you fix this right away?",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I received the wrong item—[Wrong Item] instead of [Correct Item]. I’ll be contacting my bank if you don’t resolve this quickly.",
+        "intent": "wrong item received"
+    },
+    {
+        "message": "I just placed an order and now I want to cancel it immediately. My credit card was charged for $120 and I don't want it anymore. Please refund me ASAP!",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m so disappointed with this purchase. The item arrived damaged and I don’t want it. Can you cancel my order and give me a full refund?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my recent order right away. I’ve already received the item and it’s not what I ordered. Can you process the cancellation?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really upset about this. My order was canceled, but I still got charged. Please fix this right now and refund me.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item and need my money back. Can you process this quickly?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I just wanted to cancel my order, but I’m getting a message that it’s already been shipped. This is completely unacceptable. Refund me now!",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m so frustrated with this purchase. The item was late and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it and it’s not what I expected. Please process this cancellation and refund me.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item and need my money back. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really upset with this purchase. The item arrived damaged, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Please process this cancellation and refund me.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really disappointed with this purchase. The item arrived damaged, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Please process this cancellation and refund me.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really frustrated with this purchase. The item was late, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really upset with this purchase. The item arrived damaged, and I don’t want it. Please cancel my order and refund me immediately.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Can you process this cancellation and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really disappointed with this purchase. The item arrived damaged, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my refund. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really frustrated with this purchase. The item was late, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Please process this cancellation and refund me right away.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really upset with this purchase. The item arrived damaged, and I don’t want it. Please cancel my order and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Can you process this cancellation and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my refund. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really disappointed with this purchase. The item arrived damaged, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really frustrated with this purchase. The item was late, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my refund. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really upset with this purchase. The item arrived damaged, and I don’t want it. Please cancel my order and refund me immediately.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Can you process this cancellation and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really disappointed with this purchase. The item arrived damaged, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my refund. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really frustrated with this purchase. The item was late, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Please process this cancellation and refund me right away.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really upset with this purchase. The item arrived damaged, and I don’t want it. Please cancel my order and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Can you process this cancellation and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my refund. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really disappointed with this purchase. The item arrived damaged, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really frustrated with this purchase. The item was late, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the order, and I need my money back. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really upset with this purchase. The item arrived damaged, and I don’t want it. Please cancel my order and refund me immediately.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Can you process this cancellation and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my refund. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really disappointed with this purchase. The item arrived damaged, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really frustrated with this purchase. The item was late, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my refund. Can you help me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really upset with this purchase. The item arrived damaged, and I don’t want it. Please cancel my order and refund me immediately.",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order immediately. I already received it, and it’s not what I expected. Can you process this cancellation and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m canceling my order because I changed my mind. I don’t want the item, and I need my money back. Can you assist me with this?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I’m really disappointed with this purchase. The item arrived damaged, and I don’t want it. Can you cancel my order and refund me?",
+        "intent": "cancel order request"
+    },
+    {
+        "message": "I need to cancel my order right away. I already received it, and it’s not what I ordered. Please process this cancellation and refund me now.",
+        "intent": "cancel order request"
+    }
+]

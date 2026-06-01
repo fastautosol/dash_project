@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1.7-labs
+FROM python:3.12.2-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY requirements-dash.txt .
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-dash.txt
+
+COPY apis/ apis/
+COPY assets ./assets
+COPY pages/ pages/
+COPY main.py .
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -fsS http://localhost:8000/health || exit 1
+
+CMD gunicorn main:server -k uvicorn.workers.UvicornWorker \
+    --workers=${UVICORN_WORKERS:-1} \
+    --threads=${GUNICORN_THREADS:-4} \
+    --timeout=${GUNICORN_TIMEOUT:-120} \
+    --bind 0.0.0.0:8000

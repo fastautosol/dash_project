@@ -1,0 +1,7 @@
+ccxt
+pandas
+requests
+SQLAlchemy
+psycopg[binary]
+aiohttp 
+dlt[postgres]
