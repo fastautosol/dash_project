@@ -26,7 +26,6 @@ DBX_HOST = 'https://dbc-9c577faf-b445.cloud.databricks.com/'
 DBX_HTTP_PATH = '/sql/1.0/warehouses/cbfc343eb927c998'
 WAREHOUSE_ID = 'cbfc343eb927c998' 
 TARGET_WS_PATH = "/Users/csakiss@outlook.hu"
-TARGET_CATALOG = "test_cat"
 TARGET_JOB_ID = '718482410766048'
 
 # Pre-clean host for SQL connector
@@ -47,12 +46,7 @@ except Exception as _sdk_err:
 # =================================================
 # DASH PAGE
 # =================================================
-dash.register_page(
-    __name__,
-    path="/databricks",
-    name="Databricks New",
-    order=5,
-)
+dash.register_page(__name__, path="/databricks", name="Databricks", order=5)
 
 # =================================================
 # STYLES
@@ -83,48 +77,33 @@ layout = dbc.Container(
         ], className="mb-4"),
 
         dbc.Button(
-            [html.I(className="fas fa-play me-2"), "Load All Info & Start Warehouse"],
-            id="load-btn",
-            color="info",
-            className="mb-4 fw-bold",
-        ),
+            [html.I(className="fas fa-play me-2"), "Load Info"], id="load-btn", color="info", className="mb-4 fw-bold"),
 
-        # Rows 1-4: Info cards
+        # ----- Rows 1-4: Info cards -----
         dbc.Row([
             dbc.Col(
                 html.Div(dcc.Loading(type="circle", color="#17a2b8", children=html.Div(
-                    id="user-jobs-wh-clusters-card",
-                    children=html.P("Click 'Load All Info & Start Warehouse'", className="text-muted")
-                )), style=CARD_STYLE), md=6),
+                    id="user-jobs-wh-clusters-card", children=html.P("Click 'Load Info'", className="text-muted"))), style=CARD_STYLE), md=6),
             dbc.Col(
                 html.Div(dcc.Loading(type="circle", color="#17a2b8", children=html.Div(
-                    id="job-history-card",
-                    children=html.P("Click 'Load All Info & Start Warehouse'", className="text-muted")
-                )), style=CARD_STYLE), md=6)
+                    id="job-history-card", children=html.P("Click 'Load Info'", className="text-muted"))), style=CARD_STYLE), md=6)
         ]),
         dbc.Row([
             dbc.Col(
                 html.Div(dcc.Loading(type="circle", color="#17a2b8", children=html.Div(
-                    id="workspace-card",
-                    children=html.P("Click 'Load All Info & Start Warehouse'", className="text-muted")
-                )), style=CARD_STYLE), md=6),
+                    id="workspace-card", children=html.P("Click 'Load Info'", className="text-muted"))), style=CARD_STYLE), md=6),
             dbc.Col(
                 html.Div(dcc.Loading(type="circle", color="#17a2b8", children=html.Div(
-                    id="unity-card",
-                    children=html.P("Click 'Load All Info & Start Warehouse'", className="text-muted")
-                )), style=CARD_STYLE), md=6)
+                    id="unity-card", children=html.P("Click 'Load Info'", className="text-muted"))), style=CARD_STYLE), md=6)
         ]),
 
-        # Row 5: Table data — separate Loading so clicking Load Table never blanks info cards
+        # ----- Row 5: Table data Loading so clicking Load Table -----
         dbc.Row([
             dbc.Col(
                 html.Div([
                     html.H4("Selected Table Data", className="text-info mb-3"),
                     dcc.Loading(id="loading-table-data", type="circle", color="#17a2b8",
-                        children=html.Div(id="selected-table-output",
-                            children=html.P("Click a 'Load Table' button above to display table contents.", className="text-muted")
-                        )
-                    ),
+                    children=html.Div(id="selected-table-output", children=html.P("Click a 'Load Table' button above to display table contents.", className="text-muted"))),
                 ], style=CARD_STYLE), md=12),
         ]),
     ],
@@ -150,7 +129,6 @@ def safe_call(func, timeout=30, fallback=None):
 
 
 def warmup_warehouse(w_client):
-    """Uses SDK to start the warehouse in the background."""
     try:
         logging.info(f"Starting background warehouse warmup via SDK for ID: {WAREHOUSE_ID}...")
         w_client.warehouses.start(WAREHOUSE_ID).result()
@@ -167,15 +145,10 @@ def build_table(df):
         className="text-light m-0",
         style={"backgroundColor": "transparent", "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"})
 
-
 def build_unity_tables_card(tables, catalog):
-    """Builds the UC tables list manually to inject 'Load Table' buttons."""
     if not tables:
         return html.P("No tables found", className="text-muted")
-
-    header = html.Thead(html.Tr([
-        html.Th("Table"), html.Th("Schema"), html.Th("Type"), html.Th("Action", style={"width": "120px"})
-    ]))
+    header = html.Thead(html.Tr([html.Th("Table"), html.Th("Schema"), html.Th("Type"), html.Th("Action", style={"width": "120px"})]))
 
     rows = []
     for t in tables:
@@ -188,13 +161,7 @@ def build_unity_tables_card(tables, catalog):
 
         btn_id = {"type": "load-table-btn", "index": f"{catalog}.{s_name}.{t_name}"}
         btn = dbc.Button("Load Table", id=btn_id, size="sm", color="info", className="py-0 px-2")
-
-        rows.append(html.Tr([
-            html.Td(t_name),
-            html.Td(s_name),
-            html.Td(t_type),
-            html.Td(btn)
-        ]))
+        rows.append(html.Tr([html.Td(t_name), html.Td(s_name), html.Td(t_type), html.Td(btn)]))
 
     if not rows:
         return html.P("No user tables found (only system schemas).", className="text-muted")
@@ -212,10 +179,7 @@ def build_unity_tables_card(tables, catalog):
 
 # FIX: Return a single html.Div, NOT a list
 def error_card(title, message):
-    return html.Div([
-        html.H4(title, className="text-warning mb-3"),
-        html.Div(str(message), className="text-muted"),
-    ])
+    return html.Div([html.H4(title, className="text-warning mb-3"), html.Div(str(message), className="text-muted")])
 
 
 # =================================================
@@ -246,7 +210,7 @@ def load_databricks_info(n_clicks):
     # Trigger Warehouse Warmup IMMEDIATELY in background thread
     threading.Thread(target=warmup_warehouse, args=(w,), daemon=True).start()
 
-    # --- Current User ---
+    # ----- Current User -----
     current_user = safe_call(lambda: w.current_user.me(), timeout=30)
     if current_user:
         user_section = html.Div([
@@ -256,7 +220,7 @@ def load_databricks_info(n_clicks):
     else:
         user_section = error_card("Current User", "Timeout or unavailable")
 
-    # --- Jobs ---
+    # ----- Jobs -----
     jobs = safe_call(lambda: list(w.jobs.list()), timeout=30, fallback=[])
     if jobs:
         jobs_section = html.Div([
@@ -266,7 +230,7 @@ def load_databricks_info(n_clicks):
     else:
         jobs_section = error_card("Jobs", "No jobs found or timeout")
 
-    # --- Warehouses ---
+    # ----- Warehouses -----
     warehouses = safe_call(lambda: list(w.warehouses.list()), timeout=20, fallback=[])
     if warehouses:
         warehouses_section = html.Div([
@@ -276,7 +240,7 @@ def load_databricks_info(n_clicks):
     else:
         warehouses_section = error_card("Warehouses", "No warehouses found or timeout")
 
-    # --- Clusters ---
+    # ----- Clusters -----
     clusters = safe_call(lambda: list(w.clusters.list()), timeout=20, fallback=[])
     if clusters:
         clusters_section = html.Div([
@@ -286,17 +250,17 @@ def load_databricks_info(n_clicks):
     else: 
         clusters_section = error_card("Clusters", "No clusters found or timeout")
 
-    # Unified single card containing all three sections
     user_jobs_wh_clusters_card = html.Div([user_section, jobs_section, warehouses_section, clusters_section])
 
-    # --- Job History ---
+    
+    # ----- Job History -----
     job_runs = safe_call(lambda: list(w.jobs.list_runs(job_id=int(TARGET_JOB_ID), limit=1)), timeout=30, fallback=[])
     if job_runs:
         runs_df = pd.DataFrame([{
             "Run ID": r.run_id,
             "Result": str(r.state.result_state.value) if (r.state and r.state.result_state) else "N/A",
             "Life Cycle": str(r.state.life_cycle_state.value) if (r.state and r.state.life_cycle_state) else "Unknown",
-            "Start Time": str(pd.to_datetime(r.start_time, unit='ms')) if r.start_time else "N/A",
+            "Start Time": str(pd.to_datetime(r.start_time, unit='ms').strftime("%Y-%m-%d %H:%M:%S")) if r.start_time else "N/A",
             "Duration (s)": f"{(r.end_time - r.start_time) / 1000:.1f}" if (r.start_time and r.end_time) else "Running",
         } for r in job_runs])
         job_history_card = html.Div([
@@ -308,7 +272,7 @@ def load_databricks_info(n_clicks):
         job_history_card = error_card("Job History", f"No runs found for job {TARGET_JOB_ID}")
 
 
-    # --- Workspace Notebooks ---
+    # ----- Workspace Notebooks -----
     workspace_items = safe_call(lambda: list(w.workspace.list(path=TARGET_WS_PATH)), timeout=20, fallback=[])
     notebooks = [i for i in workspace_items if "NOTEBOOK" in str(i.object_type).upper()] if workspace_items else []
     if notebooks:
@@ -319,9 +283,9 @@ def load_databricks_info(n_clicks):
     else:
         workspace_card = error_card("Workspace Notebooks", f"No notebooks in {TARGET_WS_PATH}")
 
-    # --- Unity Catalog ---
+    # ----- Unity Catalog -----
     schemas = safe_call(lambda: list(w.schemas.list(catalog_name=TARGET_CATALOG)), timeout=20, fallback=[])
-    all_tables, all_volumes = [], []
+    all_tables = []
     if schemas:
         for s in schemas:
             sn = s.name
