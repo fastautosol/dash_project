@@ -165,13 +165,7 @@ def build_table(df):
     return dbc.Table.from_dataframe(
         df, striped=False, bordered=False, hover=True, responsive=True,
         className="text-light m-0",
-        style={
-            "backgroundColor": "transparent",
-            "--bs-table-bg": "transparent",
-            "--bs-table-accent-bg": "transparent",
-            "color": "white",
-        },
-    )
+        style={"backgroundColor": "transparent", "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"})
 
 
 def build_unity_tables_card(tables, catalog):
