@@ -24,7 +24,8 @@ logging.basicConfig(level=logging.INFO)
 DBX_TOKEN = os.getenv("DB_API_KEY")
 DBX_HOST = 'https://dbc-9c577faf-b445.cloud.databricks.com/'
 DBX_HTTP_PATH = '/sql/1.0/warehouses/cbfc343eb927c998'
-WAREHOUSE_ID = 'cbfc343eb927c998' 
+WAREHOUSE_ID = 'cbfc343eb927c998'
+TARGET_CATALOG = "test_cat"
 TARGET_WS_PATH = "/Users/csakiss@outlook.hu"
 TARGET_JOB_ID = '718482410766048'
 
