@@ -199,13 +199,7 @@ def load_data_render(_, pred_store):
     ml_display_df["error_min"] = None
 
     fig_act = go.Figure()
-    fig_act.add_trace(go.Bar(
-        x=ml_display_df["dep_sched"],
-        y=ml_display_df["arr_delay"],
-        name="Actual Arrival Delay",
-        marker_color=ML_ACT_COLOR,
-        opacity=0.85,
-    ))
+    fig_act.add_trace(go.Bar(x=ml_display_df["dep_sched"], y=ml_display_df["arr_delay"], name="Actual Arrival Delay", marker_color=ML_ACT_COLOR, opacity=0.85))
     fig_act.add_hline(y=0, line_color="rgba(255,255,255,0.15)", line_width=1)
     _style_delay_fig(fig_act, "Actual Arrival Delay (min) – latest 50 flights")
 
@@ -217,25 +211,10 @@ def load_data_render(_, pred_store):
     # so the 60-second auto-refresh cannot clobber them.
     # -------------------------------------------------------
     if pred_store is not None:
-        return (
-            f"Updated → {df['_ingested_at'].iloc[-1]}",
-            df.to_dict("records"),
-            mini_charts,
-            mini_tables,
-            log_table,
-            no_update,          # keep ML chart intact
-            no_update,          # keep ML prediction table intact
-        )
+        return (f"Updated → {df['_ingested_at'].iloc[-1]}", df.to_dict("records"), mini_charts, mini_tables, log_table, no_update, no_update)  
+        # keep ML chart, prediction table intact
 
-    return (
-        f"Updated → {df['_ingested_at'].iloc[-1]}",
-        df.to_dict("records"),
-        mini_charts,
-        mini_tables,
-        log_table,
-        fig_act,
-        initial_pred_table,
-    )
+    return (f"Updated → {df['_ingested_at'].iloc[-1]}", df.to_dict("records"), mini_charts, mini_tables, log_table, fig_act, initial_pred_table)
 
 
 # ===================================================================
@@ -304,28 +283,13 @@ def run_ml(n_clicks, raw_records, existing_pred):
 
     # metric badges
     metric_badges = [
-        html.Span([html.Strong("RMSE "), f"{metrics['rmse']:.1f} min"],
-                  style={"background": "rgba(245,158,11,0.12)", "borderRadius": "8px",
-                         "padding": "2px 8px"}),
-        html.Span([html.Strong("MAE "), f"{metrics['mae']:.1f} min"],
-                  style={"background": "rgba(56,189,248,0.10)", "borderRadius": "8px",
-                         "padding": "2px 8px"}),
-        html.Span([html.Strong("R² "), f"{metrics['r2']:.3f}"],
-                  style={"background": "rgba(52,211,153,0.10)", "borderRadius": "8px",
-                         "padding": "2px 8px"}),
-        html.Span([html.Strong("n "), f"{metrics['n_train']} train / {metrics['n_test']} test"],
-                  style={"color": "#64748b", "padding": "2px 4px"}),
+        html.Span([html.Strong("RMSE "), f"{metrics['rmse']:.1f} min"], style={"background": "rgba(245,158,11,0.12)", "borderRadius": "8px", "padding": "2px 8px"}),
+        html.Span([html.Strong("MAE "), f"{metrics['mae']:.1f} min"], style={"background": "rgba(56,189,248,0.10)", "borderRadius": "8px", "padding": "2px 8px"}),
+        html.Span([html.Strong("R² "), f"{metrics['r2']:.3f}"], style={"background": "rgba(52,211,153,0.10)", "borderRadius": "8px", "padding": "2px 8px"}),
+        html.Span([html.Strong("n "), f"{metrics['n_train']} train / {metrics['n_test']} test"], style={"color": "#64748b", "padding": "2px 4px"}),
     ]
 
-    return (
-        fig,
-        "Hide Predicted",
-        "warning",
-        False,
-        pred_df.to_dict("records"),
-        pred_table,
-        metric_badges,
-    )
+    return (fig, "Hide Predicted", "warning", False, pred_df.to_dict("records"), pred_table, metric_badges)
 
 
 # ===================================================================
@@ -334,33 +298,19 @@ def run_ml(n_clicks, raw_records, existing_pred):
 
 def _empty_fig(msg="No data"):
     fig = go.Figure()
-    fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="white"),
-        margin=dict(l=10, r=10, t=10, b=10),
-        annotations=[dict(text=msg, showarrow=False,
-                          font=dict(color="#64748b", size=14))]
-    )
+    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"), margin=dict(l=10, r=10, t=10, b=10),
+        annotations=[dict(text=msg, showarrow=False, font=dict(color="#64748b", size=14))])
     return fig
 
 
 def _style_delay_fig(fig, title_text):
-    fig.update_layout(
-        height=240,
-        margin=dict(l=10, r=10, t=28, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="white", size=11),
-        title=dict(text=title_text, font=dict(size=11, color="#94a3b8"),
-                   x=0.0, xanchor="left"),
+    fig.update_layout(height=240, margin=dict(l=10, r=10, t=28, b=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white", size=11),
+        title=dict(text=title_text, font=dict(size=11, color="#94a3b8"), x=0.0, xanchor="left"),
         xaxis=dict(showgrid=False, tickfont=dict(size=9)),
-        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)",
-                   zeroline=False, ticksuffix=" m"),
+        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False, ticksuffix=" m"),
         bargap=0.2,
-        legend=dict(orientation="h", y=1.08, x=1, xanchor="right",
-                    font=dict(size=10)),
-        barmode="group",
-    )
+        legend=dict(orientation="h", y=1.08, x=1, xanchor="right", font=dict(size=10)),
+        barmode="group")
 
 
 def _build_delay_fig(pred_df: pd.DataFrame, show_combined: bool) -> go.Figure:
