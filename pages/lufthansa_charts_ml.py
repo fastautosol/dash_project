@@ -1,4 +1,4 @@
-# 2026.06.03  (ML section: lazy evaluation – only trains on button press)
+# 2026.06.03  11.00 (ML section: lazy evaluation – only trains on button press)
 import dash
 import pandas as pd
 from dash import html, dcc, Input, Output, State, callback, no_update
@@ -122,74 +122,55 @@ def load_data_render(_, pred_store):
 
     def make_card(title, content, is_graph=True):
         if is_graph:
-            content.update_layout(
-                height=200, margin=dict(l=10, r=10, t=15, b=15),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="white"))
+            content.update_layout(height=200, margin=dict(l=10, r=10, t=15, b=15), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
         return dbc.Col([
             html.Div([
-                html.H6(title, className="mb-1",
-                        style={"color": ML_ACCENT, "fontWeight": "500"}),
-                dcc.Graph(figure=content, config={'displayModeBar': False},
-                          style={"height": "200px"})
-                if is_graph else html.Div(content,
-                                          style={"height": "200px", "overflowY": "auto"})
+                html.H6(title, className="mb-1", style={"color": ML_ACCENT, "fontWeight": "500"}),
+                dcc.Graph(figure=content, config={'displayModeBar': False}, style={"height": "200px"})
+                if is_graph else html.Div(content, style={"height": "200px", "overflowY": "auto"})
             ], style=CARD_STYLE)
         ], md=4)
 
     # 1 Daily
     daily_df = df.groupby(df["dep_sch_ts"].dt.floor("D")).size().reset_index(name="count")
     fig_daily = px.bar(daily_df, x="dep_sch_ts", y="count", template="plotly_dark")
-    fig_daily.update_layout(height=250, plot_bgcolor='rgba(0,0,0,0)',
-                             paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=20, r=20, t=10, b=10))
+    fig_daily.update_layout(height=250, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=20, r=20, t=10, b=10))
     mini_charts.append(make_card("Daily Chart", fig_daily))
 
     # 2 Dep delay dist
     df_dd = df[df["dep_delay_min"].notna() & (df["dep_delay_min"] <= 100)]
-    mini_charts.append(make_card("Departure Delay Dist",
-        px.histogram(df_dd, x="dep_delay_min", nbins=25, template="plotly_dark")))
+    mini_charts.append(make_card("Departure Delay Dist", px.histogram(df_dd, x="dep_delay_min", nbins=25, template="plotly_dark")))
 
     # 3 Route delay
     route = df.groupby("route_key")["dep_delay_min"].mean().reset_index()
-    mini_charts.append(make_card("Top Delay Routes",
-        px.bar(route.sort_values("dep_delay_min", ascending=False).head(15),
-               x="route_key", y="dep_delay_min", template="plotly_dark")))
+    mini_charts.append(make_card("Top Delay Routes", px.bar(route.sort_values("dep_delay_min", ascending=False).head(15), x="route_key", y="dep_delay_min", template="plotly_dark")))
 
     # 4 Airport traffic
     airport = df["arrival__airport_code"].value_counts().head(15).reset_index()
     airport.columns = ["airport", "count"]
-    mini_charts.append(make_card("Arrival Airports",
-        px.bar(airport, x="airport", y="count", template="plotly_dark")))
+    mini_charts.append(make_card("Arrival Airports", px.bar(airport, x="airport", y="count", template="plotly_dark")))
 
     # 5 Status
     status = df["status__description"].value_counts().reset_index()
     status.columns = ["status", "count"]
-    mini_charts.append(make_card("Status",
-        px.pie(status, names="status", values="count", hole=0.4)))
+    mini_charts.append(make_card("Status", px.pie(status, names="status", values="count", hole=0.4)))
 
     # 6 Aircraft
     aircraft = df["equipment__aircraft_code"].value_counts().reset_index()
     aircraft.columns = ["aircraft", "count"]
-    mini_charts.append(make_card("Aircraft Usage",
-        px.bar(aircraft.head(10), x="aircraft", y="count", template="plotly_dark")))
+    mini_charts.append(make_card("Aircraft Usage", px.bar(aircraft.head(10), x="aircraft", y="count", template="plotly_dark")))
 
     # -------------------
     # 3 SMALL TABLES
     # -------------------
-    dep_tbl = (df.groupby("route_key")["dep_delay_min"].mean().round(2)
-                 .sort_values(ascending=False).head(25).reset_index())
-    arr_tbl = (df.groupby("route_key")["arr_delay_min"].mean().round(2)
-                 .sort_values(ascending=False).head(25).reset_index())
+    dep_tbl = (df.groupby("route_key")["dep_delay_min"].mean().round(2).sort_values(ascending=False).head(25).reset_index())
+    arr_tbl = (df.groupby("route_key")["arr_delay_min"].mean().round(2).sort_values(ascending=False).head(25).reset_index())
     route_cnt = df["route_key"].value_counts().head(10).reset_index()
     route_cnt.columns = ["route_key", "count"]
 
     def make_table(df_t):
-        return dbc.Table.from_dataframe(
-            df_t, striped=False, hover=True, responsive=True,
-            borderless=True, className="text-light small",
-            style={"backgroundColor": "transparent",
-                   "--bs-table-bg": "transparent",
-                   "--bs-table-accent-bg": "transparent", "color": "white"})
+        return dbc.Table.from_dataframe(df_t, striped=False, hover=True, responsive=True, borderless=True, className="text-light small",
+            style={"backgroundColor": "transparent", "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"})
 
     mini_tables = [
         make_card("Dep Delay",    make_table(dep_tbl),   is_graph=False),
@@ -201,13 +182,8 @@ def load_data_render(_, pred_store):
     # LOG TABLE
     # -------------------
     status_cols = [0, 4, 5, 6, 7, 10, 11]
-    log_table = dbc.Table.from_dataframe(
-        df.iloc[-100:, status_cols], striped=False, hover=True,
-        responsive=True, borderless=True,
-        className="text-light m-0",
-        style={"backgroundColor": "transparent",
-               "--bs-table-bg": "transparent",
-               "--bs-table-accent-bg": "transparent", "color": "white"})
+    log_table = dbc.Table.from_dataframe(df.iloc[-100:, status_cols], striped=False, hover=True, responsive=True, borderless=True,
+        className="text-light m-0", style={"backgroundColor": "transparent", "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"})
 
     # ---------------------------------------------
     # INITIAL DELAY CHART & TABLE  (actual only)
