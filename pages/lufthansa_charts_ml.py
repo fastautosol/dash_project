@@ -15,8 +15,7 @@ import pages.lufthansa_ml as lm
 DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
 sql_engine = create_engine(
     DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True, pool_recycle=1800,
-    connect_args={'connect_timeout': 5, 'keepalives': 1, 'keepalives_idle': 30,
-                  'keepalives_interval': 10, 'keepalives_count': 5})
+    connect_args={'connect_timeout': 5, 'keepalives': 1, 'keepalives_idle': 30, 'keepalives_interval': 10, 'keepalives_count': 5})
 
 dash.register_page(__name__, icon="fa-solid fa-plane", name="Lufthansa Flight ML", order=5)
 
@@ -347,26 +346,13 @@ def _build_pred_table(pred_df: pd.DataFrame) -> html.Table:
         return {"color": "#f87171"}
 
     header = html.Tr([
-        html.Th(c, style={"color": "#94a3b8", "fontWeight": "500",
-                           "borderBottom": "1px solid rgba(255,255,255,0.08)",
-                           "padding": "3px 8px", "whiteSpace": "nowrap"})
+        html.Th(c, style={"color": "#94a3b8", "fontWeight": "500", "borderBottom": "1px solid rgba(255,255,255,0.08)", "padding": "3px 8px", "whiteSpace": "nowrap"})
         for c in tbl_df.columns
     ])
 
     rows = []
     for _, row in tbl_df.iterrows():
-        cells = [
-            html.Td(
-                "—" if pd.isna(val) else str(val),
-                style={"padding": "3px 8px", "color": "#e2e8f0",
-                       **_cell_color(col_name, val)}
-            )
-            for col_name, val in row.items()
-        ]
-        rows.append(html.Tr(cells,
-                            style={"borderBottom": "1px solid rgba(255,255,255,0.04)"}))
+        cells = [html.Td("—" if pd.isna(val) else str(val), style={"padding": "3px 8px", "color": "#e2e8f0", **_cell_color(col_name, val)}) for col_name, val in row.items()]
+        rows.append(html.Tr(cells, style={"borderBottom": "1px solid rgba(255,255,255,0.04)"}))
 
-    return html.Table(
-        [html.Thead(header), html.Tbody(rows)],
-        style={"width": "100%", "borderCollapse": "collapse"}
-    )
+    return html.Table([html.Thead(header), html.Tbody(rows)], style={"width": "100%", "borderCollapse": "collapse"})
