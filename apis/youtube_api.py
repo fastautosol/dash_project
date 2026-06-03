@@ -126,20 +126,13 @@ async def fetch_single_channel(session: aiohttp.ClientSession, semaphore: asynci
         playlist_id = ch_item["contentDetails"]["relatedPlaylists"]["uploads"]
 
         # 2. Get latest video IDs from uploads playlist
-        pl_data = await yt_get(session, semaphore, "playlistItems", {
-            "part": "contentDetails",
-            "playlistId": playlist_id,
-            "maxResults": maxVideos,
-        })
+        pl_data = await yt_get(session, semaphore, "playlistItems", {"part": "contentDetails", "playlistId": playlist_id, "maxResults": maxVideos})
         video_ids = [item["contentDetails"]["videoId"] for item in pl_data.get("items", [])]
         if not video_ids:
             return []
 
         # 3. Fetch video details in one batch call
-        vids_data = await yt_get(session, semaphore, "videos", {
-            "part": "snippet,contentDetails,statistics",
-            "id": ",".join(video_ids),
-        })
+        vids_data = await yt_get(session, semaphore, "videos", {"part": "snippet,contentDetails,statistics", "id": ",".join(video_ids) })
 
         results = []
         for video in vids_data.get("items", []):
@@ -156,40 +149,23 @@ async def fetch_single_channel(session: aiohttp.ClientSession, semaphore: asynci
             comments = []
             if maxComments > 0 and int(stats.get("commentCount", 0)) > 0:
                 try:
-                    c_data = await yt_get(session, semaphore, "commentThreads", {
-                        "part": "snippet",
-                        "videoId": video_id,
-                        "maxResults": maxComments,   # max 100 per page; no pagination
-                        "textFormat": "plainText",
-                        "order": "relevance",        # "relevance" | "time"
-                    })
+                    c_data = await yt_get(session, semaphore, "commentThreads", 
+                            {"part": "snippet", "videoId": video_id, "maxResults": maxComments,  "textFormat": "plainText","order": "relevance"})
                     for c_item in c_data.get("items", []):
                         c_id = c_item["snippet"]["topLevelComment"]["id"]
                         c    = c_item["snippet"]["topLevelComment"]["snippet"]
-                        comments.append({
-                            "c_id":         c_id,
-                            "c_author":     c["authorDisplayName"],
-                            "c_published":  c["publishedAt"],
-                            "c_text":       c["textDisplay"][:150],
-                            "c_like_count": c["likeCount"],
-                        })
+                        comments.append({"c_id":c_id, "c_author":c["authorDisplayName"], "c_published":c["publishedAt"], "c_text":c["textDisplay"][:150],"c_like_count":c["likeCount"]})
                 except Exception as e:
                     logger.warning("Comment fetch failed for %s: %s", video_id, e)
-                    comments.append({
-                        "c_id":         None,
-                        "c_author":     None,
-                        "c_published":  None,
-                        "c_text":       f"[error: {str(e)[:100]}]",
-                        "c_like_count": 0,
-                    })
+                    comments.append({"c_id": None, "c_author": None, "c_published": None, "c_text": f"[error: {str(e)[:100]}]", "c_like_count": 0})
 
             results.append({
                 "error":               None,
                 "channel":             ch_item["snippet"]["title"],
                 "video_id":            video_id,
-                "title":               snippet["title"][:100],          # FIX: 75 → 100 (YT max)
+                "title":               snippet["title"][:100],       
                 "description_snippet": description[:200],
-                "has_store_link":      any(kw in link.lower() for link in links for kw in STORE_KEYWORDS),  # FIX: expanded keywords
+                "has_store_link":      any(kw in link.lower() for link in links for kw in STORE_KEYWORDS),  
                 "duration_sec":        duration_sec,
                 "upload_date":         snippet["publishedAt"],
                 "view_count":          int(stats.get("viewCount", 0)),
