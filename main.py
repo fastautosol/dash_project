@@ -1,4 +1,4 @@
-# 2026.05.21  18.00
+# 2026.6.03  10.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -75,9 +75,6 @@ sidebar = html.Div([
     ], className="mb-4"),
 
     html.Hr(style={"color": "rgba(255,255,255,0.3)"}),
-
-    html.Img(src="/assets/fastautosol_logo.jpg", style={"width": "100%"}),
-    #html.Img(src=app.get_asset_url("fastautosol_header.jpg"), style={"width": "100%"}),
 
     dbc.Nav([
         dbc.NavLink([
