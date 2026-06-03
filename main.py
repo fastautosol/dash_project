@@ -7,7 +7,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 
 import apis.crm_shopify_api as crm_shopify_api
-import apis.kraken_api as kraken
 import apis.lufthansa_api as lufthansa_api
 import apis.serper_places_api as serper_places
 import apis.serper_places_api_email as serper_places_email
@@ -20,21 +19,16 @@ app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True, #as
     external_scripts=["https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"])
 
 # ----- 2. NOW IMPORT YOUR PAGES -----
-#from pages import home, bybit_ccharts, bybit_lcharts, crm_serper, crm_shopify, lufthansa_charts, meta_charts, mexc_charts, youtube_charts, vps_sysinfo
+#from pages import home,  bybit_lwcharts, crm_serper, crm_shopify, databricks, lufthansa_charts, lufthansa_charts_ml, mexc_charts, youtube_charts, vps_sysinfo
 
 # ----- 3. FASTAPI WRAPPER -----
 server = FastAPI(title="Dash Main App")
 
 # ----- 4. API ROUTERS -----
 server.include_router(crm_shopify_api.router, prefix="/api/crm_shopify",   tags=["CRM Shopify"])
-server.include_router(bybit.router,         prefix="/api/bybit",         tags=["Bybit"])
-server.include_router(cryptonews_api.router,         prefix="/api/cryptonews",         tags=["Crypto News"])
-server.include_router(meta_api.router,         prefix="/api/meta",         tags=["Facebook Insta Leads"])
-server.include_router(kraken.router,        prefix="/api/kraken",        tags=["Kraken"])
 server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tags=["Lufthansa"])
 server.include_router(serper_places.router, prefix="/api/serper",        tags=["Serper Places"])
 server.include_router(serper_places_email.router, prefix="/api/serper_email",        tags=["Serper Places Email"])
-server.include_router(movies_api.router,    prefix="/api/movies",    tags=["OMDB Movies"])
 server.include_router(youtube_api.router,       prefix="/api/youtube",       tags=["Youtube Single/Multi Channel"])
 
 # ----- 5. HEALTH ENDPOINT -----
