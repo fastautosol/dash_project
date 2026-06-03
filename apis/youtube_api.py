@@ -1,4 +1,4 @@
-# 2026.06.03  (updated)
+# 2026.06.03  14.00 (updated)
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, field_validator
 from typing import List
@@ -19,18 +19,9 @@ YOUTUBE_KEY = os.getenv("YOUTUBE_API_KEY")
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 router = APIRouter()
 
-DB_CONFIG = {
-    "host": "postgresql",
-    "port": 5432,
-    "database": "n8n",
-    "username": "sql_admin",
-    "password": "sql_pass",
-    "connect_timeout": 15,
-}
+DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15,}
 
-# Store links: extend this list as needed
 STORE_KEYWORDS = ("shopify", "store", "gumroad", "etsy", "tiktokshop", "merch", "shop")
-
 
 # --- PYDANTIC MODEL ---
 class YouTubeRequest(BaseModel):
@@ -75,8 +66,6 @@ def youtube_resource(rows: list[dict]):
 @router.post("/")
 async def get_youtube_metrics_api(req: YouTubeRequest):
     raw = await fetch_youtube_multich(req.channels, req.maxVideos, req.maxComments)
-
-    # FIX: separate valid rows from error rows before loading
     errors = [r for r in raw if not r.get("video_id") or r.get("video_id") == "ERROR"]
     data   = [r for r in raw if r.get("video_id") and r.get("video_id") != "ERROR"]
 
@@ -93,26 +82,17 @@ async def get_youtube_metrics_api(req: YouTubeRequest):
     pipeline = dlt.pipeline(
         pipeline_name="youtube_ingest",
         destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-        dataset_name="bronze",
-    )
+        dataset_name="bronze")
 
     try:
-        load_info = pipeline.run(
-            youtube_resource(data),
-            write_disposition="merge",
-            primary_key="video_id",
-        )
+        load_info = pipeline.run(youtube_resource(data), write_disposition="merge", primary_key="video_id")
 
     except PipelineStepFailed as e:
         # FIX: keep merge semantics in the fallback — append would create duplicates
         if e.step in ("load", "normalize") or "does not exist" in str(e).lower():
             logger.warning("PipelineStepFailed (%s) — retrying with merge after drop: %s", e.step, e)
             pipeline.drop_pending_packages()
-            load_info = pipeline.run(
-                youtube_resource(data),
-                write_disposition="merge",
-                primary_key="video_id",
-            )
+            load_info = pipeline.run(youtube_resource(data), write_disposition="merge", primary_key="video_id")
         else:
             raise
 
@@ -120,20 +100,12 @@ async def get_youtube_metrics_api(req: YouTubeRequest):
         logger.exception("Unexpected pipeline error: %s", e)
         raise
 
-    return {
-        "rows_loaded": len(data),
-        "rows_skipped_errors": len(errors),
-        "status": "loaded",
-        "load_info": str(load_info),
-        "sample": data[:5],
-        "errors": errors,
-    }
+    return {"rows_loaded": len(data), "rows_skipped_errors": len(errors), "status": "loaded", "load_info": str(load_info), "sample": data[:5], "errors": errors}
 
 
 # --- MULTI-CHANNEL FETCH ---
 async def fetch_youtube_multich(channels: list[str], maxVideos: int, maxComments: int) -> list[dict]:
-    # FIX: semaphore is now local — avoids shared state across concurrent API requests
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(3)
     timeout = aiohttp.ClientTimeout(total=60)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         tasks = [fetch_single_channel(session, semaphore, ch, maxVideos, maxComments) for ch in channels]
@@ -142,19 +114,10 @@ async def fetch_youtube_multich(channels: list[str], maxVideos: int, maxComments
 
 
 # --- SINGLE CHANNEL FETCH ---
-async def fetch_single_channel(
-    session: aiohttp.ClientSession,
-    semaphore: asyncio.Semaphore,
-    channel: str,
-    maxVideos: int,
-    maxComments: int,
-) -> list[dict]:
+async def fetch_single_channel(session: aiohttp.ClientSession, semaphore: asyncio.Semaphore, channel: str,maxVideos: int, maxComments: int) -> list[dict]:
     try:
         # 1. Resolve channel → uploads playlist
-        ch_data = await yt_get(session, semaphore, "channels", {
-            "part": "id,snippet,statistics,contentDetails",
-            "forHandle": channel,
-        })
+        ch_data = await yt_get(session, semaphore, "channels", {"part": "id,snippet,statistics,contentDetails","forHandle": channel})
         if not ch_data.get("items"):
             logger.warning("Channel not found: %s", channel)
             return [{"channel": channel, "video_id": None, "error": "Channel not found"}]
