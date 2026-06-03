@@ -19,7 +19,6 @@ dlt
 dlt[postgres]
 pydantic
 requests
-beautifulsoup4
 scikit-learn
 databricks-sdk
 databricks-sql-connector
