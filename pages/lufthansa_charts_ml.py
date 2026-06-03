@@ -1,4 +1,4 @@
-# 2026.05.26  (ML section: lazy evaluation – only trains on button press)
+# 2026.06.03  (ML section: lazy evaluation – only trains on button press)
 import dash
 import pandas as pd
 from dash import html, dcc, Input, Output, State, callback, no_update
@@ -37,75 +37,36 @@ ML_ACT_COLOR  = "#34d399"   # emerald  – actual bars
 # -------------------
 layout = dbc.Container([
 
-    html.Div([
-        html.H2("Lufthansa Dashboard", className="text-light fw-bold mb-0"),
-        html.P(id='lh-metrics-update', className="text-muted small"),
-    ], className="mb-3"),
-
+    html.Div([html.H2("Lufthansa Dashboard", className="text-light fw-bold mb-0"), html.P(id='lh-metrics-update', className="text-muted small")], className="mb-3"),
     dcc.Interval(id='refresh', interval=60000),
-
-    # raw flight records (needed by ML callback)
     dcc.Store(id="lh-df-store"),
-    # prediction results – populated only after button press
     dcc.Store(id="lh-pred-store", data=None),
 
     # ---- 6 MINI CHART GRID ----
     dbc.Row(id="lh-mini-charts", className="g-3 mb-3"),
 
-    # ================================================================
-    # ML SECTION  –  50 / 50 : chart left, table right
-    # ================================================================
+    # ML SECTION  –  50 / 50
     dbc.Row([
         # ---- Left: chart ----
         dbc.Col([
             html.Div([
                 html.Div([
-                    html.H5("Arrival Delay  ·  HistGBR Prediction",
-                            className="mb-0",
-                            style={"color": ML_ACCENT, "fontWeight": "500",
-                                   "fontSize": "13px", "letterSpacing": "0.03em"}),
-                    dbc.Button(
-                        "Run ML Prediction",
-                        id="lh-delay-toggle",
-                        size="sm",
-                        color="warning",
-                        outline=True,
-                        className="ms-auto",
-                        style={"fontSize": "11px", "padding": "2px 12px",
-                               "borderRadius": "20px", "fontWeight": "600"}
-                    ),
+                    html.H5("Arrival Delay - HistGBR Prediction",className="mb-0", style={"color": ML_ACCENT, "fontWeight": "500", "fontSize": "13px"}),
+                    dbc.Button("Run ML Prediction", id="lh-delay-toggle", size="sm", color="warning", outline=True, className="ms-auto",
+                        style={"fontSize": "11px", "padding": "2px 12px", "borderRadius": "20px", "fontWeight": "600"}),
                 ], className="d-flex align-items-center mb-2"),
-
-                dcc.Graph(
-                    id="lh-delay-chart",
-                    config={"displayModeBar": False},
-                    style={"height": "260px"}
-                ),
-
-                # model metric badges – empty until ML runs
-                html.Div(id="lh-model-metrics", className="mt-1",
-                         style={"fontSize": "11px", "color": "#94a3b8",
-                                "display": "flex", "gap": "14px", "flexWrap": "wrap"}),
+                dcc.Graph(id="lh-delay-chart", config={"displayModeBar": False}, style={"height": "260px"}),
+                html.Div(id="lh-model-metrics", className="mt-1", style={"fontSize": "11px", "color": "#94a3b8", "display": "flex", "gap": "14px", "flexWrap": "wrap"}),
             ], style=CARD_STYLE),
         ], md=6),
 
         # ---- Right: table ----
         dbc.Col([
             html.Div([
-                html.H5("ML Prediction  ·  Latest Flights",
-                        className="mb-2",
-                        style={"color": ML_ACCENT, "fontWeight": "500",
-                               "fontSize": "13px", "letterSpacing": "0.03em"}),
-                html.Div(
-                    id="lh-pred-table",
-                    # placeholder layout container (overwritten by page load callback)
-                    children=html.P(
-                        "Loading flight records...",
-                        className="text-muted small mt-3",
-                        style={"paddingLeft": "4px"}
-                    ),
-                    style={"height": "280px", "overflowY": "auto", "fontSize": "11px"}
-                ),
+                html.H5("ML Prediction - Latest Flights", className="mb-2", style={"color": ML_ACCENT, "fontWeight": "500",  "fontSize": "13px"}),
+                html.Div(id="lh-pred-table",
+                    children=html.P("Loading flight records...", className="text-muted small mt-3", style={"paddingLeft": "4px"}),
+                    style={"height": "280px", "overflowY": "auto", "fontSize": "11px"}),
             ], style=CARD_STYLE),
         ], md=6),
 
