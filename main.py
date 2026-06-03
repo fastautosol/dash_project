@@ -9,12 +9,10 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 import apis.crm_shopify_api as crm_shopify_api
 import apis.bybit_api as bybit
 import apis.cryptonews_api as cryptonews_api
-import apis.meta_api as meta_api
 import apis.kraken_api as kraken
 import apis.lufthansa_api as lufthansa_api
 import apis.serper_places_api as serper_places
 import apis.serper_places_api_email as serper_places_email
-import apis.movies_api as movies_api
 import apis.youtube_api as youtube_api
 
 # ----- 1. Initalize Dash -----
