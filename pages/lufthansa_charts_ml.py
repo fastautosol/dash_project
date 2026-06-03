@@ -314,47 +314,22 @@ def _style_delay_fig(fig, title_text):
 
 
 def _build_delay_fig(pred_df: pd.DataFrame, show_combined: bool) -> go.Figure:
-    """
-    show_combined=True  → two bar groups: Actual (emerald) + Predicted (sky-blue)
-    show_combined=False → Actual bars only
-    """
+
     x = pred_df.get("dep_sched", pred_df.index)
     fig = go.Figure()
-
-    fig.add_trace(go.Bar(
-        x=x,
-        y=pred_df.get("arr_delay", []),
-        name="Actual",
-        marker_color=ML_ACT_COLOR,
-        opacity=0.85,
-    ))
+    fig.add_trace(go.Bar( x=x, y=pred_df.get("arr_delay", []), name="Actual", marker_color=ML_ACT_COLOR, opacity=0.85))
 
     if show_combined:
-        fig.add_trace(go.Bar(
-            x=x,
-            y=pred_df["pred_arr_delay"],
-            name="Predicted",
-            marker_color=ML_PRED_COLOR,
-            opacity=0.85,
-        ))
+        fig.add_trace(go.Bar(x=x, y=pred_df["pred_arr_delay"], name="Predicted", marker_color=ML_PRED_COLOR, opacity=0.85))
 
     fig.add_hline(y=0, line_color="rgba(255,255,255,0.15)", line_width=1)
-
-    title = ("Actual vs Predicted Arrival Delay (min)"
-             if show_combined else "Actual Arrival Delay (min)")
+    title = ("Actual vs Predicted Arrival Delay (min)" if show_combined else "Actual Arrival Delay (min)")
     _style_delay_fig(fig, title)
     return fig
 
 
 def _build_pred_table(pred_df: pd.DataFrame) -> html.Table:
-    display_cols = {
-        "route_key":      "Route",
-        "dep_sched":      "Dep. Sched.",
-        "dep_delay":      "Dep Δ (m)",
-        "arr_delay":      "Act Arr Δ (m)",
-        "pred_arr_delay": "Pred Arr Δ (m)",
-        "error_min":      "Error (m)",
-    }
+    display_cols = { "route_key":"Route", "dep_sched":"Dep. Sched.", "dep_delay":"Dep Δ (m)", "arr_delay":"Act Arr Δ (m)", "pred_arr_delay":"Pred Arr Δ (m)", "error_min":"Error (m)"}
     tbl_df = pred_df[[c for c in display_cols if c in pred_df.columns]].rename(
         columns=display_cols)
 
