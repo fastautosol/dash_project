@@ -154,11 +154,7 @@ async def supervised(coro_fn, *args) -> None:
 # =========================
 # REST — TICKER REFRESH
 # =========================
-async def ticker_refresh_loop(
-    ex_linear: ccxtpro.bybit,
-    ex_spot:   ccxtpro.bybit,
-    state: MarketState,
-) -> None:
+async def ticker_refresh_loop(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit, state: MarketState) -> None:
     """
     Refreshes funding rate, open interest, vwap, and 24h stats every 5min.
     Two batch calls (one per market type) replace N individual REST calls.
@@ -166,10 +162,7 @@ async def ticker_refresh_loop(
     """
     while True:
         await asyncio.sleep(TICKER_INTERVAL)
-        for exchange, symbols in [
-            (ex_linear, CRYPTO_SYMBOLS),
-            (ex_spot,   XSTOCK_SYMBOLS),
-        ]:
+        for exchange, symbols in [(ex_linear, CRYPTO_SYMBOLS), (ex_spot,   XSTOCK_SYMBOLS)]:
             if not symbols:
                 continue
             try:
@@ -215,12 +208,7 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
 
             if to_insert:
                 try:
-                    await asyncio.to_thread(
-                        pipeline.run,
-                        to_insert,
-                        table_name="bybit_candles_history",
-                        write_disposition="append",
-                    )
+                    await asyncio.to_thread(pipeline.run, to_insert, table_name="bybit_candles_history", write_disposition="append")
                     log.info(f"[INSERT] {len(to_insert)} completed candles → history")
                 except Exception as e:
                     log.error(f"[INSERT] Failed: {e}")
@@ -235,9 +223,7 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
                 threshold = datetime.now(UTC) - timedelta(hours=CLEANUP_HOURS)
                 with pipeline.sql_client() as client:
                     tname = client.make_qualified_table_name("bybit_candles")
-                    client.execute_sql(
-                        f"DELETE FROM {tname} WHERE timestamp < %s", threshold
-                    )
+                    client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", threshold)
                 log.info(f"[CLEANUP] Removed forming candles older than {CLEANUP_HOURS}h")
             except Exception as e:
                 log.error(f"[CLEANUP] Failed: {e}")
@@ -259,11 +245,7 @@ async def main() -> None:
     ex_spot   = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "spot"}})
 
     # ── dlt pipeline ──────────────────────────────────────────────────────────
-    pipeline = dlt.pipeline(
-        pipeline_name="crypto_strategy",
-        destination=dlt.destinations.postgres(credentials=DB_URL),
-        dataset_name="bybit_data",
-    )
+    pipeline = dlt.pipeline(pipeline_name="crypto_strategy", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bybit_data")
 
     # ── Build task list ───────────────────────────────────────────────────────
     tasks: list[asyncio.Task] = []
@@ -272,15 +254,9 @@ async def main() -> None:
     # ccxt.pro shares the underlying WS connection across all coroutines
     # on the same exchange instance — no per-symbol connection overhead.
     for sym in CRYPTO_SYMBOLS:
-        tasks.append(asyncio.create_task(
-            supervised(watch_ohlcv_symbol, ex_linear, sym, state),
-            name=f"ws-{sym}",
-        ))
+        tasks.append(asyncio.create_task(supervised(watch_ohlcv_symbol, ex_linear, sym, state), name=f"ws-{sym}"))
     for sym in XSTOCK_SYMBOLS:
-        tasks.append(asyncio.create_task(
-            supervised(watch_ohlcv_symbol, ex_spot, sym, state),
-            name=f"ws-{sym}",
-        ))
+        tasks.append(asyncio.create_task(supervised(watch_ohlcv_symbol, ex_spot, sym, state), name=f"ws-{sym}"))
 
     # REST ticker refresh (shared instances handle both WS + REST)
     tasks.append(asyncio.create_task(supervised(ticker_refresh_loop, ex_linear, ex_spot, state), name="ticker-refresh"))
