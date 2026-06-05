@@ -293,22 +293,12 @@ async def main() -> None:
         ))
 
     # REST ticker refresh (shared instances handle both WS + REST)
-    tasks.append(asyncio.create_task(
-        supervised(ticker_refresh_loop, ex_linear, ex_spot, state),
-        name="ticker-refresh",
-    ))
+    tasks.append(asyncio.create_task(supervised(ticker_refresh_loop, ex_linear, ex_spot, state), name="ticker-refresh"))
 
     # DB writer
-    tasks.append(asyncio.create_task(
-        supervised(db_writer_loop, pipeline, state),
-        name="db-writer",
-    ))
+    tasks.append(asyncio.create_task(supervised(db_writer_loop, pipeline, state), name="db-writer"))
 
-    log.info(
-        f"Bot started — {len(CRYPTO_SYMBOLS)} crypto (linear) "
-        f"+ {len(XSTOCK_SYMBOLS)} xstocks (spot) | "
-        f"UPSERT {UPSERT_INTERVAL}s | INSERT {INSERT_INTERVAL}s"
-    )
+    log.info(f"Bot started — {len(CRYPTO_SYMBOLS)} crypto (linear) " f"+ {len(XSTOCK_SYMBOLS)} xstocks (spot) | " f"UPSERT {UPSERT_INTERVAL}s | INSERT {INSERT_INTERVAL}s")
 
     try:
         await asyncio.gather(*tasks)
