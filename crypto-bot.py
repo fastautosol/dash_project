@@ -1,4 +1,3 @@
-# 2026.06.05  19.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -26,7 +25,7 @@ UPSERT_INTERVAL  = 75     # seconds
 INSERT_INTERVAL  = 300    # seconds
 TICKER_INTERVAL  = 300    # seconds
 CLEANUP_INTERVAL = 3600   # seconds
-CLEANUP_HOURS    = 72     # hours
+CLEANUP_HOURS    = 60     # hours
 
 # =========================
 # SHARED STATE
@@ -50,15 +49,19 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, state: Market
     while True:
         try:
             ohlcv = await exchange.watch_ohlcv(symbol, "5m", limit=2)
-            if not ohlcv or len(ohlcv) < 2:
+            if not ohlcv:
                 continue
 
             latest = ohlcv[-1]
             ts = int(latest[0])
             prev = state.prev_ts.get(symbol)
 
-            # Detect candle close
-            if prev is not None and ts != prev:
+            # Always update state — even on first message with only 1 candle
+            state.prev_ts[symbol] = ts
+            state.ohlcv[symbol] = latest
+
+            # Detect candle close — needs a previous ts reference AND 2 bars in the response
+            if prev is not None and ts != prev and len(ohlcv) >= 2:
                 closed = ohlcv[-2]
                 rec = {
                     "symbol":    symbol,
@@ -73,9 +76,6 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, state: Market
                 async with state.completed_lock:
                     state.completed_buffer.append(rec)
                 log.debug(f"[CLOSE] {symbol} @ {rec['timestamp'].isoformat()}")
-
-            state.prev_ts[symbol] = ts
-            state.ohlcv[symbol] = latest
 
         except Exception as e:
             log.warning(f"[WS] {symbol} error: {e} — retrying in 5s")
