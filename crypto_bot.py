@@ -9,11 +9,7 @@ from datetime import datetime, UTC, timedelta
 import time
 import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S",
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 log = logging.getLogger(__name__)
 
 # =========================
@@ -23,12 +19,8 @@ DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 # Linear futures (perpetuals)
 CRYPTO_SYMBOLS: list[str] = [
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT",
-    "SUI/USDT", "HYPE/USDT", "LTC/USDT", "ETC/USDT", "COMP/USDT",
-    "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT",
-    "ZEN/USDT",
-    # add more up to 30 …
-]
+    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "LTC/USDT", "ETC/USDT", "COMP/USDT",
+    "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT"]
 
 # Tokenized stocks — traded on Bybit spot market
 # ⚠ Verify exact symbol names: exchange.load_markets() and filter for xstock category
