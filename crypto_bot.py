@@ -198,20 +198,10 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
 
         # ── 75s UPSERT: forming candles ──────────────────────────────────────
         if now - state.last_upsert >= UPSERT_INTERVAL:
-            records = [
-                _build_record(sym, bar, state.ticker.get(sym, {}), complete=False)
-                for sym in all_symbols
-                if (bar := state.ohlcv.get(sym)) is not None
-            ]
+            records = [_build_record(sym, bar, state.ticker.get(sym, {}), complete=False) for sym in all_symbols if (bar := state.ohlcv.get(sym)) is not None]
             if records:
                 try:
-                    await asyncio.to_thread(
-                        pipeline.run,
-                        records,
-                        table_name="bybit_candles",
-                        write_disposition="merge",
-                        primary_key=["symbol", "timestamp"],
-                    )
+                    await asyncio.to_thread(pipeline.run, records, table_name="bybit_candles", write_disposition="merge", primary_key=["symbol", "timestamp"])
                     log.info(f"[UPSERT] {len(records)} forming candles")
                 except Exception as e:
                     log.error(f"[UPSERT] Failed: {e}")
