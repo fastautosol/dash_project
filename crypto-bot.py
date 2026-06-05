@@ -26,7 +26,7 @@ UPSERT_INTERVAL  = 75     # seconds
 INSERT_INTERVAL  = 300    # seconds
 TICKER_INTERVAL  = 300    # seconds
 CLEANUP_INTERVAL = 3600   # seconds
-CLEANUP_HOURS    = 60     # hours
+CLEANUP_HOURS    = 72     # hours
 
 # =========================
 # SHARED STATE
@@ -123,10 +123,9 @@ async def ticker_refresh_loop(
                 await asyncio.to_thread(
                     pipeline.run, ticker_records,
                     table_name="bybit_tickers",
-                    write_disposition="merge",
-                    primary_key=["symbol"],     # one live row per symbol
+                    write_disposition="replace",    # current-state snapshot; replace on every refresh
                 )
-                log.info(f"[TICKER] Upserted {len(ticker_records)} ticker snapshots → bybit_tickers")
+                log.info(f"[TICKER] Replaced {len(ticker_records)} ticker snapshots → bybit_tickers")
             except Exception as e:
                 log.error(f"[TICKER] DB write failed: {e}")
 
@@ -160,7 +159,7 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
                 try:
                     await asyncio.to_thread(
                         pipeline.run, records, table_name="bybit_candles",
-                        write_disposition="merge", primary_key=["symbol", "timestamp"]
+                        write_disposition="replace",    # current-state only; full replace every 75s
                     )
                     log.info(f"[UPSERT] {len(records)} forming candles")
                 except Exception as e:
