@@ -25,7 +25,7 @@ UPSERT_INTERVAL  = 75     # seconds
 INSERT_INTERVAL  = 300    # seconds
 TICKER_INTERVAL  = 300    # seconds
 CLEANUP_INTERVAL = 3600   # seconds
-CLEANUP_HOURS    = 60     # hours
+CLEANUP_HOURS    = 72     # hours
 
 # =========================
 # SHARED STATE
