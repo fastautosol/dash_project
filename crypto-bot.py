@@ -163,7 +163,7 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
             try:
                 threshold = datetime.now(UTC) - timedelta(hours=CLEANUP_HOURS)
                 with pipeline.sql_client() as client:
-                    tname = client.make_qualified_table_name("bybit_candles_final")
+                    tname = client.make_qualified_table_name("bybit_candles")
                     client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", threshold)
                 log.info(f"[CLEANUP] Removed forming candles older than {CLEANUP_HOURS}h")
             except Exception as e:
