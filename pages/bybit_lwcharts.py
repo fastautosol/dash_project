@@ -60,7 +60,7 @@ def fetch_candles(symbol):
     candles = df_clean[ ["time", "open", "high", "low", "close"]].to_dict("records")
     
     # ── INDICATORS: keep all rows, convert NaN → None (→ null in JSON) ───────
-    ind_cols = ["time", "sma100", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap"]
+    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap"]
     ind_df = df[ind_cols].where(df[ind_cols].notna(), other=None)
     indicators = ind_df.to_dict("records")
     return {"candles": candles, "indicators": indicators}
