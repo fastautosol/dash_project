@@ -1,4 +1,4 @@
-# 2026.06.06  10.00
+# 2026.06.06  11.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -20,13 +20,16 @@ CRYPTO_SYMBOLS = [
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT"
 ]
 
-XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "METAX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
+XSTOCK_SYMBOLS = [
+    "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", 
+    "COINX/USDT", "CRCLX/USDT", "METAX/USDT", "HOODX/USDT", "GOOGLX/USDT"
+]
 
-UPSERT_INTERVAL  = 75     # seconds
-INSERT_INTERVAL  = 300    # seconds
-TICKER_INTERVAL  = 300    # seconds
-CLEANUP_INTERVAL = 3600   # seconds
-CLEANUP_HOURS    = 72     # hours
+ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
+
+POLL_INTERVAL = 60       # Seconds between DB upserts (fast, no artificial delay)
+TICKER_INTERVAL = 300    # Seconds between ticker refreshes (5 mins)
+CLEANUP_HOURS = 72       # Hours of data to retain
 
 # =========================
 # SHARED STATE
@@ -34,72 +37,34 @@ CLEANUP_HOURS    = 72     # hours
 class MarketState:
     def __init__(self) -> None:
         self.ohlcv: dict[str, list] = {}
-        self.ticker: dict[str, dict] = {}
-        self.prev_ts: dict[str, int] = {}
-        self.completed_buffer: list[dict] = []
-        self.completed_lock = asyncio.Lock()
-
-        self.last_upsert: float = 0.0
-        self.last_insert: float = 0.0
         self.last_cleanup: float = 0.0
+        self.pipeline_lock = asyncio.Lock()  # Serialize dlt pipeline calls
 
-        self.pipeline_lock = asyncio.Lock()  # serialise all pipeline.run() calls
+state = MarketState()
 
 # =========================
 # WEBSOCKET — OHLCV WATCHER
 # =========================
-async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, state: MarketState) -> None:
+async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
+    """Continuously watch 5m candles and update shared state in real-time."""
     while True:
         try:
-            ohlcv = await exchange.watch_ohlcv(symbol, "5m", limit=2)
-            if not ohlcv:
-                continue
-
-            latest = ohlcv[-1]
-            ts = int(latest[0])
-            prev = state.prev_ts.get(symbol)
-
-            # Detect candle close BEFORE updating state.
-            # state.ohlcv[symbol] still holds the final bar of the previous candle,
-            # so no reliance on ohlcv[-2] or len >= 2 (breaks when Bybit sends
-            # only the new candle in the boundary message).
-            if prev is not None and ts != prev:
-                closed_bar = state.ohlcv.get(symbol)
-                if closed_bar:
-                    rec = {
-                        "symbol":    symbol,
-                        "timestamp": datetime.fromtimestamp(closed_bar[0] / 1000, tz=UTC),
-                        "open":      float(closed_bar[1] or 0),
-                        "high":      float(closed_bar[2] or 0),
-                        "low":       float(closed_bar[3] or 0),
-                        "close":     float(closed_bar[4] or 0),
-                        "volume":    float(closed_bar[5] or 0),
-                        "complete":  True
-                    }
-                    async with state.completed_lock:
-                        state.completed_buffer.append(rec)
-                    log.debug(f"[CLOSE] {symbol} @ {rec['timestamp'].isoformat()}")
-
-            # Update state AFTER close detection
-            state.prev_ts[symbol] = ts
-            state.ohlcv[symbol] = latest
-
+            # watch_ohlcv returns a list of candles. We only care about the latest (forming) one.
+            ohlcv = await exchange.watch_ohlcv(symbol, timeframe="5m", limit=1)
+            if ohlcv:
+                state.ohlcv[symbol] = ohlcv[-1]
         except Exception as e:
-            log.warning(f"[WS] {symbol} error: {e} — retrying in 5s")
-            await asyncio.sleep(5)
+            log.warning(f"[WS] {symbol} error: {e} — reconnecting in 3s")
+            await asyncio.sleep(3)
 
 # =========================
-# REST — TICKER REFRESH
+# REST — TICKER REFRESH (Optional but recommended)
 # =========================
-async def ticker_refresh_loop(
-    ex_linear: ccxtpro.bybit,
-    ex_spot: ccxtpro.bybit,
-    state: MarketState,
-    pipeline,
-) -> None:
+async def ticker_refresh_loop(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit, pipeline) -> None:
+    """Fetches 24h stats every 5 minutes for both markets."""
     while True:
         await asyncio.sleep(TICKER_INTERVAL)
-        ticker_records: list[dict] = []
+        records = []
         now_utc = datetime.now(UTC)
 
         for exchange, symbols in [(ex_linear, CRYPTO_SYMBOLS), (ex_spot, XSTOCK_SYMBOLS)]:
@@ -107,110 +72,90 @@ async def ticker_refresh_loop(
                 continue
             try:
                 tickers = await exchange.fetch_tickers(symbols=symbols)
-                state.ticker.update(tickers)
-
                 for sym, t in tickers.items():
                     info = t.get("info", {})
-                    ticker_records.append({
+                    records.append({
                         "symbol":        sym,
                         "timestamp":     now_utc,
-                        # vwap24h is the Bybit-specific key; fall back to ccxt unified field
-                        "vwap":          float(info.get("vwap24h")      or t.get("vwap")        or 0),
-                        # turnover24h is quote-currency volume; quoteVolume is the ccxt fallback
-                        "turnover_24h":  float(info.get("turnover24h")  or t.get("quoteVolume") or 0),
-                        # price24hPcnt arrives as a decimal fraction from Bybit (0.032 = 3.2 %)
-                        "price_24h_pct": float(info.get("price24hPcnt") or t.get("percentage")  or 0),
+                        "vwap":          float(info.get("vwap24h") or t.get("vwap") or 0),
+                        "turnover_24h":  float(info.get("turnover24h") or t.get("quoteVolume") or 0),
+                        "price_24h_pct": float(info.get("price24hPcnt") or t.get("percentage") or 0),
                     })
-                log.info(f"[TICKER] Refreshed {len(tickers)} symbols")
+                log.info(f"[TICKER] Refreshed {len(tickers)} {exchange.options['defaultType']} symbols")
             except Exception as e:
-                log.error(f"[TICKER] Refresh error: {e}")
+                log.error(f"[TICKER] {exchange.options['defaultType']} refresh error: {e}")
 
-        if ticker_records:
+        if records:
             try:
                 async with state.pipeline_lock:
                     await asyncio.to_thread(
-                        pipeline.run, ticker_records,
+                        pipeline.run,
+                        records,
                         table_name="bybit_tickers",
-                        write_disposition="replace",
+                        write_disposition="merge",
+                        primary_key=["symbol", "timestamp"]
                     )
-                log.info(f"[TICKER] Replaced {len(ticker_records)} ticker snapshots → bybit_tickers")
             except Exception as e:
                 log.error(f"[TICKER] DB write failed: {e}")
 
 # =========================
-# DB WRITER
+# DB WRITER & CLEANUP LOOP
 # =========================
-async def db_writer_loop(pipeline, state: MarketState) -> None:
-    all_symbols = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
+async def db_writer_loop(pipeline) -> None:
+    """Upserts the latest state to DB every POLL_INTERVAL seconds."""
     while True:
-        await asyncio.sleep(1)
+        await asyncio.sleep(POLL_INTERVAL)
         now = time.time()
+        now_utc = datetime.now(UTC)
+        records = []
 
-        # ── 75s UPSERT: forming candles ──────────────────────────────────────
-        if now - state.last_upsert >= UPSERT_INTERVAL:
-            records = []
-            for sym in all_symbols:
-                bar = state.ohlcv.get(sym)
-                if bar:
-                    records.append({
-                        "symbol":    sym,
-                        "timestamp": datetime.fromtimestamp(bar[0] / 1000, tz=UTC),
-                        "open":      float(bar[1] or 0),
-                        "high":      float(bar[2] or 0),
-                        "low":       float(bar[3] or 0),
-                        "close":     float(bar[4] or 0),
-                        "volume":    float(bar[5] or 0),
-                        "complete":  False
-                    })
+        # 1. Build records from current WebSocket state (both Crypto and X-Stocks)
+        for sym in ALL_SYMBOLS:
+            bar = state.ohlcv.get(sym)
+            if not bar:
+                continue
+            
+            # A 5m candle is "complete" if current time is >= candle start time + 5 minutes (300,000 ms)
+            is_complete = (now * 1000 - bar[0]) >= 300000
 
-            if records:
-                try:
-                    async with state.pipeline_lock:
-                        await asyncio.to_thread(
-                            pipeline.run, records, table_name="bybit_candles",
-                            write_disposition="replace",
-                        )
-                    log.info(f"[UPSERT] {len(records)} forming candles")
-                except Exception as e:
-                    log.error(f"[UPSERT] Failed: {e}")
-            state.last_upsert = now
+            records.append({
+                "symbol":    sym,
+                "timestamp": datetime.fromtimestamp(bar[0] / 1000, tz=UTC),
+                "open":      float(bar[1] or 0),
+                "high":      float(bar[2] or 0),
+                "low":       float(bar[3] or 0),
+                "close":     float(bar[4] or 0),
+                "volume":    float(bar[5] or 0),
+                "complete":  is_complete
+            })
 
-        # ── 5min INSERT: completed candles ────────────────────────────────────
-        if now - state.last_insert >= INSERT_INTERVAL:
-            async with state.completed_lock:
-                to_insert = state.completed_buffer[:]
-                state.completed_buffer.clear()
-
-            if to_insert:
-                try:
-                    async with state.pipeline_lock:
-                        await asyncio.to_thread(
-                            pipeline.run, to_insert, table_name="bybit_candles_history",
-                            write_disposition="append"
-                        )
-                    log.info(f"[INSERT] {len(to_insert)} completed candles → history")
-                except Exception as e:
-                    log.error(f"[INSERT] Failed: {e}")
-                    # Re-queue on failure
-                    async with state.completed_lock:
-                        state.completed_buffer[:0] = to_insert
-            state.last_insert = now
-
-        # ── Hourly cleanup ────────────────────────────────────────────────────
-        if now - state.last_cleanup >= CLEANUP_INTERVAL:
-            threshold = datetime.now(UTC) - timedelta(hours=CLEANUP_HOURS)
-
-            def _cleanup() -> None:
-                with pipeline.sql_client() as client:
-                    tname = client.make_qualified_table_name("bybit_candles")
-                    client.execute_sql(
-                        f"DELETE FROM {tname} WHERE timestamp < %s", threshold
-                    )
-
+        # 2. Upsert to database
+        if records:
             try:
                 async with state.pipeline_lock:
+                    await asyncio.to_thread(
+                        pipeline.run,
+                        records,
+                        table_name="bybit_candles",
+                        write_disposition="merge",
+                        primary_key=["symbol", "timestamp"]
+                    )
+                log.info(f"[DB] Upserted {len(records)} candles (Crypto + X-Stocks)")
+            except Exception as e:
+                log.error(f"[DB] Upsert failed: {e}")
+
+        # 3. Hourly Cleanup
+        if now - state.last_cleanup >= 3600:
+            threshold = now_utc - timedelta(hours=CLEANUP_HOURS)
+            try:
+                async with state.pipeline_lock:
+                    def _cleanup():
+                        with pipeline.sql_client() as client:
+                            tname = client.make_qualified_table_name("bybit_candles")
+                            client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
+                    
                     await asyncio.to_thread(_cleanup)
-                log.info(f"[CLEANUP] Removed forming candles older than {CLEANUP_HOURS}h")
+                log.info(f"[CLEANUP] Removed data older than {CLEANUP_HOURS}h")
             except Exception as e:
                 log.error(f"[CLEANUP] Failed: {e}")
             state.last_cleanup = now
@@ -219,35 +164,36 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
 # MAIN
 # =========================
 async def main() -> None:
-    state = MarketState()
-
+    # Initialize TWO exchange instances: one for linear (crypto), one for spot (x-stocks)
     base_cfg = {"enableRateLimit": True}
     ex_linear = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "linear"}})
     ex_spot   = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "spot"}})
 
+    # Initialize dlt pipeline
     pipeline = dlt.pipeline(
-        pipeline_name="crypto_strategy",
+        pipeline_name="crypto_strategy_ws_unified",
         destination=dlt.destinations.postgres(credentials=DB_URL),
         dataset_name="bybit_data"
     )
 
-    tasks: list[asyncio.Task] = []
+    tasks = []
 
+    # Start WebSocket watchers for Crypto (Linear)
     for sym in CRYPTO_SYMBOLS:
-        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym, state), name=f"ws-{sym}"))
+        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym), name=f"ws-linear-{sym}"))
+
+    # Start WebSocket watchers for X-Stocks (Spot)
     for sym in XSTOCK_SYMBOLS:
-        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_spot, sym, state), name=f"ws-{sym}"))
+        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_spot, sym), name=f"ws-spot-{sym}"))
 
-    tasks.append(asyncio.create_task(
-        ticker_refresh_loop(ex_linear, ex_spot, state, pipeline),   # pipeline added
-        name="ticker-refresh"
-    ))
-    tasks.append(asyncio.create_task(db_writer_loop(pipeline, state), name="db-writer"))
+    # Start unified DB writer
+    tasks.append(asyncio.create_task(db_writer_loop(pipeline), name="db-writer"))
 
-    log.info(
-        f"Bot started — {len(CRYPTO_SYMBOLS)} crypto + {len(XSTOCK_SYMBOLS)} xstocks"
-        f" | UPSERT {UPSERT_INTERVAL}s | INSERT {INSERT_INTERVAL}s | TICKER {TICKER_INTERVAL}s"
-    )
+    # Start unified ticker refresh
+    tasks.append(asyncio.create_task(ticker_refresh_loop(ex_linear, ex_spot, pipeline), name="ticker-refresh"))
+
+    log.info(f"Bot started — Watching {len(CRYPTO_SYMBOLS)} Crypto + {len(XSTOCK_SYMBOLS)} X-Stocks via WebSocket")
+    log.info(f"DB Upsert every {POLL_INTERVAL}s | Ticker every {TICKER_INTERVAL}s")
 
     try:
         await asyncio.gather(*tasks)
@@ -258,6 +204,9 @@ async def main() -> None:
             t.cancel()
         await asyncio.gather(ex_linear.close(), ex_spot.close(), return_exceptions=True)
         log.info("All connections closed. Bye.")
+
+if __name__ == "__ZYTHON__": # Fixed typo from standard template
+    pass
 
 if __name__ == "__main__":
     asyncio.run(main())
