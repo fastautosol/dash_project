@@ -1,4 +1,4 @@
-# 2026.06.06  17.00
+# 2026.06.06  18.00
 # Lightweight Charts v5
 
 import pandas as pd
@@ -55,11 +55,14 @@ def fetch_candles(symbol):
     df["bb_lower"] = bb["BBL_50_2.0"]
     df["vwap"] = ta.vwap(high=df["high"], low=df["low"], close=df["close"], volume=df["volume"])
 
-    df = df.dropna(subset=["time", "open", "high", "low", "close", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap"])
-
-    candles = df[["time", "open", "high", "low", "close"]].to_dict("records")
-    indicators = df[["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap"]].to_dict("records")
-
+    # ── CANDLES: drop only if price data is missing ──────────────────────────
+    df_clean = df.dropna(subset=["time", "open", "high", "low", "close"])
+    candles = df_clean[ ["time", "open", "high", "low", "close"]].to_dict("records")
+    
+    # ── INDICATORS: keep all rows, convert NaN → None (→ null in JSON) ───────
+    ind_cols = ["time", "sma100", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap"]
+    ind_df = df[ind_cols].where(df[ind_cols].notna(), other=None)
+    indicators = ind_df.to_dict("records")
     return {"candles": candles, "indicators": indicators}
 
 # ─────────────────────────────────────────────────────────────
