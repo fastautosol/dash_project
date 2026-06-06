@@ -1,4 +1,4 @@
-# 2026.06.06  11.00
+# 2026.06.06  18.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -15,15 +15,11 @@ log = logging.getLogger(__name__)
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 CRYPTO_SYMBOLS = [
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT",
-    "SUI/USDT", "HYPE/USDT", "LTC/USDT", "ETC/USDT", "COMP/USDT",
+    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "LTC/USDT", "ETC/USDT", "COMP/USDT",
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT"
 ]
 
-XSTOCK_SYMBOLS = [
-    "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", 
-    "COINX/USDT", "CRCLX/USDT", "METAX/USDT", "HOODX/USDT", "GOOGLX/USDT"
-]
+XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT",  "COINX/USDT", "CRCLX/USDT", "METAX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
 
 ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
 
@@ -97,9 +93,6 @@ async def db_writer_loop(pipeline) -> None:
             ticker_data = state.ticker.get(sym, {})
             info = ticker_data.get("info", {})
 
-            # A 5m candle is "complete" if current time is >= candle start time + 5 minutes (300,000 ms)
-            is_complete = (now * 1000 - bar[0]) >= 300000
-
             records.append({
                 "symbol":        sym,
                 "timestamp":     datetime.fromtimestamp(bar[0] / 1000, tz=UTC),
@@ -108,9 +101,6 @@ async def db_writer_loop(pipeline) -> None:
                 "low":           float(bar[3] or 0),
                 "close":         float(bar[4] or 0),
                 "volume":        float(bar[5] or 0),
-                "complete":      is_complete,
-                
-                # --- EXTENDED FIELDS (Enriched from 5-min Ticker Cache) ---
                 "vwap":          float(info.get("vwap24h") or ticker_data.get("vwap") or 0),
                 "turnover_24h":  float(info.get("turnover24h") or ticker_data.get("quoteVolume") or 0),
                 "price_24h_pct": float(info.get("price24hPcnt") or ticker_data.get("percentage") or 0),
@@ -120,13 +110,7 @@ async def db_writer_loop(pipeline) -> None:
         if records:
             try:
                 async with state.pipeline_lock:
-                    await asyncio.to_thread(
-                        pipeline.run,
-                        records,
-                        table_name="bybit_candles",
-                        write_disposition="merge",
-                        primary_key=["symbol", "timestamp"]
-                    )
+                    await asyncio.to_thread(pipeline.run, records, table_name="bybit_candles", write_disposition="merge", primary_key=["symbol", "timestamp"])
                 log.info(f"[DB] Upserted {len(records)} enriched candles")
             except Exception as e:
                 log.error(f"[DB] Upsert failed: {e}")
@@ -160,8 +144,7 @@ async def main() -> None:
     pipeline = dlt.pipeline(
         pipeline_name="crypto_strategy_ws_unified",
         destination=dlt.destinations.postgres(credentials=DB_URL),
-        dataset_name="bybit_data"
-    )
+        dataset_name="bybit_data")
 
     tasks = []
 
