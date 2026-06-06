@@ -1,4 +1,4 @@
-# 2026.05.30  18.00
+# 2026.06.06  17.00
 # Lightweight Charts v5
 
 import pandas as pd
@@ -27,7 +27,7 @@ CARD_STYLE = {
 
 def fetch_candles(symbol):
 
-    sql = text("SELECT timestamp, open, high, low, close, volume FROM bybit_data.bybit_candles WHERE symbol = :sym ORDER BY timestamp DESC LIMIT 700")
+    sql = text("SELECT timestamp, open, high, low, close, volume FROM bybit_data.bybit_candles WHERE symbol = :sym ORDER BY timestamp DESC")
 
     with engine.connect() as conn:
         df = pd.read_sql(sql, conn, params={"sym": symbol})
@@ -90,14 +90,11 @@ layout = dbc.Container(
 
     dbc.Row(
         [
-        dbc.Col(
-            html.Div(
-                [
-                    html.H6(sym, className="text-success mb-2", style={"fontFamily": "monospace"}),
-                    html.Div(id=f"chart-{sym.replace('/', '-')}", style={"width": "100%", "height": "210px"}),
+        dbc.Col(html.Div([
+                html.H6(sym, className="text-success mb-2", style={"fontFamily": "monospace"}),
+                html.Div(id=f"chart-{sym.replace('/', '-')}", style={"width": "100%", "height": "210px"}),
                 ], style=CARD_STYLE), xs=12, sm=6, lg=4)
-        for sym in SYMBOLS
-        ], className="g-3 mb-3"),
+        for sym in SYMBOLS], className="g-3 mb-3"),
 
     ], fluid=True, style={"backgroundColor": "--bs-body-bg", "minHeight": "100vh", "paddingBottom": "20px"})
 
