@@ -1,4 +1,4 @@
-# 2026.06.06  9.00
+# 2026.06.06  10.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -43,6 +43,8 @@ class MarketState:
         self.last_insert: float = 0.0
         self.last_cleanup: float = 0.0
 
+        self.pipeline_lock = asyncio.Lock()  # serialise all pipeline.run() calls
+
 # =========================
 # WEBSOCKET — OHLCV WATCHER
 # =========================
@@ -59,8 +61,8 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, state: Market
 
             # Detect candle close BEFORE updating state.
             # state.ohlcv[symbol] still holds the final bar of the previous candle,
-            # so no reliance on ohlcv[-2] or len >= 2 (which breaks when Bybit
-            # sends only the new candle in the boundary message).
+            # so no reliance on ohlcv[-2] or len >= 2 (breaks when Bybit sends
+            # only the new candle in the boundary message).
             if prev is not None and ts != prev:
                 closed_bar = state.ohlcv.get(symbol)
                 if closed_bar:
@@ -125,11 +127,12 @@ async def ticker_refresh_loop(
 
         if ticker_records:
             try:
-                await asyncio.to_thread(
-                    pipeline.run, ticker_records,
-                    table_name="bybit_tickers",
-                    write_disposition="replace",    # current-state snapshot; replace on every refresh
-                )
+                async with state.pipeline_lock:
+                    await asyncio.to_thread(
+                        pipeline.run, ticker_records,
+                        table_name="bybit_tickers",
+                        write_disposition="replace",
+                    )
                 log.info(f"[TICKER] Replaced {len(ticker_records)} ticker snapshots → bybit_tickers")
             except Exception as e:
                 log.error(f"[TICKER] DB write failed: {e}")
@@ -162,10 +165,11 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
 
             if records:
                 try:
-                    await asyncio.to_thread(
-                        pipeline.run, records, table_name="bybit_candles",
-                        write_disposition="replace",    # current-state only; full replace every 75s
-                    )
+                    async with state.pipeline_lock:
+                        await asyncio.to_thread(
+                            pipeline.run, records, table_name="bybit_candles",
+                            write_disposition="replace",
+                        )
                     log.info(f"[UPSERT] {len(records)} forming candles")
                 except Exception as e:
                     log.error(f"[UPSERT] Failed: {e}")
@@ -179,10 +183,11 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
 
             if to_insert:
                 try:
-                    await asyncio.to_thread(
-                        pipeline.run, to_insert, table_name="bybit_candles_history",
-                        write_disposition="append"
-                    )
+                    async with state.pipeline_lock:
+                        await asyncio.to_thread(
+                            pipeline.run, to_insert, table_name="bybit_candles_history",
+                            write_disposition="append"
+                        )
                     log.info(f"[INSERT] {len(to_insert)} completed candles → history")
                 except Exception as e:
                     log.error(f"[INSERT] Failed: {e}")
@@ -203,7 +208,8 @@ async def db_writer_loop(pipeline, state: MarketState) -> None:
                     )
 
             try:
-                await asyncio.to_thread(_cleanup)   # was blocking the event loop
+                async with state.pipeline_lock:
+                    await asyncio.to_thread(_cleanup)
                 log.info(f"[CLEANUP] Removed forming candles older than {CLEANUP_HOURS}h")
             except Exception as e:
                 log.error(f"[CLEANUP] Failed: {e}")
