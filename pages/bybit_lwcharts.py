@@ -95,11 +95,11 @@ layout = dbc.Container(
         [
         dbc.Col(html.Div([
                 html.H6(sym, className="text-success mb-2", style={"fontFamily": "monospace"}),
-                html.Div(id=f"chart-{sym.replace('/', '-')}", style={"width": "100%", "height": "150px"}),
+                html.Div(id=f"chart-{sym.replace('/', '-')}", style={"width": "100%", "height": "140px"}),
                 ], style=CARD_STYLE), xs=12, sm=6, md=3, lg=3, xl=3)
         for sym in SYMBOLS], className="g-3 mb-3"),
 
-    ], fluid=True, style={"backgroundColor": "--bs-body-bg", "minHeight": "100vh", "paddingBottom": "20px"})
+    ], fluid=True, style={"backgroundColor": "--bs-body-bg", "minHeight": "100vh", "paddingBottom": "10px"})
 
 # ─────────────────────────────────────────────────────────────
 # CALLBACKS
