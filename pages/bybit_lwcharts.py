@@ -89,7 +89,7 @@ layout = dbc.Container(
                 {"label": " VWAP",   "value": "vwap"},
             ], value=["ema50"], inline=True, switch=True, className="text-light",
             input_checked_style={"backgroundColor": "#198754", "borderColor": "#198754"}),
-        ], style={"padding": "10px 0px 18px 0px", "borderBottom": "1px solid #222", "marginBottom": "20px"}),
+        ], style={"padding": "10px 0px 15px 0px", "borderBottom": "1px solid #222", "marginBottom": "10px"}),
 
     dbc.Row(
         [
