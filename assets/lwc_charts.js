@@ -145,6 +145,45 @@ window.LWCharts = function(data, selectedIndicators) {
             }
 
             // -------------------------------------------------
+            // MFI  (Money Flow Index, overbought/oversold lines)
+            // -------------------------------------------------
+            
+            if (selectedIndicators.includes("mfi")) {
+            
+                chart.addPane({ height: 55 });   // creates pane index 2
+                //   (or index 1 if volume_delta is NOT selected — addPane() is only called
+                //    when that block runs, so the pane index depends on render order)
+            
+                const mfiPane = selectedIndicators.includes("volume_delta") ? 2 : 1;
+            
+                const mfiSeries = chart.addSeries(
+                    LightweightCharts.LineSeries,
+                    { color: "#ce93d8", lineWidth: 1,
+                      priceLineVisible: false, lastValueVisible: false },
+                    mfiPane
+                            );
+            
+                // Overbought (80) and oversold (20) reference lines
+                const obSeries = chart.addSeries(
+                    LightweightCharts.LineSeries,
+                    { color: "#ef5350", lineWidth: 1, lineStyle: 2,
+                      priceLineVisible: false, lastValueVisible: false },
+                    mfiPane
+                );
+                const osSeries = chart.addSeries(
+                    LightweightCharts.LineSeries,
+                    { color: "#26a69a", lineWidth: 1, lineStyle: 2,
+                      priceLineVisible: false, lastValueVisible: false },
+                    mfiPane
+                );
+            
+                const mfiPoints = indicators.filter(x => x.mfi != null);
+                mfiSeries.setData(mfiPoints.map(x => ({ time: x.time, value: x.mfi   })));
+                obSeries.setData( mfiPoints.map(x => ({ time: x.time, value: 80      })));
+                osSeries.setData( mfiPoints.map(x => ({ time: x.time, value: 20      })));
+            }
+
+            // -------------------------------------------------
             // FINALIZE
             // -------------------------------------------------
 
