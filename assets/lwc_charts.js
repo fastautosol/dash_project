@@ -108,6 +108,43 @@ window.LWCharts = function(data, selectedIndicators) {
             }
 
             // -------------------------------------------------
+            // VOLUME DELTA  (buy_vol ↑ green / sell_vol ↓ red)
+            // -------------------------------------------------
+
+            if (selectedIndicators.includes("volume_delta")) {
+            
+                chart.addPane({ height: 60 });   // creates pane index 1
+            
+                const buyVolSeries = chart.addSeries(
+                    LightweightCharts.HistogramSeries,
+                    { color: "#26a69a", priceFormat: { type: "volume" },
+                      priceLineVisible: false, lastValueVisible: false,
+                      baseLineVisible: false },
+                    1   // ← pane index
+                );
+
+                const sellVolSeries = chart.addSeries(
+                    LightweightCharts.HistogramSeries,
+                    { color: "#ef5350", priceFormat: { type: "volume" },
+                      priceLineVisible: false, lastValueVisible: false,
+                      baseLineVisible: false },
+                    1   // ← same pane index
+                );
+            
+                buyVolSeries.setData(
+                    indicators
+                        .filter(x => x.buy_vol != null && x.buy_vol > 0)
+                        .map(x => ({ time: x.time, value: x.buy_vol }))
+                );
+            
+                sellVolSeries.setData(
+                    indicators
+                        .filter(x => x.sell_vol != null && x.sell_vol > 0)
+                        .map(x => ({ time: x.time, value: -x.sell_vol }))  // ← negative → below zero
+                );
+            }
+
+            // -------------------------------------------------
             // FINALIZE
             // -------------------------------------------------
 
