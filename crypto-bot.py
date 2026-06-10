@@ -43,31 +43,11 @@ state = MarketState()
 # STARTUP SCHEMA CLEANUP
 # =========================
 def startup_schema_cleanup() -> dlt.Pipeline:
-    """
-    Fixes schema-mismatch errors caused by direct ALTER/DROP COLUMN in Postgres.
 
-    dlt tracks its schema in TWO places — both must be cleared:
-
-      1. LOCAL files  — ~/.dlt/pipelines/<name>/
-         Cleared by: pipeline.drop()
-
-      2. POSTGRES table — bybit_data._dlt_version  ← the real culprit here
-         Cleared by: TRUNCATE bybit_data._dlt_version
-         This is the JSON blob dlt reads back on startup; it still listed
-         the dropped "complete" column, causing the terminal error even
-         after local drop().
-
-    Additionally, drop_pending_packages() discards the stuck failed load
-    job so dlt does not keep retrying the broken INSERT on every cycle.
-
-    Safe to leave in permanently: runs once at startup (~1-2s), never
-    touches actual candle data — only dlt's internal bookkeeping tables.
-    """
     pipeline = dlt.pipeline(
         pipeline_name="crypto_strategy_ws_unified",
         destination=dlt.destinations.postgres(credentials=DB_URL),
-        dataset_name="bybit_data",
-    )
+        dataset_name="bybit_data")
 
     # Step 1 — discard stuck failed packages from previous run
     dropped = pipeline.drop_pending_packages()
