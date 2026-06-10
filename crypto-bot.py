@@ -145,6 +145,7 @@ async def main() -> None:
         pipeline_name="crypto_strategy_bybit",
         destination=dlt.destinations.postgres(credentials=DB_URL),
         dataset_name="bybit_data")
+    pipeline.drop_pending_packages()
 
     tasks = []
 
