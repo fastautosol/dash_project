@@ -1,4 +1,4 @@
-# 2026.06.10  (added startup schema cleanup)
+# 2026.06.10  (fixed: also clear _dlt_version in Postgres on startup)
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -44,19 +44,24 @@ state = MarketState()
 # =========================
 def startup_schema_cleanup() -> dlt.Pipeline:
     """
-    Builds the dlt pipeline and performs two safety steps before the bot starts:
+    Fixes schema-mismatch errors caused by direct ALTER/DROP COLUMN in Postgres.
 
-    1. drop_pending_packages() — clears any failed/stuck load packages from the
-       previous run (e.g. after a terminal schema error like a dropped column).
-       Without this, dlt would keep retrying the broken package on every upsert.
+    dlt tracks its schema in TWO places — both must be cleared:
 
-    2. pipeline.drop() — wipes the LOCAL schema cache only (files under
-       ~/.dlt/pipelines/<name>/). Does NOT touch Postgres data.
-       Forces dlt to re-introspect the real table on the next run, so its
-       internal schema stays in sync with whatever columns actually exist in DB.
+      1. LOCAL files  — ~/.dlt/pipelines/<name>/
+         Cleared by: pipeline.drop()
 
-    Call this whenever you manually ALTER / DROP columns directly in Postgres.
-    Safe to leave in permanently: it adds ~1–2s at startup and never loses data.
+      2. POSTGRES table — bybit_data._dlt_version  ← the real culprit here
+         Cleared by: TRUNCATE bybit_data._dlt_version
+         This is the JSON blob dlt reads back on startup; it still listed
+         the dropped "complete" column, causing the terminal error even
+         after local drop().
+
+    Additionally, drop_pending_packages() discards the stuck failed load
+    job so dlt does not keep retrying the broken INSERT on every cycle.
+
+    Safe to leave in permanently: runs once at startup (~1-2s), never
+    touches actual candle data — only dlt's internal bookkeeping tables.
     """
     pipeline = dlt.pipeline(
         pipeline_name="crypto_strategy_ws_unified",
@@ -64,23 +69,34 @@ def startup_schema_cleanup() -> dlt.Pipeline:
         dataset_name="bybit_data",
     )
 
-    # Step 1 — discard any stuck failed packages from previous run
+    # Step 1 — discard stuck failed packages from previous run
     dropped = pipeline.drop_pending_packages()
     if dropped:
         log.info(f"[STARTUP] Dropped {dropped} pending/failed package(s) from previous run")
     else:
-        log.info("[STARTUP] No pending packages found — clean state")
+        log.info("[STARTUP] No pending packages — clean state")
 
-    # Step 2 — wipe local schema cache so dlt re-discovers actual DB columns
+    # Step 2 — wipe LOCAL schema cache
     pipeline.drop()
-    log.info("[STARTUP] Local schema cache cleared — dlt will re-introspect DB on first upsert")
+    log.info("[STARTUP] Local schema cache cleared (pipeline.drop)")
 
-    # Re-create pipeline object after drop() invalidated it
+    # Re-create pipeline object (drop() invalidates the old one)
     pipeline = dlt.pipeline(
         pipeline_name="crypto_strategy_ws_unified",
         destination=dlt.destinations.postgres(credentials=DB_URL),
         dataset_name="bybit_data",
     )
+
+    # Step 3 — also wipe the schema stored inside Postgres itself
+    # Without this step dlt reads the old JSON (with "complete") back from
+    # _dlt_version and regenerates the broken INSERT on the very first upsert.
+    try:
+        with pipeline.sql_client() as client:
+            client.execute_sql("TRUNCATE bybit_data._dlt_version")
+        log.info("[STARTUP] Destination schema cache cleared (bybit_data._dlt_version truncated)")
+    except Exception as e:
+        # Table may not exist on a brand-new deployment — that's fine
+        log.warning(f"[STARTUP] Could not truncate _dlt_version (may not exist yet): {e}")
 
     return pipeline
 
@@ -188,7 +204,7 @@ async def main() -> None:
     ex_linear = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "linear"}})
     ex_spot   = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "spot"}})
 
-    # Initialize pipeline with startup safety cleanup
+    # Initialize pipeline with full startup schema cleanup
     pipeline = startup_schema_cleanup()
 
     tasks = []
