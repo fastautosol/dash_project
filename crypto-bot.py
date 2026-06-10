@@ -1,4 +1,4 @@
-# 2026.06.10  (fixed: also clear _dlt_version in Postgres on startup)
+# 2026.06.10
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -19,13 +19,13 @@ CRYPTO_SYMBOLS = [
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT"
 ]
 
-XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "METAX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
+XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT",  "COINX/USDT", "CRCLX/USDT", "METAX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
 
 ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
 
-POLL_INTERVAL    = 75    # Seconds between DB upserts
-TICKER_INTERVAL  = 300   # Seconds between ticker cache refreshes (5 mins)
-CLEANUP_HOURS    = 60    # Hours of data to retain
+POLL_INTERVAL = 75       # Seconds between DB upserts (fast, no artificial delay)
+TICKER_INTERVAL = 300    # Seconds between ticker cache refreshes (5 mins)
+CLEANUP_HOURS = 60       # Hours of data to retain
 
 # =========================
 # SHARED STATE
@@ -33,52 +33,11 @@ CLEANUP_HOURS    = 60    # Hours of data to retain
 class MarketState:
     def __init__(self) -> None:
         self.ohlcv: dict[str, list] = {}
-        self.ticker: dict[str, dict] = {}   # Cache for 24h stats
+        self.ticker: dict[str, dict] = {}  # Cache for 24h stats
         self.last_cleanup: float = 0.0
         self.pipeline_lock = asyncio.Lock()  # Serialize dlt pipeline calls
 
 state = MarketState()
-
-# =========================
-# STARTUP SCHEMA CLEANUP
-# =========================
-def startup_schema_cleanup() -> dlt.Pipeline:
-
-    pipeline = dlt.pipeline(
-        pipeline_name="crypto_strategy_ws_unified",
-        destination=dlt.destinations.postgres(credentials=DB_URL),
-        dataset_name="bybit_data")
-
-    # Step 1 — discard stuck failed packages from previous run
-    dropped = pipeline.drop_pending_packages()
-    if dropped:
-        log.info(f"[STARTUP] Dropped {dropped} pending/failed package(s) from previous run")
-    else:
-        log.info("[STARTUP] No pending packages — clean state")
-
-    # Step 2 — wipe LOCAL schema cache
-    pipeline.drop()
-    log.info("[STARTUP] Local schema cache cleared (pipeline.drop)")
-
-    # Re-create pipeline object (drop() invalidates the old one)
-    pipeline = dlt.pipeline(
-        pipeline_name="crypto_strategy_ws_unified",
-        destination=dlt.destinations.postgres(credentials=DB_URL),
-        dataset_name="bybit_data",
-    )
-
-    # Step 3 — also wipe the schema stored inside Postgres itself
-    # Without this step dlt reads the old JSON (with "complete") back from
-    # _dlt_version and regenerates the broken INSERT on the very first upsert.
-    try:
-        with pipeline.sql_client() as client:
-            client.execute_sql("TRUNCATE bybit_data._dlt_version")
-        log.info("[STARTUP] Destination schema cache cleared (bybit_data._dlt_version truncated)")
-    except Exception as e:
-        # Table may not exist on a brand-new deployment — that's fine
-        log.warning(f"[STARTUP] Could not truncate _dlt_version (may not exist yet): {e}")
-
-    return pipeline
 
 # =========================
 # WEBSOCKET — OHLCV WATCHER
@@ -101,12 +60,13 @@ async def ticker_refresh_loop(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) 
     """Fetches 24h stats every 5 minutes and stores them in state.ticker."""
     while True:
         await asyncio.sleep(TICKER_INTERVAL)
-
+        
         for exchange, symbols in [(ex_linear, CRYPTO_SYMBOLS), (ex_spot, XSTOCK_SYMBOLS)]:
             if not symbols:
                 continue
             try:
                 tickers = await exchange.fetch_tickers(symbols=symbols)
+                # Update the shared cache
                 state.ticker.update(tickers)
                 log.info(f"[TICKER] Cached {len(tickers)} {exchange.options['defaultType']} symbols")
             except Exception as e:
@@ -119,7 +79,7 @@ async def db_writer_loop(pipeline) -> None:
     """Upserts the latest state + ticker stats to DB every POLL_INTERVAL seconds."""
     while True:
         await asyncio.sleep(POLL_INTERVAL)
-        now     = time.time()
+        now = time.time()
         now_utc = datetime.now(UTC)
         records = []
 
@@ -128,7 +88,8 @@ async def db_writer_loop(pipeline) -> None:
             bar = state.ohlcv.get(sym)
             if not bar:
                 continue
-
+            
+            # Fetch latest ticker info for this symbol (fallback to empty dict if not yet cached)
             ticker_data = state.ticker.get(sym, {})
             info = ticker_data.get("info", {})
 
@@ -145,16 +106,11 @@ async def db_writer_loop(pipeline) -> None:
                 "price_24h_pct": float(info.get("price24hPcnt") or ticker_data.get("percentage") or 0),
             })
 
-        # 2. Upsert to database
+        # 2. Upsert to database (Single unified table, just like the old bot)
         if records:
             try:
                 async with state.pipeline_lock:
-                    await asyncio.to_thread(
-                        pipeline.run, records,
-                        table_name="bybit_candles",
-                        write_disposition="merge",
-                        primary_key=["symbol", "timestamp"],
-                    )
+                    await asyncio.to_thread(pipeline.run, records, table_name="bybit_candles", write_disposition="merge", primary_key=["symbol", "timestamp"])
                 log.info(f"[DB] Upserted {len(records)} enriched candles")
             except Exception as e:
                 log.error(f"[DB] Upsert failed: {e}")
@@ -168,7 +124,7 @@ async def db_writer_loop(pipeline) -> None:
                         with pipeline.sql_client() as client:
                             tname = client.make_qualified_table_name("bybit_candles")
                             client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
-
+                    
                     await asyncio.to_thread(_cleanup)
                 log.info(f"[CLEANUP] Removed data older than {CLEANUP_HOURS}h")
             except Exception as e:
@@ -180,12 +136,15 @@ async def db_writer_loop(pipeline) -> None:
 # =========================
 async def main() -> None:
     # Initialize TWO exchange instances: linear (crypto) and spot (x-stocks)
-    base_cfg  = {"enableRateLimit": True}
+    base_cfg = {"enableRateLimit": True}
     ex_linear = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "linear"}})
     ex_spot   = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "spot"}})
 
-    # Initialize pipeline with full startup schema cleanup
-    pipeline = startup_schema_cleanup()
+    # Initialize dlt pipeline
+    pipeline = dlt.pipeline(
+        pipeline_name="crypto_strategy_bybit",
+        destination=dlt.destinations.postgres(credentials=DB_URL),
+        dataset_name="bybit_data")
 
     tasks = []
 
@@ -218,3 +177,4 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+
