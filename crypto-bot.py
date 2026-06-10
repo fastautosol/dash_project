@@ -162,7 +162,7 @@ async def main() -> None:
     # Start background ticker cache refresh
     tasks.append(asyncio.create_task(ticker_refresh_loop(ex_linear, ex_spot), name="ticker-refresh"))
 
-    log.info(f"Bot started — Watching {len(CRYPTO_SYMBOLS)} Crypto + {len(XSTOCK_SYMBOLS)} X-Stocks")
+    #log.info(f"Bot started — Watching {len(CRYPTO_SYMBOLS)} Crypto + {len(XSTOCK_SYMBOLS)} X-Stocks")
     log.info(f"DB Upsert every {POLL_INTERVAL}s (with VWAP/Turnover/Pct) | Ticker cache every {TICKER_INTERVAL}s")
 
     try:
