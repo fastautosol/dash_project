@@ -83,22 +83,25 @@ def fetch_candles(symbol):
     except Exception:
         df["vfi"] = None
 
-    # --- VOLUME PROFILE (VP) ---
+    # --- VOLUME PROFILE (VP) CONFIGURATION KNOBS ---
     volume_profile = []
     try:
-        num_bins = 20
-        min_p, max_p = float(df["low"].min()), float(df["high"].max())
+        num_bins = 15       # <-- Change this to increase or decrease vertical rows (e.g., 15 to 50)
+        vp_lookback = 150    # <-- Limits calculation to only the last X candles back from today
+
+        df_vp = df.iloc[-vp_lookback:] if len(df) > vp_lookback else df
+        min_p, max_p = float(df_vp["low"].min()), float(df_vp["high"].max())
+        
         if max_p > min_p:
             bin_size = (max_p - min_p) / num_bins
             bins = [min_p + i * bin_size for i in range(num_bins + 1)]
-            df["price_bin"] = np.digitize(df["close"], bins[:-1]) - 1
-            vp_data = df.groupby("price_bin")["volume"].sum().to_dict()
-            
-            volume_profile = [
-                {"price": float(round(bins[idx] + (bin_size / 2), 4)), "volume": float(vp_data.get(idx, 0))}
-                for idx in range(num_bins)
-            ]
-    except Exception:
+            df_vp = df_vp.copy()
+            df_vp["price_bin"] = np.digitize(df_vp["close"], bins[:-1]) - 1
+            vp_data = df_vp.groupby("price_bin")["volume"].sum().to_dict()         
+            volume_profile = [{"price": float(round(bins[idx] + (bin_size / 2), 4)), "volume": float(vp_data.get(idx, 0))} for idx in range(num_bins)]
+                  
+    except Exception as e:
+        print(f"Volume profile calculation error: {e}")
         volume_profile = []
 
     # Format JSON clean structures
