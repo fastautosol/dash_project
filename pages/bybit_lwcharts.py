@@ -86,8 +86,8 @@ def fetch_candles(symbol):
     # --- VOLUME PROFILE (VP) CONFIGURATION KNOBS ---
     volume_profile = []
     try:
-        num_bins = 15       # <-- Change this to increase or decrease vertical rows (e.g., 15 to 50)
-        vp_lookback = 150    # <-- Limits calculation to only the last X candles back from today
+        num_bins = 10       # <-- Change this to increase or decrease vertical rows (e.g., 15 to 50)
+        vp_lookback = 50    # <-- Limits calculation to only the last X candles back from today
 
         df_vp = df.iloc[-vp_lookback:] if len(df) > vp_lookback else df
         min_p, max_p = float(df_vp["low"].min()), float(df_vp["high"].max())
