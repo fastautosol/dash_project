@@ -1,11 +1,10 @@
-# 2026.06.14  12.00 Lightweight-Charts + Order Flow Profile (last candle)
-import math
+# 2026.06.14 Optimized Multi-Chart Infrastructure
 import pandas as pd
+import numpy as np
 import pandas_ta_classic as ta
-import ccxt
 from sqlalchemy import create_engine, text
 import dash
-from dash import html, dcc, Input, Output, callback, clientside_callback
+from dash import html, dcc, Input, Output, State, callback, clientside_callback
 import dash_bootstrap_components as dbc
 
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
@@ -23,177 +22,107 @@ CARD_STYLE = {
 }
 
 # ─────────────────────────────────────────────────────────────
-# EXCHANGE (REST) — used only for fetching recent trades for the
-# order-flow / volume-profile column of the last candle.
+# FETCH CANDLES & PROCESS PREMIUM INDICATORS
 # ─────────────────────────────────────────────────────────────
 
-exchange = ccxt.bybit({"enableRateLimit": True})
-try:
-    exchange.load_markets()
-except Exception as e:
-    print(f"load_markets failed: {e}")
-
-# Simple per-symbol cache so we don't hammer the REST API every
-# 15s for 20 symbols. Profile is refreshed at most every PROFILE_TTL sec.
-_profile_cache = {}
-PROFILE_TTL = 15  # seconds
-
-# ─────────────────────────────────────────────────────────────
-# ORDER FLOW / VOLUME PROFILE (LAST CANDLE)
-# ─────────────────────────────────────────────────────────────
-
-def get_price_tick(symbol):
-    """Return the symbol's price tick size, or None if unavailable."""
-    market = exchange.markets.get(symbol) if exchange.markets else None
-    if not market:
-        return None
-    tick = market.get("precision", {}).get("price")
-    if tick is None:
-        return None
-    # ccxt's TICK_SIZE precision mode returns the actual tick (e.g. 0.1, 0.01)
-    if tick <= 0:
-        return None
-    return tick
-
-
-def get_last_candle_profile(symbol, last_candle, max_bins=40):
-    """
-    Fetch recent trades and bucket buy/sell volume by price for the
-    time range of the last candle. Bucket size = symbol tick size,
-    widened (by an integer factor) if that would create too many bins.
-    Returns a list of {price_low, price_high, buy, sell} dicts.
-    """
-    import time
-    now = time.time()
-
-    cached = _profile_cache.get(symbol)
-    if cached and (now - cached["ts"]) < PROFILE_TTL and cached["candle_time"] == last_candle["time"]:
-        return cached["profile"]
-
-    tick = get_price_tick(symbol)
-    if tick is None:
-        _profile_cache[symbol] = {"ts": now, "candle_time": last_candle["time"], "profile": []}
-        return []
-
-    since = int(last_candle["time"]) * 1000
-
-    try:
-        trades = exchange.fetch_trades(symbol, since=since, limit=1000)
-    except Exception as e:
-        print(f"fetch_trades failed for {symbol}: {e}")
-        _profile_cache[symbol] = {"ts": now, "candle_time": last_candle["time"], "profile": []}
-        return []
-
-    if not trades:
-        _profile_cache[symbol] = {"ts": now, "candle_time": last_candle["time"], "profile": []}
-        return []
-
-    lo, hi = last_candle["low"], last_candle["high"]
-    if hi <= lo:
-        _profile_cache[symbol] = {"ts": now, "candle_time": last_candle["time"], "profile": []}
-        return []
-
-    # Widen the bucket size if the natural tick size would create
-    # too many rows to render cleanly.
-    n_natural = (hi - lo) / tick
-    if n_natural > max_bins:
-        factor = math.ceil(n_natural / max_bins)
-        bucket_size = tick * factor
-    else:
-        bucket_size = tick
-
-    bins = {}
-    for t in trades:
-        price = t.get("price")
-        side = t.get("side")
-        amount = t.get("amount")
-        if price is None or amount is None or side is None:
-            continue
-        idx = int((price - lo) / bucket_size)
-        b = bins.setdefault(idx, {"buy": 0.0, "sell": 0.0})
-        if side == "buy":
-            b["buy"] += amount
-        elif side == "sell":
-            b["sell"] += amount
-
-    profile = []
-    for idx in sorted(bins.keys()):
-        price_low = lo + idx * bucket_size
-        b = bins[idx]
-        profile.append({
-            "price_low": round(price_low, 8),
-            "price_high": round(price_low + bucket_size, 8),
-            "buy": round(b["buy"], 8),
-            "sell": round(b["sell"], 8),
-        })
-
-    _profile_cache[symbol] = {"ts": now, "candle_time": last_candle["time"], "profile": profile}
-    return profile
-
-# ─────────────────────────────────────────────────────────────
-# FETCH CANDLES
-# ─────────────────────────────────────────────────────────────
-
-def fetch_candles(symbol, want_profile=False):
-
-    sql = text("SELECT timestamp, open, high, low, close, volume FROM bybit_data.bybit_candles WHERE symbol = :sym ORDER BY timestamp DESC")
+def fetch_candles(symbol):
+    sql = text("SELECT timestamp, open, high, low, close, volume FROM bybit_data.bybit_candles WHERE symbol = :sym ORDER BY timestamp DESC LIMIT 500")
 
     with engine.connect() as conn:
         df = pd.read_sql(sql, conn, params={"sym": symbol})
 
     if df.empty:
-        return {"candles": [], "indicators": [], "profile": []}
+        return {"candles": [], "indicators": [], "volume_profile": []}
 
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
     df["timestamp"] = df["timestamp"].dt.tz_convert("Europe/Budapest")
-    df["timestamp"] = df["timestamp"].dt.tz_localize(None) # Remove timezone (avoids pandas_ta VWAP warning)
-    df = df.set_index("timestamp")
-
-    df = df.sort_index()
+    df["timestamp"] = df["timestamp"].dt.tz_localize(None) 
+    df = df.set_index("timestamp").sort_index()
+    
     df["time"] = df.index.astype("int64") // 10**9
     df = df.drop_duplicates(subset=["time"], keep="last")
 
     for col in ["open", "high", "low", "close", "volume"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
+    # --- INDICATORS CALCULATIONS ---
     df["sma50"] = ta.sma(df["close"], length=50)
-    df["ema50"] = ta.ema(df["close"], length=50).round(4)
-    bb = ta.bbands(df["close"], length=50)
-    df["bb_upper"] = bb["BBU_50_2.0"]
-    df["bb_middle"] = bb["BBM_50_2.0"]
-    df["bb_lower"] = bb["BBL_50_2.0"]
+    df["ema50"] = ta.ema(df["close"], length=50)
+    
+    try:
+        bb = ta.bbands(df["close"], length=50)
+        df["bb_upper"] = bb["BBU_50_2.0"]
+        df["bb_middle"] = bb["BBM_50_2.0"]
+        df["bb_lower"] = bb["BBL_50_2.0"]
+    except Exception:
+        df["bb_upper"] = df["bb_middle"] = df["bb_lower"] = None
+        
     df["vwap"] = ta.vwap(high=df["high"], low=df["low"], close=df["close"], volume=df["volume"])
-
     df["mfi"] = ta.mfi(df["high"], df["low"], df["close"], df["volume"], length=14)          
     df["buy_vol"]  = df["volume"].where(df["close"] >= df["open"], 0)
     df["sell_vol"] = df["volume"].where(df["close"] <  df["open"], 0)
 
-    # ── CANDLES: drop only if price data is missing ──────────────────────────
+    # --- VOLUME FLOW INDICATOR (VFI) ---
+    try:
+        vfi_len, vfi_coef, vfi_vcoef = 130, 0.2, 2.5
+        hlc3 = (df["high"] + df["low"] + df["close"]) / 3
+        ln_hlc3 = np.log(hlc3)
+        v_inter = ln_hlc3.diff(1)
+        v_std = v_inter.rolling(vfi_len).std()
+        cutoff = vfi_coef * v_std * df["close"]
+        v_ma = df["volume"].rolling(vfi_len).mean()
+        max_v = v_ma * vfi_vcoef
+        
+        direction = np.zeros(len(df))
+        direction[hlc3 > hlc3.shift(1) + cutoff] = 1
+        direction[hlc3 < hlc3.shift(1) - cutoff] = -1
+        
+        v_clipped = np.minimum(df["volume"], max_v)
+        vfi_raw = direction * v_clipped
+        df["vfi"] = (vfi_raw.rolling(vfi_len).sum() / v_ma) / 100.0
+    except Exception:
+        df["vfi"] = None
+
+    # --- VOLUME PROFILE (VP) CONFIGURATION KNOBS ---
+    volume_profile = []
+    try:
+        num_bins = 15       # <-- Change this to increase or decrease vertical rows (e.g., 15 to 50)
+        vp_lookback = 100    # <-- Limits calculation to only the last X candles back from today
+
+        df_vp = df.iloc[-vp_lookback:] if len(df) > vp_lookback else df
+        min_p, max_p = float(df_vp["low"].min()), float(df_vp["high"].max())
+        
+        if max_p > min_p:
+            bin_size = (max_p - min_p) / num_bins
+            bins = [min_p + i * bin_size for i in range(num_bins + 1)]
+            df_vp = df_vp.copy()
+            df_vp["price_bin"] = np.digitize(df_vp["close"], bins[:-1]) - 1
+            vp_data = df_vp.groupby("price_bin")["volume"].sum().to_dict()         
+            volume_profile = [{"price": float(round(bins[idx] + (bin_size / 2), 4)), "volume": float(vp_data.get(idx, 0))} for idx in range(num_bins)]
+                  
+    except Exception as e:
+        print(f"Volume profile calculation error: {e}")
+        volume_profile = []
+
+    # Format JSON clean structures
     df_clean = df.dropna(subset=["time", "open", "high", "low", "close"])
-    candles = df_clean[ ["time", "open", "high", "low", "close"]].to_dict("records")
+    candles = df_clean[["time", "open", "high", "low", "close"]].to_dict("records")
     
-    # ── INDICATORS: keep all rows, convert NaN → None (→ null in JSON) ───────
-    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "mfi", "buy_vol", "sell_vol"]
-    ind_df = df[ind_cols].where(df[ind_cols].notna(), other=None)
+    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "mfi", "buy_vol", "sell_vol", "vfi"]
+    ind_df = df[ind_cols].replace({np.nan: None})
     indicators = ind_df.to_dict("records")
-
-    # ── ORDER FLOW PROFILE (last candle only) ─────────────────────────────────
-    profile = []
-    if want_profile and candles:
-        last_candle = candles[-1]
-        profile = get_last_candle_profile(symbol, last_candle)
-
-    return {"candles": candles, "indicators": indicators, "profile": profile}
+    
+    return {"candles": candles, "indicators": indicators, "volume_profile": volume_profile}
 
 # ─────────────────────────────────────────────────────────────
-# REGISTER PAGE & LAYOUT
+# LAYOUT & CONFIGURATION
 # ─────────────────────────────────────────────────────────────
 
-dash.register_page(__name__, path="/bybit-lwcharts", name="Bybit LWCharts", order=3, assets_folder="assets")
+dash.register_page(__name__, path="/bybit-lwcharts", name="Bybit LWCharts", order=3)
 
 layout = dbc.Container(
     [
-    html.Div([html.H2("Crypto Multi Charts", className="text-light fw-bold mb-0")], className="mb-4"),
+    html.Div([html.H2("Crypto Multi Charts Pro", className="text-light fw-bold mb-0")], className="mb-4"),
     html.Div(id="page-load-trigger", style={"display": "none"}),
     html.Div(id="lwc-render-trigger", style={"display": "none"}),
     dcc.Interval(id="lwc-timer", interval=15_000, n_intervals=0),
@@ -208,9 +137,10 @@ layout = dbc.Container(
                 {"label": " BB50",   "value": "bb50"},
                 {"label": " VWAP",   "value": "vwap"},
                 {"label": " Volume Δ", "value": "volume_delta"},  
-                {"label": " MFI", "value": "mfi"},
-                {"label": " Order Flow", "value": "profile"},
-            ], value=["ema50"], inline=True, switch=True, className="text-light",
+                {"label": " MFI", "value": "mfi"},  
+                {"label": " Vol Flow Indicator (VFI) 👑", "value": "vfi"},  
+                {"label": " Volume Profile (VP) 👑", "value": "volume_profile"},  
+            ], value=["ema50", "volume_profile", "vfi"], inline=True, switch=True, className="text-light",
             input_checked_style={"backgroundColor": "#198754", "borderColor": "#198754"}),
         ], style={"padding": "10px 0px 15px 0px", "borderBottom": "1px solid #222", "marginBottom": "10px"}),
 
@@ -218,34 +148,33 @@ layout = dbc.Container(
         [
         dbc.Col(html.Div([
                 html.H6(sym, className="text-success mb-2", style={"fontFamily": "monospace"}),
-                html.Div(id=f"chart-{sym.replace('/', '-')}", style={"width": "100%", "height": "140px"}),
+                html.Div(id=f"chart-{sym.replace('/', '-')}", style={"width": "100%", "height": "160px"}),
                 ], style=CARD_STYLE), xs=12, sm=6, md=3, lg=3, xl=3)
         for sym in SYMBOLS], className="g-3 mb-3"),
 
     ], fluid=True, style={"backgroundColor": "--bs-body-bg", "minHeight": "100vh", "paddingBottom": "10px"})
 
 # ─────────────────────────────────────────────────────────────
-# CALLBACKS
+# DATABASE PERSISTENCE ENGINE CALLBACK
 # ─────────────────────────────────────────────────────────────
 
 @callback(
     Output("lwc-store", "data"),
     Input("page-load-trigger", "children"),
     Input("lwc-timer", "n_intervals"),
-    Input("indicator-selector", "value"),
     prevent_initial_call=False,
 )
-def load_all_charts(_, n, indicators):
-    want_profile = "profile" in (indicators or [])
+def load_all_charts(_, n):
     result = {}
     for sym in SYMBOLS:
-        result[sym] = fetch_candles(sym, want_profile=want_profile)
+        result[sym] = fetch_candles(sym)
     return result
 
+# Trigger client rendering instantly if data updates OR toggles shift
 clientside_callback(
     """
     function(data, indicators) {
-        if (!data) return "";
+        if (!data || Object.keys(data).length === 0) return "Waiting for store data...";
         return window.LWCharts(data, indicators);
     }
     """,
