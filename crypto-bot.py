@@ -1,7 +1,8 @@
-# 2026.06.14
+# 2026.06.10
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
+import aiohttp
 from datetime import datetime, UTC, timedelta
 import time
 import logging
@@ -37,6 +38,8 @@ ALERT_THRESHOLDS = {
     "max_funding_rate": 0.0005,      # skip if already overheated (longs crowded/paying a lot)
     "cooldown_minutes": 60,          # don't re-alert the same symbol within this window
 }
+
+N8N_ALERT_WEBHOOK = "http://n8n:5678/webhook/crypto-alert"  # internal docker network URL
 
 # =========================
 # SHARED STATE
@@ -82,6 +85,22 @@ async def ticker_refresh_loop(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) 
                 log.info(f"[TICKER] Cached {len(tickers)} {exchange.options['defaultType']} symbols")
             except Exception as e:
                 log.error(f"[TICKER] {exchange.options['defaultType']} refresh error: {e}")
+
+# =========================
+# N8N WEBHOOK NOTIFIER
+# =========================
+async def notify_n8n(alerts: list[dict]) -> None:
+    """Best-effort push to N8N. Failure here is non-fatal — the DB row remains
+    for a slow fallback poll on the N8N side to pick up later."""
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+            for alert in alerts:
+                payload = {**alert, "timestamp": alert["timestamp"].isoformat()}
+                async with session.post(N8N_ALERT_WEBHOOK, json=payload) as resp:
+                    if resp.status >= 300:
+                        log.warning(f"[ALERT] webhook returned {resp.status} for {alert['symbol']}")
+    except Exception as e:
+        log.warning(f"[ALERT] webhook push failed (will rely on poll fallback): {e}")
 
 # =========================
 # ALERT SCAN LOOP
@@ -153,6 +172,7 @@ async def alert_scan_loop(ex_linear: ccxtpro.bybit, pipeline) -> None:
                         write_disposition="append",
                     )
                 log.info(f"[ALERT] {len(alerts)} signal(s): {[a['symbol'] for a in alerts]}")
+                await notify_n8n(alerts)
             except Exception as e:
                 log.error(f"[ALERT] write failed: {e}")
 
