@@ -32,9 +32,9 @@ CLEANUP_HOURS = 60       # Hours of data to retain
 # ALERT CONFIG
 # =========================
 ALERT_THRESHOLDS = {
-    "change_1h_pct": 2.5,            # 1h % move that counts as "starting to move"
+    "change_1h_pct": 2.0,            # 1h % move that counts as "starting to move"
     "change_24h_pct": 0.0,           # require non-negative 24h trend (avoid dead-cat bounces)
-    "min_turnover_24h": 5_000_000,   # liquidity filter in USDT
+    "min_turnover_24h": 1_000_000,   # liquidity filter in USDT
     "max_funding_rate": 0.0005,      # skip if already overheated (longs crowded/paying a lot)
     "cooldown_minutes": 60,          # don't re-alert the same symbol within this window
 }
