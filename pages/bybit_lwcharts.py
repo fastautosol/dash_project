@@ -64,27 +64,6 @@ def fetch_candles(symbol):
     df["buy_vol"]  = df["volume"].where(df["close"] >= df["open"], 0)
     df["sell_vol"] = df["volume"].where(df["close"] <  df["open"], 0)
 
-    # --- VOLUME FLOW INDICATOR (VFI) ---
-    try:
-        vfi_len, vfi_coef, vfi_vcoef = 130, 0.2, 2.5
-        hlc3 = (df["high"] + df["low"] + df["close"]) / 3
-        ln_hlc3 = np.log(hlc3)
-        v_inter = ln_hlc3.diff(1)
-        v_std = v_inter.rolling(vfi_len).std()
-        cutoff = vfi_coef * v_std * df["close"]
-        v_ma = df["volume"].rolling(vfi_len).mean()
-        max_v = v_ma * vfi_vcoef
-        
-        direction = np.zeros(len(df))
-        direction[hlc3 > hlc3.shift(1) + cutoff] = 1
-        direction[hlc3 < hlc3.shift(1) - cutoff] = -1
-        
-        v_clipped = np.minimum(df["volume"], max_v)
-        vfi_raw = direction * v_clipped
-        df["vfi"] = (vfi_raw.rolling(vfi_len).sum() / v_ma) / 100.0
-    except Exception:
-        df["vfi"] = None
-
     # --- VOLUME PROFILE (VP) CONFIGURATION KNOBS ---
     volume_profile = []
     try:
@@ -110,7 +89,7 @@ def fetch_candles(symbol):
     df_clean = df.dropna(subset=["time", "open", "high", "low", "close"])
     candles = df_clean[["time", "open", "high", "low", "close"]].to_dict("records")
     
-    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "mfi", "buy_vol", "sell_vol", "vfi"]
+    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "mfi", "buy_vol", "sell_vol"]
     ind_df = df[ind_cols].replace({np.nan: None})
     indicators = ind_df.to_dict("records")
     
