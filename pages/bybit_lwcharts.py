@@ -1,3 +1,4 @@
+
 # 2026.06.07  12.00 Lightweight-Charts
 import pandas as pd
 import pandas_ta_classic as ta
@@ -40,7 +41,7 @@ def fetch_candles(symbol):
     df = df.set_index("timestamp")
 
     df = df.sort_index()
-    df["time"] = df.index.astype("datetime64[ns]").astype("int64") // 10**9
+    df["time"] = df.index.astype("int64") // 10**9
     df = df.drop_duplicates(subset=["time"], keep="last")
 
     for col in ["open", "high", "low", "close", "volume"]:
@@ -54,12 +55,16 @@ def fetch_candles(symbol):
     df["bb_lower"] = bb["BBL_50_2.0"]
     df["vwap"] = ta.vwap(high=df["high"], low=df["low"], close=df["close"], volume=df["volume"])
 
+    df["mfi"] = ta.mfi(df["high"], df["low"], df["close"], df["volume"], length=14)          
+    df["buy_vol"]  = df["volume"].where(df["close"] >= df["open"], 0)
+    df["sell_vol"] = df["volume"].where(df["close"] <  df["open"], 0)
+
     # ── CANDLES: drop only if price data is missing ──────────────────────────
     df_clean = df.dropna(subset=["time", "open", "high", "low", "close"])
     candles = df_clean[ ["time", "open", "high", "low", "close"]].to_dict("records")
     
     # ── INDICATORS: keep all rows, convert NaN → None (→ null in JSON) ───────
-    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap"]
+    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "mfi", "buy_vol", "sell_vol"]
     ind_df = df[ind_cols].where(df[ind_cols].notna(), other=None)
     indicators = ind_df.to_dict("records")
     return {"candles": candles, "indicators": indicators}
@@ -86,6 +91,8 @@ layout = dbc.Container(
                 {"label": " EMA50",  "value": "ema50"},
                 {"label": " BB50",   "value": "bb50"},
                 {"label": " VWAP",   "value": "vwap"},
+                {"label": " Volume Δ", "value": "volume_delta"},  
+                {"label": " MFI", "value": "mfi"},  
             ], value=["ema50"], inline=True, switch=True, className="text-light",
             input_checked_style={"backgroundColor": "#198754", "borderColor": "#198754"}),
         ], style={"padding": "10px 0px 15px 0px", "borderBottom": "1px solid #222", "marginBottom": "10px"}),
