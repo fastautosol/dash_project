@@ -118,10 +118,9 @@ layout = dbc.Container(
                 {"label": " BB50",   "value": "bb50"},
                 {"label": " VWAP",   "value": "vwap"},
                 {"label": " Volume Δ", "value": "volume_delta"},  
-                {"label": " MFI", "value": "mfi"},  
-                {"label": " Vol Flow Indicator (VFI) 👑", "value": "vfi"},  
-                {"label": " Volume Profile (VP) 👑", "value": "volume_profile"},  
-            ], value=["ema50", "volume_profile", "vfi"], inline=True, switch=True, className="text-light",
+                {"label": " MFI", "value": "mfi"},   
+                {"label": " Volume Profile (VP)", "value": "volume_profile"},  
+            ], value=["ema50", "volume_profile"], inline=True, switch=True, className="text-light",
             input_checked_style={"backgroundColor": "#198754", "borderColor": "#198754"}),
         ], style={"padding": "10px 0px 15px 0px", "borderBottom": "1px solid #222", "marginBottom": "10px"}),
 
