@@ -11,6 +11,7 @@ DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 engine = create_engine(DB_URL)
 
 SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", "COMP/USDT", "LINK/USDT",
+           "NEAR/USDT", "AAVE/USDT", "BCH/USDT", "ZEC/USDT",
           "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
 
 CARD_STYLE = {
@@ -41,7 +42,8 @@ def fetch_candles(symbol):
     df = df.set_index("timestamp")
 
     df = df.sort_index()
-    df["time"] = df.index.astype("int64") // 10**9
+    #df["time"] = df.index.astype("int64") // 10**9
+    df["time"] = df.index.astype("datetime64[ns]").astype("int64") // 10**9
     df = df.drop_duplicates(subset=["time"], keep="last")
 
     for col in ["open", "high", "low", "close", "volume"]:
