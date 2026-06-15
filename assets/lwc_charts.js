@@ -1,4 +1,4 @@
-// 2026.06.14 Premium Multi-Pane Chart Rendering Pipeline
+// 2026.06.15 Premium Multi-Pane Chart Rendering Pipeline
 
 window.LWCharts = function(data, selectedIndicators) {
     if (typeof LightweightCharts === "undefined") {
@@ -51,29 +51,19 @@ window.LWCharts = function(data, selectedIndicators) {
             if (selectedIndicators.includes("volume_profile") && vpData.length > 0) {
                 const maxVol = Math.max(...vpData.map(v => v.volume));
                 const totalBars = candles.length;
-                // Scale width to fill up to 25% of the chart horizontally
-                const maxBarWidth = Math.max(5, Math.round(totalBars * 0.25));
+                const maxBarWidth = Math.max(5, Math.round(totalBars * 0.20)); // fill up to 20% of the chart horizontally
 
                 vpData.forEach(bin => {
                     if (bin.volume > 0) {
                         const widthUnits = Math.round((bin.volume / maxVol) * maxBarWidth);
-                        const startIndex = Math.max(0, totalBars - 1 - widthUnits);
-                        
+                        const startIndex = Math.max(0, totalBars - 1 - widthUnits);          
                         const startTime = candles[startIndex].time;
                         const endTime = candles[totalBars - 1].time;
 
-                        const vpLine = chart.addSeries(LightweightCharts.LineSeries, {
-                            color: "rgba(38, 166, 154, 0.25)",
-                            lineWidth: 2,
-                            priceLineVisible: false,
-                            lastValueVisible: false,
-                            crosshairMarkerVisible: false
-                        }, 0);
+                        const vpLine = chart.addSeries(LightweightCharts.LineSeries, {color: "rgba(38, 166, 154, 0.25)", lineWidth: 2,
+                            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false}, 0);
 
-                        vpLine.setData([
-                            { time: startTime, value: bin.price },
-                            { time: endTime, value: bin.price }
-                        ]);
+                        vpLine.setData([{ time: startTime, value: bin.price }, { time: endTime, value: bin.price }]);
                     }
                 });
             }
@@ -86,10 +76,12 @@ window.LWCharts = function(data, selectedIndicators) {
                 const smaSeries = chart.addSeries(LightweightCharts.LineSeries, { color: "#42a5f5", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 0);
                 smaSeries.setData(indicators.filter(x => x.sma50 != null).map(x => ({ time: x.time, value: x.sma50 })));
             }
+            
             if (selectedIndicators.includes("ema50")) {
                 const emaSeries = chart.addSeries(LightweightCharts.LineSeries, { color: "#f5a623", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 0);
                 emaSeries.setData(indicators.filter(x => x.ema50 != null).map(x => ({ time: x.time, value: x.ema50 })));
             }
+            
             if (selectedIndicators.includes("bb50")) {
                 const bbu = chart.addSeries(LightweightCharts.LineSeries, { color: "#2196f3", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 0);
                 const bbm = chart.addSeries(LightweightCharts.LineSeries, { color: "#555555", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 0);
@@ -98,6 +90,7 @@ window.LWCharts = function(data, selectedIndicators) {
                 bbm.setData(indicators.filter(x => x.bb_middle != null).map(x => ({ time: x.time, value: x.bb_middle })));
                 bbl.setData(indicators.filter(x => x.bb_lower != null).map(x => ({ time: x.time, value: x.bb_lower })));
             }
+            
             if (selectedIndicators.includes("vwap")) {
                 const vwapSeries = chart.addSeries(LightweightCharts.LineSeries, { color: "#00e676", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 0);
                 vwapSeries.setData(indicators.filter(x => x.vwap != null).map(x => ({ time: x.time, value: x.vwap })));
@@ -124,17 +117,6 @@ window.LWCharts = function(data, selectedIndicators) {
                 mfiS.setData(mPoints.map(x => ({ time: x.time, value: x.mfi })));
                 obLine.setData(mPoints.map(x => ({ time: x.time, value: 80 })));
                 osLine.setData(mPoints.map(x => ({ time: x.time, value: 20 })));
-            }
-
-            // Lower Sub-pane: Volume Flow Indicator (VFI)
-            if (selectedIndicators.includes("vfi")) {
-                paneCounter++;
-                chart.addPane({ height: 45 });
-                const vfiSeries = chart.addSeries(LightweightCharts.LineSeries, { color: "#e11d48", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false }, paneCounter);
-                const zeroLine = chart.addSeries(LightweightCharts.LineSeries, { color: "#555555", lineWidth: 1, lineStyle: 3, priceLineVisible: false, lastValueVisible: false }, paneCounter);
-                const vPoints = indicators.filter(x => x.vfi != null);
-                vfiSeries.setData(vPoints.map(x => ({ time: x.time, value: x.vfi })));
-                zeroLine.setData(vPoints.map(x => ({ time: x.time, value: 0 })));
             }
 
             window.lwcCharts[safeId] = chart;
