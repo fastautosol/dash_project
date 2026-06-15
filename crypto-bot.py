@@ -1,9 +1,7 @@
-# 2026.06.15  15.00
+# 2026.06.15  18.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
-import aiohttp
-from collections import deque
 from datetime import datetime, UTC, timedelta
 import time
 import logging
@@ -21,7 +19,6 @@ CRYPTO_SYMBOLS = [
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT", "NEAR/USDT", "AAVE/USDT", "IP/USDT", "ICP/USDT"
 ]
 
-
 XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT",  "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
 
 ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
@@ -31,29 +28,12 @@ TICKER_INTERVAL = 300    # Seconds between ticker cache refreshes (5 mins)
 CLEANUP_HOURS = 60       # Hours of data to retain
 
 # =========================
-# ALERT CONFIG
-# =========================
-ALERT_THRESHOLDS = {
-    "change_1h_pct": 2.5,            # 1h % move that counts as "starting to move"
-    "change_24h_pct": 0.0,           # require non-negative 24h trend (avoid dead-cat bounces)
-    "min_turnover_24h": 5_000_000,   # liquidity filter in USDT
-    "max_funding_rate": 0.0005,      # skip if already overheated (longs crowded/paying a lot)
-    "cooldown_minutes": 60,          # don't re-alert the same symbol within this window
-}
-
-N8N_ALERT_WEBHOOK = "http://n8n:5678/webhook/crypto-alert"  # internal docker network URL
-
-OI_WINDOW_SECONDS = 3600                                    # window for OI trend confirmation
-OI_HISTORY_MAXLEN = int(OI_WINDOW_SECONDS / POLL_INTERVAL) + 5  # ~50 samples at 75s
-
-# =========================
 # SHARED STATE
 # =========================
 class MarketState:
     def __init__(self) -> None:
         self.ohlcv: dict[str, list] = {}
         self.ticker: dict[str, dict] = {}  # Cache for 24h stats
-        self.oi_history: dict[str, deque] = {}  # symbol -> deque[(timestamp, open_interest)]
         self.last_cleanup: float = 0.0
         self.pipeline_lock = asyncio.Lock()  # Serialize dlt pipeline calls
 
@@ -80,7 +60,7 @@ async def ticker_refresh_loop(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) 
     """Fetches 24h stats every 5 minutes and stores them in state.ticker."""
     while True:
         await asyncio.sleep(TICKER_INTERVAL)
-
+        
         for exchange, symbols in [(ex_linear, CRYPTO_SYMBOLS), (ex_spot, XSTOCK_SYMBOLS)]:
             if not symbols:
                 continue
@@ -91,136 +71,6 @@ async def ticker_refresh_loop(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) 
                 log.info(f"[TICKER] Cached {len(tickers)} {exchange.options['defaultType']} symbols")
             except Exception as e:
                 log.error(f"[TICKER] {exchange.options['defaultType']} refresh error: {e}")
-
-# =========================
-# OPEN INTEREST TRACKING
-# =========================
-def record_oi(symbol: str, now: datetime, oi: float) -> None:
-    """Append an OI sample for this symbol to the rolling history buffer."""
-    buf = state.oi_history.setdefault(symbol, deque(maxlen=OI_HISTORY_MAXLEN))
-    buf.append((now, oi))
-
-def get_oi_change_pct(symbol: str, now: datetime) -> float | None:
-    """Returns % change in OI over the last OI_WINDOW_SECONDS, or None if not enough history."""
-    buf = state.oi_history.get(symbol)
-    if not buf:
-        return None
-    target = now - timedelta(seconds=OI_WINDOW_SECONDS)
-    # Find the oldest sample that's still within the window (closest to ~1h ago)
-    past = next((oi for ts, oi in buf if ts >= target), None)
-    if past is None or past == 0:
-        return None
-    current = buf[-1][1]
-    return (current - past) / past * 100
-
-# =========================
-# N8N WEBHOOK NOTIFIER
-# =========================
-async def notify_n8n(alerts: list[dict]) -> None:
-    """Best-effort push to N8N. Failure here is non-fatal — the DB row remains
-    for a slow fallback poll on the N8N side to pick up later."""
-    try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-            for alert in alerts:
-                payload = {**alert, "timestamp": alert["timestamp"].isoformat()}
-                async with session.post(N8N_ALERT_WEBHOOK, json=payload) as resp:
-                    if resp.status >= 300:
-                        log.warning(f"[ALERT] webhook returned {resp.status} for {alert['symbol']}")
-    except Exception as e:
-        log.warning(f"[ALERT] webhook push failed (will rely on poll fallback): {e}")
-
-# =========================
-# ALERT SCAN LOOP
-# =========================
-async def alert_scan_loop(ex_linear: ccxtpro.bybit, pipeline) -> None:
-    """Periodically scans tickers for early-momentum conditions and logs alerts to DB."""
-    last_alert: dict[str, datetime] = {}
-
-    while True:
-        await asyncio.sleep(POLL_INTERVAL)
-
-        try:
-            tickers = await ex_linear.fetch_tickers(symbols=CRYPTO_SYMBOLS)
-        except Exception as e:
-            log.error(f"[ALERT] ticker fetch failed: {e}")
-            continue
-
-        now = datetime.now(UTC)
-        alerts = []
-
-        for sym, t in tickers.items():
-            info = t.get("info", {})
-            try:
-                last_price = float(info["lastPrice"])
-                prev_1h = float(info["prevPrice1h"])
-                prev_24h = float(info["prevPrice24h"])
-                funding = float(info.get("fundingRate") or 0)
-                open_interest = float(info.get("openInterest") or 0)
-                turnover = float(info.get("turnover24h") or 0)
-            except (KeyError, TypeError, ValueError):
-                continue
-
-            if not prev_1h or not prev_24h:
-                continue
-
-            change_1h = (last_price - prev_1h) / prev_1h * 100
-            change_24h = (last_price - prev_24h) / prev_24h * 100
-
-            # Record OI sample for trend confirmation (regardless of whether an alert fires)
-            record_oi(sym, now, open_interest)
-            oi_change_1h = get_oi_change_pct(sym, now)
-
-            # Cooldown — skip if we already fired for this symbol recently
-            fired = last_alert.get(sym)
-            if fired and (now - fired) < timedelta(minutes=ALERT_THRESHOLDS["cooldown_minutes"]):
-                continue
-
-            if (change_1h >= ALERT_THRESHOLDS["change_1h_pct"]
-                    and change_24h >= ALERT_THRESHOLDS["change_24h_pct"]
-                    and turnover >= ALERT_THRESHOLDS["min_turnover_24h"]
-                    and funding <= ALERT_THRESHOLDS["max_funding_rate"]):
-
-                # Classify using the price/OI relationship:
-                #  price up + OI up    -> new longs entering, trend confirmed (strongest)
-                #  price up + OI down  -> short covering / squeeze, weaker signal
-                #  price up + OI flat  -> inconclusive
-                if oi_change_1h is None:
-                    oi_signal = "unknown"
-                elif oi_change_1h > 0.5:
-                    oi_signal = "trend_confirmed"
-                elif oi_change_1h < -0.5:
-                    oi_signal = "short_squeeze"
-                else:
-                    oi_signal = "flat_oi"
-
-                alerts.append({
-                    "symbol": sym,
-                    "timestamp": now,
-                    "alert_type": "momentum_1h",
-                    "oi_signal": oi_signal,
-                    "oi_change_1h_pct": round(oi_change_1h, 3) if oi_change_1h is not None else None,
-                    "last_price": last_price,
-                    "change_1h_pct": round(change_1h, 3),
-                    "change_24h_pct": round(change_24h, 3),
-                    "funding_rate": funding,
-                    "open_interest": open_interest,
-                    "turnover_24h": turnover,
-                    "notified": False,
-                })
-                last_alert[sym] = now
-
-        if alerts:
-            try:
-                async with state.pipeline_lock:
-                    await asyncio.to_thread(
-                        pipeline.run, alerts,
-                        table_name="bybit_alerts",
-                        write_disposition="append",
-                    )
-                log.info(f"[ALERT] {len(alerts)} signal(s): {[a['symbol'] for a in alerts]}")
-                await notify_n8n(alerts)
-            except Exception as e:
-                log.error(f"[ALERT] write failed: {e}")
 
 # =========================
 # DB WRITER & CLEANUP LOOP
@@ -238,7 +88,7 @@ async def db_writer_loop(pipeline) -> None:
             bar = state.ohlcv.get(sym)
             if not bar:
                 continue
-
+            
             # Fetch latest ticker info for this symbol (fallback to empty dict if not yet cached)
             ticker_data = state.ticker.get(sym, {})
             info = ticker_data.get("info", {})
@@ -274,7 +124,7 @@ async def db_writer_loop(pipeline) -> None:
                         with pipeline.sql_client() as client:
                             tname = client.make_qualified_table_name("bybit_candles")
                             client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
-
+                    
                     await asyncio.to_thread(_cleanup)
                 log.info(f"[CLEANUP] Removed data older than {CLEANUP_HOURS}h")
             except Exception as e:
@@ -292,10 +142,9 @@ async def main() -> None:
 
     # Initialize dlt pipeline
     pipeline = dlt.pipeline(
-        pipeline_name="crypto_strategy_bybit",
+        pipeline_name="crypto_strategy_ws_unified",
         destination=dlt.destinations.postgres(credentials=DB_URL),
         dataset_name="bybit_data")
-    pipeline.drop_pending_packages()
 
     tasks = []
 
@@ -313,11 +162,8 @@ async def main() -> None:
     # Start background ticker cache refresh
     tasks.append(asyncio.create_task(ticker_refresh_loop(ex_linear, ex_spot), name="ticker-refresh"))
 
-    # Start momentum alert scanner
-    tasks.append(asyncio.create_task(alert_scan_loop(ex_linear, pipeline), name="alert-scan"))
-
-    #log.info(f"Bot started — Watching {len(CRYPTO_SYMBOLS)} Crypto + {len(XSTOCK_SYMBOLS)} X-Stocks")
-    log.info(f"DB Upsert every {POLL_INTERVAL}s (with VWAP/Turnover/Pct) | Ticker cache every {TICKER_INTERVAL}s | Alert scan every {POLL_INTERVAL}s")
+    log.info(f"Bot started — Watching {len(CRYPTO_SYMBOLS)} Crypto + {len(XSTOCK_SYMBOLS)} X-Stocks")
+    log.info(f"DB Upsert every {POLL_INTERVAL}s (with VWAP/Turnover/Pct) | Ticker cache every {TICKER_INTERVAL}s")
 
     try:
         await asyncio.gather(*tasks)
