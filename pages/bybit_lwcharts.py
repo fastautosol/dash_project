@@ -1,5 +1,5 @@
 
-# 2026.06.07  12.00 Lightweight-Charts
+# 2026.06.15  18.00 Lightweight-Charts
 import pandas as pd
 import pandas_ta_classic as ta
 from sqlalchemy import create_engine, text
