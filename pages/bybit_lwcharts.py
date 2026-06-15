@@ -49,7 +49,7 @@ def fetch_candles(symbol):
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df["sma50"] = ta.sma(df["close"], length=50)
-    df["ema50"] = ta.ema(df["close"], length=50).round(4)
+    df["ema50"] = ta.ema(df["close"], length=50)
     bb = ta.bbands(df["close"], length=50)
     df["bb_upper"] = bb["BBU_50_2.0"]
     df["bb_middle"] = bb["BBM_50_2.0"]
