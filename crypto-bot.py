@@ -3,6 +3,7 @@ import asyncio
 import ccxt.pro as ccxtpro
 import dlt
 import aiohttp
+from collections import deque
 from datetime import datetime, UTC, timedelta
 import time
 import logging
@@ -20,7 +21,8 @@ CRYPTO_SYMBOLS = [
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT", "NEAR/USDT", "AAVE/USDT", "IP/USDT", "ICP/USDT"
 ]
 
-XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
+
+XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT",  "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
 
 ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
 
@@ -32,14 +34,17 @@ CLEANUP_HOURS = 60       # Hours of data to retain
 # ALERT CONFIG
 # =========================
 ALERT_THRESHOLDS = {
-    "change_1h_pct": 2.0,            # 1h % move that counts as "starting to move"
+    "change_1h_pct": 2.5,            # 1h % move that counts as "starting to move"
     "change_24h_pct": 0.0,           # require non-negative 24h trend (avoid dead-cat bounces)
-    "min_turnover_24h": 1_000_000,   # liquidity filter in USDT
+    "min_turnover_24h": 5_000_000,   # liquidity filter in USDT
     "max_funding_rate": 0.0005,      # skip if already overheated (longs crowded/paying a lot)
     "cooldown_minutes": 60,          # don't re-alert the same symbol within this window
 }
 
 N8N_ALERT_WEBHOOK = "http://n8n:5678/webhook/crypto-alert"  # internal docker network URL
+
+OI_WINDOW_SECONDS = 3600                                    # window for OI trend confirmation
+OI_HISTORY_MAXLEN = int(OI_WINDOW_SECONDS / POLL_INTERVAL) + 5  # ~50 samples at 75s
 
 # =========================
 # SHARED STATE
@@ -48,6 +53,7 @@ class MarketState:
     def __init__(self) -> None:
         self.ohlcv: dict[str, list] = {}
         self.ticker: dict[str, dict] = {}  # Cache for 24h stats
+        self.oi_history: dict[str, deque] = {}  # symbol -> deque[(timestamp, open_interest)]
         self.last_cleanup: float = 0.0
         self.pipeline_lock = asyncio.Lock()  # Serialize dlt pipeline calls
 
@@ -85,6 +91,27 @@ async def ticker_refresh_loop(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) 
                 log.info(f"[TICKER] Cached {len(tickers)} {exchange.options['defaultType']} symbols")
             except Exception as e:
                 log.error(f"[TICKER] {exchange.options['defaultType']} refresh error: {e}")
+
+# =========================
+# OPEN INTEREST TRACKING
+# =========================
+def record_oi(symbol: str, now: datetime, oi: float) -> None:
+    """Append an OI sample for this symbol to the rolling history buffer."""
+    buf = state.oi_history.setdefault(symbol, deque(maxlen=OI_HISTORY_MAXLEN))
+    buf.append((now, oi))
+
+def get_oi_change_pct(symbol: str, now: datetime) -> float | None:
+    """Returns % change in OI over the last OI_WINDOW_SECONDS, or None if not enough history."""
+    buf = state.oi_history.get(symbol)
+    if not buf:
+        return None
+    target = now - timedelta(seconds=OI_WINDOW_SECONDS)
+    # Find the oldest sample that's still within the window (closest to ~1h ago)
+    past = next((oi for ts, oi in buf if ts >= target), None)
+    if past is None or past == 0:
+        return None
+    current = buf[-1][1]
+    return (current - past) / past * 100
 
 # =========================
 # N8N WEBHOOK NOTIFIER
@@ -139,6 +166,10 @@ async def alert_scan_loop(ex_linear: ccxtpro.bybit, pipeline) -> None:
             change_1h = (last_price - prev_1h) / prev_1h * 100
             change_24h = (last_price - prev_24h) / prev_24h * 100
 
+            # Record OI sample for trend confirmation (regardless of whether an alert fires)
+            record_oi(sym, now, open_interest)
+            oi_change_1h = get_oi_change_pct(sym, now)
+
             # Cooldown — skip if we already fired for this symbol recently
             fired = last_alert.get(sym)
             if fired and (now - fired) < timedelta(minutes=ALERT_THRESHOLDS["cooldown_minutes"]):
@@ -149,10 +180,25 @@ async def alert_scan_loop(ex_linear: ccxtpro.bybit, pipeline) -> None:
                     and turnover >= ALERT_THRESHOLDS["min_turnover_24h"]
                     and funding <= ALERT_THRESHOLDS["max_funding_rate"]):
 
+                # Classify using the price/OI relationship:
+                #  price up + OI up    -> new longs entering, trend confirmed (strongest)
+                #  price up + OI down  -> short covering / squeeze, weaker signal
+                #  price up + OI flat  -> inconclusive
+                if oi_change_1h is None:
+                    oi_signal = "unknown"
+                elif oi_change_1h > 0.5:
+                    oi_signal = "trend_confirmed"
+                elif oi_change_1h < -0.5:
+                    oi_signal = "short_squeeze"
+                else:
+                    oi_signal = "flat_oi"
+
                 alerts.append({
                     "symbol": sym,
                     "timestamp": now,
                     "alert_type": "momentum_1h",
+                    "oi_signal": oi_signal,
+                    "oi_change_1h_pct": round(oi_change_1h, 3) if oi_change_1h is not None else None,
                     "last_price": last_price,
                     "change_1h_pct": round(change_1h, 3),
                     "change_24h_pct": round(change_24h, 3),
