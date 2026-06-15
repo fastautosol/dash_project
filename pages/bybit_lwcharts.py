@@ -1,4 +1,4 @@
-# 2026.06.15  18.00 Lightweight-Charts
+# 2026.06.07  12.00 Lightweight-Charts
 import pandas as pd
 import pandas_ta_classic as ta
 from sqlalchemy import create_engine, text
@@ -9,10 +9,8 @@ import dash_bootstrap_components as dbc
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 engine = create_engine(DB_URL)
 
-SYMBOLS = [
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "LTC/USDT", "ETC/USDT", "COMP/USDT",
-    "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT" #"NEAR/USDT", "AAVE/USDT", "IP/USDT", "ICP/USDT",
-    "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
+SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", "COMP/USDT", "LINK/USDT",
+          "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
 
 CARD_STYLE = {
     "backgroundColor": "#111111",
@@ -49,23 +47,19 @@ def fetch_candles(symbol):
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df["sma50"] = ta.sma(df["close"], length=50)
-    df["ema50"] = ta.ema(df["close"], length=50)
+    df["ema50"] = ta.ema(df["close"], length=50).round(4)
     bb = ta.bbands(df["close"], length=50)
     df["bb_upper"] = bb["BBU_50_2.0"]
     df["bb_middle"] = bb["BBM_50_2.0"]
     df["bb_lower"] = bb["BBL_50_2.0"]
     df["vwap"] = ta.vwap(high=df["high"], low=df["low"], close=df["close"], volume=df["volume"])
 
-    df["mfi"] = ta.mfi(df["high"], df["low"], df["close"], df["volume"], length=14)          
-    df["buy_vol"]  = df["volume"].where(df["close"] >= df["open"], 0)
-    df["sell_vol"] = df["volume"].where(df["close"] <  df["open"], 0)
-
     # ── CANDLES: drop only if price data is missing ──────────────────────────
     df_clean = df.dropna(subset=["time", "open", "high", "low", "close"])
     candles = df_clean[ ["time", "open", "high", "low", "close"]].to_dict("records")
     
     # ── INDICATORS: keep all rows, convert NaN → None (→ null in JSON) ───────
-    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "mfi", "buy_vol", "sell_vol"]
+    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap"]
     ind_df = df[ind_cols].where(df[ind_cols].notna(), other=None)
     indicators = ind_df.to_dict("records")
     return {"candles": candles, "indicators": indicators}
@@ -92,8 +86,6 @@ layout = dbc.Container(
                 {"label": " EMA50",  "value": "ema50"},
                 {"label": " BB50",   "value": "bb50"},
                 {"label": " VWAP",   "value": "vwap"},
-                {"label": " Volume Δ", "value": "volume_delta"},  
-                {"label": " MFI", "value": "mfi"},  
             ], value=["ema50"], inline=True, switch=True, className="text-light",
             input_checked_style={"backgroundColor": "#198754", "borderColor": "#198754"}),
         ], style={"padding": "10px 0px 15px 0px", "borderBottom": "1px solid #222", "marginBottom": "10px"}),
