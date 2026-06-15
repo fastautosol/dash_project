@@ -1,4 +1,4 @@
-// 2026.06.15  18.00
+// 2026.05.31  12.00
 
 window.LWCharts = function(data, selectedIndicators) {
 
@@ -105,82 +105,6 @@ window.LWCharts = function(data, selectedIndicators) {
             if (selectedIndicators.includes("vwap")) {
                 const vwapSeries = chart.addSeries(LightweightCharts.LineSeries, {color:"#00e676", lineWidth:1, priceLineVisible:false, lastValueVisible:false});
                 vwapSeries.setData(indicators.filter(x => x.vwap != null).map(x => ({time: x.time, value: x.vwap })));
-            }
-
-            // -------------------------------------------------
-            // VOLUME DELTA  (buy_vol ↑ green / sell_vol ↓ red)
-            // -------------------------------------------------
-
-            if (selectedIndicators.includes("volume_delta")) {
-            
-                chart.addPane({ height: 60 });   // creates pane index 1
-            
-                const buyVolSeries = chart.addSeries(
-                    LightweightCharts.HistogramSeries,
-                    { color: "#26a69a", priceFormat: { type: "volume" },
-                      priceLineVisible: false, lastValueVisible: false,
-                      baseLineVisible: false },
-                    1   // ← pane index
-                );
-
-                const sellVolSeries = chart.addSeries(
-                    LightweightCharts.HistogramSeries,
-                    { color: "#ef5350", priceFormat: { type: "volume" },
-                      priceLineVisible: false, lastValueVisible: false,
-                      baseLineVisible: false },
-                    1   // ← same pane index
-                );
-            
-                buyVolSeries.setData(
-                    indicators
-                        .filter(x => x.buy_vol != null && x.buy_vol > 0)
-                        .map(x => ({ time: x.time, value: x.buy_vol }))
-                );
-            
-                sellVolSeries.setData(
-                    indicators
-                        .filter(x => x.sell_vol != null && x.sell_vol > 0)
-                        .map(x => ({ time: x.time, value: -x.sell_vol }))  // ← negative → below zero
-                );
-            }
-
-            // -------------------------------------------------
-            // MFI  (Money Flow Index, overbought/oversold lines)
-            // -------------------------------------------------
-            
-            if (selectedIndicators.includes("mfi")) {
-            
-                chart.addPane({ height: 55 });   // creates pane index 2
-                //   (or index 1 if volume_delta is NOT selected — addPane() is only called
-                //    when that block runs, so the pane index depends on render order)
-            
-                const mfiPane = selectedIndicators.includes("volume_delta") ? 2 : 1;
-            
-                const mfiSeries = chart.addSeries(
-                    LightweightCharts.LineSeries,
-                    { color: "#ce93d8", lineWidth: 1,
-                      priceLineVisible: false, lastValueVisible: false },
-                    mfiPane
-                            );
-            
-                // Overbought (80) and oversold (20) reference lines
-                const obSeries = chart.addSeries(
-                    LightweightCharts.LineSeries,
-                    { color: "#ef5350", lineWidth: 1, lineStyle: 2,
-                      priceLineVisible: false, lastValueVisible: false },
-                    mfiPane
-                );
-                const osSeries = chart.addSeries(
-                    LightweightCharts.LineSeries,
-                    { color: "#26a69a", lineWidth: 1, lineStyle: 2,
-                      priceLineVisible: false, lastValueVisible: false },
-                    mfiPane
-                );
-            
-                const mfiPoints = indicators.filter(x => x.mfi != null);
-                mfiSeries.setData(mfiPoints.map(x => ({ time: x.time, value: x.mfi   })));
-                obSeries.setData( mfiPoints.map(x => ({ time: x.time, value: 80      })));
-                osSeries.setData( mfiPoints.map(x => ({ time: x.time, value: 20      })));
             }
 
             // -------------------------------------------------
