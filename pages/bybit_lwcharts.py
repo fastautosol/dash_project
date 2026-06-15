@@ -40,7 +40,7 @@ def fetch_candles(symbol):
     df = df.set_index("timestamp")
 
     df = df.sort_index()
-    df["time"] = df.index.astype("int64") // 10**9
+    df["time"] = df.index.astype("datetime64[ns]").astype("int64") // 10**9
     df = df.drop_duplicates(subset=["time"], keep="last")
 
     for col in ["open", "high", "low", "close", "volume"]:
