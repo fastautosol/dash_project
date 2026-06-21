@@ -15,7 +15,6 @@ log = logging.getLogger(__name__)
 # =========================
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"
-https://n8n.fastautosol.com/webhook/crypto-alert
 POLL_INTERVAL = 300  # 5 minutes
 
 # Custom Strategy Thresholds
@@ -34,25 +33,19 @@ previous_state = {}  # Format: {symbol: {"price": float, "volume": float, "oi": 
 # =========================
 
 async def initialize_markets():
-    """Loads markets from Bybit and filters for linear perpetuals with >= 25x leverage."""
-    global symbols, exchange
-    log.info("Loading Bybit markets and filtering for >= 20x leverage...")
-    
+    global symbols, exchange    
     markets = await exchange.load_markets()
-
     for symbol, market in markets.items():
         if market.get('linear') and market.get('swap'):
             lev_filter = market.get('info', {}).get('leverageFilter', {})
-            max_leverage = float(lev_filter.get('maxLeverage', 0))
-            
-            if max_leverage >= 20 and symbol not in symbols:
+            max_leverage = float(lev_filter.get('maxLeverage', 0))      
+            if max_leverage >= 25 and symbol not in symbols:
                 symbols.append(symbol)
                 
-    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 20x leverage.")
+    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 25x leverage.")
 
 
 async def send_webhook(payload: dict):
-    """Sends an alert JSON payload to your webhook endpoint natively."""
     global http_client
     try:
         response = await http_client.post(WEBHOOK_URL, json=payload)
@@ -65,11 +58,8 @@ async def send_webhook(payload: dict):
 
 
 async def check_metrics():
-    """Fetches tickers, calculates signals, fires webhooks, and logs to PostgreSQL."""
-    global symbols, exchange, previous_state, pipeline
-    
+    global symbols, exchange, previous_state, pipeline    
     try:
-        log.info("Polling latest market tickers...")
         tickers = await exchange.fetch_tickers(symbols=symbols)
     except Exception as e:
         log.error(f"Failed to fetch tickers: {e}")
@@ -101,33 +91,28 @@ async def check_metrics():
             change_24h = ((last_price - prev_24h) / prev_24h) * 100 if prev_24h > 0 else 0.0
 
             if symbol in previous_state:
-                prev = previous_state[symbol]
-                
+                prev = previous_state[symbol]       
                 volume_ratio = volume_24h / prev['volume'] if prev['volume'] > 0 else 1.0
                 oi_change_pct = ((open_interest - prev['oi']) / prev['oi']) * 100 if prev['oi'] > 0 else 0.0
-
                 alerts_triggered = []
 
-                # Signal #1: Volume explosion
+                # ----- Signal #1: Volume explosion -----
                 if change_1h >= PRICE_CHANGE_1H_THRESHOLD and volume_ratio >= VOLUME_SPIKE_THRESHOLD:
                     alerts_triggered.append({
                         "alert_type": "VOLUME_EXPLOSION",
-                        "details": f"Price +{change_1h:.2f}% with 5m volume spike of {volume_ratio:.2f}x"
-                    })
+                        "details": f"Price +{change_1h:.2f}% with 5m volume spike of {volume_ratio:.2f}x"})
 
-                # Signal #2: Open Interest Rising
+                # ----- Signal #2: Open Interest Rising -----
                 if change_1h > 0 and oi_change_pct >= OI_INCREASE_THRESHOLD and volume_ratio >= VOLUME_SPIKE_THRESHOLD:
                     alerts_triggered.append({
                         "alert_type": "OPEN_INTEREST_RISING",
-                        "details": f"Price rising under heavy buying pressure with +{oi_change_pct:.2f}% OI growth"
-                    })
+                        "details": f"Price rising under heavy buying pressure with +{oi_change_pct:.2f}% OI growth"})
 
-                # Signal #2 (Alternate): Short Covering
+                # ----- Signal #2 (Alternate): Short Covering -----
                 if change_1h >= PRICE_CHANGE_1H_THRESHOLD and oi_change_pct <= -OI_INCREASE_THRESHOLD:
                     alerts_triggered.append({
                         "alert_type": "SHORT_COVERING_PUMP",
-                        "details": f"Price rising (+{change_1h:.2f}%), but open interest shedding (-{abs(oi_change_pct):.2f}%)"
-                    })
+                        "details": f"Price rising (+{change_1h:.2f}%), but open interest shedding (-{abs(oi_change_pct):.2f}%)"})
 
                 # If signals fired, log them and push to arrays
                 if alerts_triggered:
@@ -172,7 +157,7 @@ async def check_metrics():
         except Exception as parse_err:
             log.debug(f"Skipping row error for {symbol}: {parse_err}")
 
-    # Write metrics cleanly to Postgres via DLT
+    # ----- Write metrics cleanly to Postgres via DLT -----
     if db_alert_records:
         try:
             # We run this in a threadpool executor so it doesn't halt async event tickers
@@ -188,12 +173,10 @@ async def check_metrics():
 
 
 async def main():
-    global exchange, http_client, pipeline
-    
+    global exchange, http_client, pipeline    
     exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
     http_client = httpx.AsyncClient(timeout=10.0)
     
-    # Initialize your native dlt pipeline configuration
     pipeline = dlt.pipeline(
         pipeline_name="crypto_alert_bot",
         destination=dlt.destinations.postgres(credentials=DB_URL),
@@ -203,17 +186,13 @@ async def main():
     
     try:
         await initialize_markets()
-        
-        # Seed initial snapshot dictionary mapping data
         await check_metrics()
-        log.info(f"Bot activated. Monitoring and logging directly to Postgres every {POLL_INTERVAL}s.")
+        log.info(f"Bot activated. Monitoring and logging to Postgres every {POLL_INTERVAL}s.")
 
         while True:
             await asyncio.sleep(POLL_INTERVAL)
-            start_time = time.time()
-            
-            await check_metrics()
-            
+            start_time = time.time()          
+            await check_metrics()          
             elapsed = time.time() - start_time
             log.info(f"Loop completed in {elapsed:.2f} seconds.")
             
