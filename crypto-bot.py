@@ -36,6 +36,8 @@ async def initialize_markets():
             max_leverage = float(lev_filter.get('maxLeverage', 0))          
             if max_leverage >= 25 and symbol not in symbols:
                 symbols.append(symbol)
+                
+    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 25x leverage.") 
             
 
 async def send_webhook(payload: dict):
