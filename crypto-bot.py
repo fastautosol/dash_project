@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 # =========================
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"
+https://n8n.fastautosol.com/webhook/crypto-alert
 POLL_INTERVAL = 300  # 5 minutes
 
 # Custom Strategy Thresholds
