@@ -1,4 +1,4 @@
-# 2026.06.21
+# 2026.06.21  11.00
 import asyncio
 import ccxt.async_support as ccxt
 import httpx
@@ -14,23 +14,24 @@ log = logging.getLogger(__name__)
 WEBHOOK_URL = "http://your-n8n-or-fastapi-server:5678/webhook/crypto-alerts"
 POLL_INTERVAL = 300  # 5 minutes
 
-PRICE_CHANGE_THRESHOLD = 3.5  # % change in 5 mins
-VOLUME_SPIKE_THRESHOLD = 2.0  # 2x volume increase in 5 mins
+# Thresholds for custom rules/alerts
+PRICE_CHANGE_1H_THRESHOLD = 5.0   # Trigger if 1h change exceeds 5%
+VOLUME_SPIKE_THRESHOLD = 2.0      # Trigger if current 24h volume is 2x the previous check's volume
 
-# Global state variables (replacing the class attributes)
+# Global state variables (no classes)
 exchange = None
 http_client = None
 symbols = []
-previous_state = {}  # Format: {symbol: {"price": float, "volume": float}}
+previous_state = {}  # Format: {symbol: {"price": float, "volume": float, "oi": float}}
 
 # =========================
 # FUNCTIONS
 # =========================
 
 async def initialize_markets():
-    """Loads markets from Bybit and filters for linear pairs with >= 25x leverage."""
+    """Loads markets from Bybit and filters for linear perpetuals with >= 25x leverage."""
     global symbols, exchange
-    log.info("Loading Bybit markets...")
+    log.info("Loading Bybit markets and filtering for >= 25x leverage...")
     
     markets = await exchange.load_markets()
     
@@ -60,65 +61,89 @@ async def send_webhook(payload: dict):
 
 
 async def check_metrics():
-    """Fetches all tickers at once, compares against the last snapshot, and triggers alerts."""
+    """Fetches all tickers, extracts the required dictionary attributes, and checks signals."""
     global symbols, exchange, previous_state
     
     try:
-        log.info("Fetching latest market tickers...")
-        # Fetch all filtered symbols at once to stay safe from rate limits
-        tickers = await exchange.fetch_tickers(symbols=symbols)
+        log.info("Fetching latest market tickers via REST...")
+        # Using fetch_derivatives_tickers ensures info block has funding rate, open interest, and historical price baselines
+        tickers = await exchange.fetch_derivatives_tickers(symbols=symbols)
     except Exception as e:
         log.error(f"Failed to fetch tickers: {e}")
         return
 
     for symbol in symbols:
-        ticker = tickers.get(symbol)
-        if not ticker or 'last' not in ticker or 'baseVolume' not in ticker:
+        ticker_data = tickers.get(symbol)
+        if not ticker_data or 'info' not in ticker_data:
             continue
 
-        current_price = ticker['last']
-        current_volume = ticker['baseVolume']  # Rolling 24h volume accumulated
+        info = ticker_data['info']
+        
+        try:
+            # Extract requested metric items safely
+            last_price = float(info.get("lastPrice") or ticker_data.get("last") or 0)
+            prev_1h = float(info.get("prevPrice1h") or last_price or 0)
+            prev_24h = float(info.get("prevPrice24h") or last_price or 0)
+            change_24ho = float(info.get('price24hPcnt') or 0) * 100
 
-        # If we have a past 5-minute snapshot for this asset, run calculations
-        if symbol in previous_state:
-            prev = previous_state[symbol]
-            
-            # 1. Calculate Price Change %
-            price_pct_change = ((current_price - prev['price']) / prev['price']) * 100
-            
-            # 2. Calculate Volume Spike Ratio
-            volume_ratio = current_volume / prev['volume'] if prev['volume'] > 0 else 1.0
+            funding = float(info.get("fundingRate") or 0)
+            open_interest = float(info.get("openInterest") or 0)
+            turnover = float(info.get("turnover24h") or 0)
+            volume_24h = float(info.get("volume24h") or ticker_data.get("baseVolume") or 0)
 
-            alerts_triggered = []
+            # Performance variations calculations requested
+            change_1h = ((last_price - prev_1h) / prev_1h) * 100 if prev_1h > 0 else 0.0
+            change_24h = ((last_price - prev_24h) / prev_24h) * 100 if prev_24h > 0 else 0.0
 
-            if abs(price_pct_change) >= PRICE_CHANGE_THRESHOLD:
-                alerts_triggered.append({
-                    "type": "PRICE_SUDDEN_CHANGE",
-                    "details": f"Price shifted {price_pct_change:.2f}% inside 5 minutes."
-                })
+            # Signal Evaluation Layer (Comparing current ticker variables to last 5-min state)
+            if symbol in previous_state:
+                prev = previous_state[symbol]
+                
+                # Check for 5m Volume spike velocity
+                volume_ratio = volume_24h / prev['volume'] if prev['volume'] > 0 else 1.0
+                oi_change_pct = ((open_interest - prev['oi']) / prev['oi']) * 100 if prev['oi'] > 0 else 0.0
 
-            if volume_ratio >= VOLUME_SPIKE_THRESHOLD:
-                alerts_triggered.append({
-                    "type": "VOLUME_SPIKE",
-                    "details": f"24h rolling volume expanded by {volume_ratio:.2f}x over last 5 minutes."
-                })
+                alerts_triggered = []
 
-            # Fire the webhook background task safely without blocking the rest of the loop
-            if alerts_triggered:
-                payload = {
-                    "symbol": symbol,
-                    "timestamp": ticker.get('datetime'),
-                    "current_price": current_price,
-                    "alerts": alerts_triggered,
-                    "leverage_tier_eligible": "25x+"
-                }
-                asyncio.create_task(send_webhook(payload))
+                # Signal Rule Example #1: Volume explosion along with strong 1h momentum
+                if change_1h > 3.0 and volume_ratio > 1.8:
+                    alerts_triggered.append({
+                        "type": "VOLUME_EXPLOSION_BEFORE_PRICE",
+                        "details": f"1h Return: {change_1h:.2f}%, 5m Volume expanded by {volume_ratio:.2f}x"
+                    })
 
-        # Save current state as historical context for the next 5-minute iteration
-        previous_state[symbol] = {
-            "price": current_price,
-            "volume": current_volume
-        }
+                # Signal Rule Example #2: OI + Price entering momentum phase
+                if change_1h > 2.0 and oi_change_pct > 4.0:
+                    alerts_triggered.append({
+                        "type": "OPEN_INTEREST_RISING",
+                        "details": f"New money entering! 1h Price +{change_1h:.2f}%, 5m OI increased by {oi_change_pct:.2f}%"
+                    })
+
+                # Fire the non-blocking background webhook if any signals matched
+                if alerts_triggered:
+                    payload = {
+                        "symbol": symbol,
+                        "last_price": last_price,
+                        "change_1h": change_1h,
+                        "change_24h": change_24h,
+                        "change_24ho": change_24ho,
+                        "funding_rate": funding,
+                        "open_interest": open_interest,
+                        "turnover_24h": turnover,
+                        "volume_24h": volume_24h,
+                        "alerts": alerts_triggered
+                    }
+                    asyncio.create_task(send_webhook(payload))
+
+            # Store history state context for next iteration calculations
+            previous_state[symbol] = {
+                "price": last_price,
+                "volume": volume_24h,
+                "oi": open_interest
+            }
+
+        except Exception as parse_err:
+            log.debug(f"Skipping processing calculations on {symbol}: {parse_err}")
 
 
 async def main():
@@ -129,14 +154,14 @@ async def main():
     http_client = httpx.AsyncClient(timeout=10.0)
     
     try:
-        # Load markets & filter pairs
+        # Load markets & filter pairs supporting high leverage tiers
         await initialize_markets()
         
-        # Run a baseline check to seed the `previous_state` snapshot dictionary
+        # Run a baseline check to seed the `previous_state` dictionary snapshot mapping
         await check_metrics()
-        log.info(f"Initial cache seeded. Polling every {POLL_INTERVAL}s.")
+        log.info(f"Initial snapshot seeds completed. Active monitoring polling loop every {POLL_INTERVAL}s.")
 
-        # Main alert loop
+        # Main loop framework
         while True:
             await asyncio.sleep(POLL_INTERVAL)
             start_time = time.time()
@@ -144,12 +169,12 @@ async def main():
             await check_metrics()
             
             elapsed = time.time() - start_time
-            log.info(f"Completed analysis cycle in {elapsed:.2f} seconds.")
+            log.info(f"Completed metric screening analysis cycle in {elapsed:.2f} seconds.")
             
     except asyncio.CancelledError:
         log.info("Shutdown requested.")
     finally:
-        # Clean up HTTP and exchange sessions safely on exit
+        # Clean up HTTP client and exchange connections safely on script exit
         await exchange.close()
         await http_client.aclose()
         log.info("Connections cleanly severed.")
