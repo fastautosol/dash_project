@@ -1,8 +1,4 @@
 # 2026.06.21  18.00
-
-WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"
-
-# 2026.06.21
 import asyncio
 import ccxt.async_support as ccxt
 import dlt
@@ -19,7 +15,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)  # Mute HTTPX routing chatt
 # CONFIGURATION & GLOBAL STATE
 # =========================
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-WEBHOOK_URL = "http://your-n8n-or-fastapi-server:5678/webhook/crypto-alerts"
+WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"
 POLL_INTERVAL = 300  # 5 minutes
 
 # Advanced Strategy Thresholds
