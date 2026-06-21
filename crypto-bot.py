@@ -104,7 +104,6 @@ async def check_metrics():
                 
                 volume_ratio = volume_24h / prev['volume'] if prev['volume'] > 0 else 1.0
                 oi_change_pct = ((open_interest - prev['oi']) / prev['oi']) * 100 if prev['oi'] > 0 else 0.0
-                relative_strength_1h = change_1h - btc_1h_return
 
                 alerts_triggered = []
 
@@ -135,8 +134,7 @@ async def check_metrics():
                     v_score = min(20.0, (volume_ratio / VOLUME_SPIKE_THRESHOLD) * 20.0) if VOLUME_SPIKE_THRESHOLD > 0 else 0
                     oi_score = min(20.0, (max(0, oi_change_pct) / OI_INCREASE_THRESHOLD) * 20.0) if OI_INCREASE_THRESHOLD > 0 else 0
                     p_score = min(20.0, (max(0, change_1h) / PRICE_CHANGE_1H_THRESHOLD) * 20.0) if PRICE_CHANGE_1H_THRESHOLD > 0 else 0
-                    rs_score = min(10.0, (max(0, relative_strength_1h) / PRICE_CHANGE_1H_THRESHOLD) * 10.0) if PRICE_CHANGE_1H_THRESHOLD > 0 else 0
-                    momentum_score = round(p_score + v_score + oi_score + rs_score, 2)
+                    momentum_score = round(p_score + v_score + oi_score, 2)
 
                     # 1. Fire non-blocking Webhook to N8N/FastAPI
                     payload = {
@@ -164,16 +162,11 @@ async def check_metrics():
                             "open_interest": open_interest,
                             "turnover_24h": turnover,
                             "volume_24h": volume_24h,
-                            "relative_strength_vs_btc": relative_strength_1h,
                             "momentum_score": momentum_score
                         })
 
             # Save state snap
-            previous_state[symbol] = {
-                "price": last_price,
-                "volume": volume_24h,
-                "oi": open_interest
-            }
+            previous_state[symbol] = {"price": last_price, "volume": volume_24h, "oi": open_interest}
 
         except Exception as parse_err:
             log.debug(f"Skipping row error for {symbol}: {parse_err}")
