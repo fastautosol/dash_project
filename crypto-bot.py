@@ -20,10 +20,8 @@ POLL_INTERVAL = 300  # 5 minutes
 # Custom Strategy Thresholds
 PRICE_CHANGE_1H_THRESHOLD = 2.0   
 VOLUME_SPIKE_THRESHOLD = 1.5      
-OI_INCREASE_THRESHOLD = 1.5       
-BTC_SYMBOL = "BTC/USDT"           
+OI_INCREASE_THRESHOLD = 1.5                
 
-# Global state variables
 exchange = None
 http_client = None
 pipeline = None
@@ -37,22 +35,19 @@ previous_state = {}  # Format: {symbol: {"price": float, "volume": float, "oi": 
 async def initialize_markets():
     """Loads markets from Bybit and filters for linear perpetuals with >= 25x leverage."""
     global symbols, exchange
-    log.info("Loading Bybit markets and filtering for >= 25x leverage...")
+    log.info("Loading Bybit markets and filtering for >= 20x leverage...")
     
     markets = await exchange.load_markets()
-    
-    if BTC_SYMBOL not in symbols:
-        symbols.append(BTC_SYMBOL)
 
     for symbol, market in markets.items():
         if market.get('linear') and market.get('swap'):
             lev_filter = market.get('info', {}).get('leverageFilter', {})
             max_leverage = float(lev_filter.get('maxLeverage', 0))
             
-            if max_leverage >= 25 and symbol not in symbols:
+            if max_leverage >= 20 and symbol not in symbols:
                 symbols.append(symbol)
                 
-    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 25x leverage (including BTC).")
+    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 20x leverage.")
 
 
 async def send_webhook(payload: dict):
@@ -79,21 +74,10 @@ async def check_metrics():
         log.error(f"Failed to fetch tickers: {e}")
         return
 
-    # Extract BTC 1h return for Relative Strength checks
-    btc_ticker = tickers.get(BTC_SYMBOL)
-    btc_1h_return = 0.0
-    if btc_ticker and 'info' in btc_ticker:
-        btc_info = btc_ticker['info']
-        btc_last = float(btc_info.get("lastPrice") or btc_ticker.get('last') or 0)
-        btc_prev_1h = float(btc_info.get("prevPrice1h") or btc_last or 0)
-        btc_1h_return = ((btc_last - btc_prev_1h) / btc_prev_1h) * 100 if btc_prev_1h > 0 else 0.0
-
     now_utc = datetime.now(UTC)
     db_alert_records = []
 
     for symbol in symbols:
-        if symbol == BTC_SYMBOL:
-            continue
 
         ticker_data = tickers.get(symbol)
         if not ticker_data or 'info' not in ticker_data:
@@ -143,13 +127,6 @@ async def check_metrics():
                     alerts_triggered.append({
                         "alert_type": "SHORT_COVERING_PUMP",
                         "details": f"Price rising (+{change_1h:.2f}%), but open interest shedding (-{abs(oi_change_pct):.2f}%)"
-                    })
-
-                # Signal #4: Relative Strength
-                if relative_strength_1h >= PRICE_CHANGE_1H_THRESHOLD and volume_ratio >= 1.5:
-                    alerts_triggered.append({
-                        "alert_type": "RELATIVE_STRENGTH_OUTPERFORMANCE",
-                        "details": f"Outperforming BTC benchmark by +{relative_strength_1h:.2f}%"
                     })
 
                 # If signals fired, log them and push to arrays
