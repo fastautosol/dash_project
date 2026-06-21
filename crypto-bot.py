@@ -38,24 +38,14 @@ previous_state = {}  # Format: {symbol: {"price": float, "volume": float, "oi": 
 # =========================
 
 async def initialize_markets():
-    """Loads markets from Bybit, filters linear contracts, and extracts Max Leverage configurations."""
     global symbols, exchange, leverage_cache
-    log.info("Loading Bybit master markets and extracting leverage configurations...")
-    
+    log.info("Loading Bybit master markets and extracting leverage configurations...")    
     markets = await exchange.load_markets()
-    
-    if BTC_SYMBOL not in symbols:
-        symbols.append(BTC_SYMBOL)
-
     for symbol, market in markets.items():
         if market.get('linear') and market.get('swap'):
             lev_filter = market.get('info', {}).get('leverageFilter', {})
             max_leverage = float(lev_filter.get('maxLeverage', 0))
-            
-            # Map structural data characteristics directly to global memory definitions
             leverage_cache[symbol] = max_leverage
-            
-            # Screen for high tier assets matching risk requirements
             if max_leverage >= 25 and symbol not in symbols:
                 symbols.append(symbol)
                 
