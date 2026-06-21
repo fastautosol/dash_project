@@ -152,7 +152,7 @@ services:
       - n8n-shared-net
 
 
-  crypt-candles-bot:
+  crypto-candles-bot:
     build:
       context: .
       dockerfile: Dockerfile.bot
