@@ -19,8 +19,8 @@ POLL_INTERVAL = 300  # 5 minutes
 
 # Custom Strategy Thresholds
 PRICE_CHANGE_1H_THRESHOLD = 2.0   
-VOLUME_SPIKE_THRESHOLD = 1.25      
-OI_INCREASE_THRESHOLD = 1.25                
+VOLUME_SPIKE_THRESHOLD = 1.5      
+OI_INCREASE_THRESHOLD = 1.5               
 
 exchange = None
 http_client = None
