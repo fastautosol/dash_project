@@ -39,7 +39,7 @@ services:
 
 
   n8n:
-    image: docker.n8n.io/n8nio/n8n:2.25.6
+    image: docker.n8n.io/n8nio/n8n:2.27.3
     container_name: n8n
     restart: unless-stopped
     depends_on:
@@ -127,11 +127,11 @@ services:
       - n8n-shared-net
 
 
-  crypto-webhook-bot:
+  crypto-alert-bot:
     build:
       context: .
       dockerfile: Dockerfile.bot
-    container_name: crypto-webhook-bot
+    container_name: crypto-alert-bot
     restart: unless-stopped
     depends_on:
       n8n:
@@ -152,20 +152,19 @@ services:
       - n8n-shared-net
 
 
-  xstock-webhook-bot:
+  crypt-candles-bot:
     build:
       context: .
       dockerfile: Dockerfile.bot
-    container_name: xstock-webhook-bot
+    container_name: crypto-candles-bot
     restart: unless-stopped
     depends_on:
       n8n:
         condition: service_healthy
     environment:
-      N8N_WEBHOOK_URL: https://${SERVICE_FQDN_N8N}/webhook/xstock-alert
       PYTHONUNBUFFERED: "1"
       TZ: ${TZ:-Europe/Berlin}
-    command: ["python", "xstock-bot.py"]
+    command: ["python", "candles-bot.py"]
     mem_limit: 500m
     cpus: 0.5
     logging:
