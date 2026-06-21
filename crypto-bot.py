@@ -194,7 +194,7 @@ async def main():
             start_time = time.time()          
             await check_metrics()          
             elapsed = time.time() - start_time
-            log.info(f"{datetime.now(UTC)} Loop completed in {elapsed:.2f} seconds.")
+            log.info(f"{datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')} Loop completed in {elapsed:.2f} seconds.")
             
     except asyncio.CancelledError:
         log.info("Shutdown requested.")
