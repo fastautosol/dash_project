@@ -1,4 +1,4 @@
-# 2026.06.21  10.00
+# 2026.06.21  11.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -115,7 +115,7 @@ async def main() -> None:
 
     # Initialize dlt pipeline
     pipeline = dlt.pipeline(
-        pipeline_name="crypto_strategy_bybit",
+        pipeline_name="crypto_candles_bybit",
         destination=dlt.destinations.postgres(credentials=DB_URL),
         dataset_name="bybit_data")
     pipeline.drop_pending_packages()
