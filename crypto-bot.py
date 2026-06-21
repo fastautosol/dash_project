@@ -223,7 +223,7 @@ async def main():
         
         # Seed state definitions
         await check_metrics()
-        log.info(f"Bot activated. Core strategy monitoring loop operational on {POLL_INTERVAL}s frequency.")
+        log.info(f"Bot activated. Monitoring on {POLL_INTERVAL}s frequency.")
 
         while True:
             await asyncio.sleep(POLL_INTERVAL)
