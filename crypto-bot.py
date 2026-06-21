@@ -196,7 +196,7 @@ async def main():
     pipeline = dlt.pipeline(
         pipeline_name="crypto_alert_bot",
         destination=dlt.destinations.postgres(credentials=DB_URL),
-        dataset_name="bybit_alerts"
+        dataset_name="bybit_data"
     )
     pipeline.drop_pending_packages()
     
