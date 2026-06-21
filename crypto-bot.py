@@ -38,8 +38,7 @@ previous_state = {}  # Format: {symbol: {"price": float, "volume": float, "oi": 
 # =========================
 
 async def initialize_markets():
-    global symbols, exchange, leverage_cache
-    log.info("Loading Bybit master markets and extracting leverage configurations...")    
+    global symbols, exchange, leverage_cache   
     markets = await exchange.load_markets()
     for symbol, market in markets.items():
         if market.get('linear') and market.get('swap'):
@@ -49,11 +48,10 @@ async def initialize_markets():
             if max_leverage >= 25 and symbol not in symbols:
                 symbols.append(symbol)
                 
-    log.info(f"Initialized {len(symbols)} high-leverage assets. Leverage master configuration mapped.")
+    log.info(f"Initialized {len(symbols)} high-leverage assets.")
 
 
 async def send_webhook(payload: dict):
-    """Sends an alert JSON payload to your webhook endpoint natively."""
     global http_client
     try:
         response = await http_client.post(WEBHOOK_URL, json=payload)
@@ -106,43 +104,32 @@ async def check_metrics():
                 
                 volume_ratio = volume_24h / prev['volume'] if prev['volume'] > 0 else 1.0
                 oi_change_pct = ((open_interest - prev['oi']) / prev['oi']) * 100 if prev['oi'] > 0 else 0.0
-                
-                # ADVANCED CALCULATION: Turnover Density (Turnover to Open Interest capital utilization ratio)
                 toi_ratio = turnover / open_interest if open_interest > 0 else 0.0
-
                 alerts_triggered = []
 
                 # Signal #1: Volume explosion
                 if change_1h >= PRICE_CHANGE_1H_THRESHOLD and volume_ratio >= VOLUME_SPIKE_THRESHOLD:
                     alerts_triggered.append({
                         "alert_type": "VOLUME_EXPLOSION",
-                        "details": f"Price +{change_1h:.2f}% with 5m volume spike of {volume_ratio:.2f}x"
-                    })
+                        "details": f"Price +{change_1h:.2f}% with 5m volume spike of {volume_ratio:.2f}x"})
 
                 # Signal #2: Open Interest Rising (Organic Long expansion)
                 if change_1h > 0 and oi_change_pct >= OI_INCREASE_THRESHOLD and volume_ratio >= VOLUME_SPIKE_THRESHOLD:
                     alerts_triggered.append({
                         "alert_type": "OPEN_INTEREST_RISING",
-                        "details": f"Price rising under strong structural accumulation (+{oi_change_pct:.2f}% OI growth)"
-                    })
-
-                # ========================================================
-                # NEW ADDITION: Advanced Confirmation Signals
-                # ========================================================
+                        "details": f"Price rising under strong structural accumulation (+{oi_change_pct:.2f}% OI growth)"})
                 
-                # Signal #4: Short Squeeze Breakout (Funding Divergence Confirmation)
+                # Signal #3: Short Squeeze Breakout (Funding Divergence Confirmation)
                 if change_1h >= 3.0 and funding <= FUNDING_DIVERGENCE_LIMIT:
                     alerts_triggered.append({
                         "alert_type": "SHORT_SQUEEZE_CONFIRMED",
-                        "details": f"Aggressive upward break (+{change_1h:.2f}%) meeting extreme short friction. Funding: {funding*100:.4f}%"
-                    })
+                        "details": f"Aggressive upward break (+{change_1h:.2f}%) meeting extreme short friction. Funding: {funding*100:.4f}%"})
 
-                # Signal #5: Turnover Velocity Spike (High Capital Density Acceleration)
+                # Signal #4: Turnover Velocity Spike (High Capital Density Acceleration)
                 if volume_ratio >= VOLUME_SPIKE_THRESHOLD and toi_ratio > 1.5:
                     alerts_triggered.append({
                         "alert_type": "HIGH_TURNOVER_DENSITY",
-                        "details": f"Heavy capital rotation detected. 24h Turnover is {toi_ratio:.2f}x greater than open interest."
-                    })
+                        "details": f"Heavy capital rotation detected. 24h Turnover is {toi_ratio:.2f}x greater than open interest."})
 
                 # If signals fired, calculate momentum score and process distribution pipeline
                 if alerts_triggered:
