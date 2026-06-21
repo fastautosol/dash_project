@@ -33,7 +33,6 @@ CLEANUP_HOURS = 60       # Hours of data to retain
 class MarketState:
     def __init__(self) -> None:
         self.ohlcv: dict[str, list] = {}
-        self.ticker: dict[str, dict] = {}  # Cache for 24h stats
         self.last_cleanup: float = 0.0
         self.pipeline_lock = asyncio.Lock()  # Serialize dlt pipeline calls
 
@@ -54,25 +53,6 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
             await asyncio.sleep(3)
 
 # =========================
-# REST — TICKER CACHE REFRESH
-# =========================
-async def ticker_refresh_loop(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) -> None:
-    """Fetches 24h stats every 5 minutes and stores them in state.ticker."""
-    while True:
-        await asyncio.sleep(TICKER_INTERVAL)
-        
-        for exchange, symbols in [(ex_linear, CRYPTO_SYMBOLS), (ex_spot, XSTOCK_SYMBOLS)]:
-            if not symbols:
-                continue
-            try:
-                tickers = await exchange.fetch_tickers(symbols=symbols)
-                # Update the shared cache
-                state.ticker.update(tickers)
-                log.info(f"[TICKER] Cached {len(tickers)} {exchange.options['defaultType']} symbols")
-            except Exception as e:
-                log.error(f"[TICKER] {exchange.options['defaultType']} refresh error: {e}")
-
-# =========================
 # DB WRITER & CLEANUP LOOP
 # =========================
 async def db_writer_loop(pipeline) -> None:
@@ -88,10 +68,6 @@ async def db_writer_loop(pipeline) -> None:
             bar = state.ohlcv.get(sym)
             if not bar:
                 continue
-            
-            # Fetch latest ticker info for this symbol (fallback to empty dict if not yet cached)
-            ticker_data = state.ticker.get(sym, {})
-            info = ticker_data.get("info", {})
 
             records.append({
                 "symbol":        sym,
@@ -100,10 +76,7 @@ async def db_writer_loop(pipeline) -> None:
                 "high":          float(bar[2] or 0),
                 "low":           float(bar[3] or 0),
                 "close":         float(bar[4] or 0),
-                "volume":        float(bar[5] or 0),
-                "vwap":          float(info.get("vwap24h") or ticker_data.get("vwap") or 0),
-                "turnover_24h":  float(info.get("turnover24h") or ticker_data.get("quoteVolume") or 0),
-                "price_24h_pct": float(info.get("price24hPcnt") or ticker_data.get("percentage") or 0),
+                "volume":        float(bar[5] or 0)
             })
 
         # 2. Upsert to database (Single unified table, just like the old bot)
@@ -159,12 +132,6 @@ async def main() -> None:
 
     # Start unified DB writer
     tasks.append(asyncio.create_task(db_writer_loop(pipeline), name="db-writer"))
-
-    # Start background ticker cache refresh
-    tasks.append(asyncio.create_task(ticker_refresh_loop(ex_linear, ex_spot), name="ticker-refresh"))
-
-    #log.info(f"Bot started — Watching {len(CRYPTO_SYMBOLS)} Crypto + {len(XSTOCK_SYMBOLS)} X-Stocks")
-    log.info(f"DB Upsert every {POLL_INTERVAL}s (with VWAP/Turnover/Pct) | Ticker cache every {TICKER_INTERVAL}s")
 
     try:
         await asyncio.gather(*tasks)
