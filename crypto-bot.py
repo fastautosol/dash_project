@@ -1,23 +1,32 @@
 # 2026.06.21  17.00
 import asyncio
 import ccxt.async_support as ccxt
+import dlt
 import httpx
 import logging
 import time
+from datetime import datetime, UTC
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 log = logging.getLogger(__name__)
 
+# =========================
+# CONFIGURATION & GLOBAL STATE
+# =========================
+DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"
 POLL_INTERVAL = 300  # 5 minutes
 
 # Custom Strategy Thresholds
-PRICE_CHANGE_1H_THRESHOLD = 2.0   # Trigger if 1h price change exceeds +2% (or drops below -2%)
-VOLUME_SPIKE_THRESHOLD = 2.0      # Trigger if current 24h rolling volume is 2x greater than 5m ago
-OI_INCREASE_THRESHOLD = 3.0       # Trigger if Open Interest increases by 3% inside 5 minutes
+PRICE_CHANGE_1H_THRESHOLD = 2.0   
+VOLUME_SPIKE_THRESHOLD = 1.5      
+OI_INCREASE_THRESHOLD = 1.5       
+BTC_SYMBOL = "BTC/USDT"           
 
+# Global state variables
 exchange = None
 http_client = None
+pipeline = None
 symbols = []
 previous_state = {}  # Format: {symbol: {"price": float, "volume": float, "oi": float}}
 
@@ -26,26 +35,33 @@ previous_state = {}  # Format: {symbol: {"price": float, "volume": float, "oi": 
 # =========================
 
 async def initialize_markets():
+    """Loads markets from Bybit and filters for linear perpetuals with >= 25x leverage."""
     global symbols, exchange
-    log.info("Loading Bybit markets and filtering for >= 20x leverage...") 
+    log.info("Loading Bybit markets and filtering for >= 25x leverage...")
+    
     markets = await exchange.load_markets()
     
+    if BTC_SYMBOL not in symbols:
+        symbols.append(BTC_SYMBOL)
+
     for symbol, market in markets.items():
         if market.get('linear') and market.get('swap'):
             lev_filter = market.get('info', {}).get('leverageFilter', {})
-            max_leverage = float(lev_filter.get('maxLeverage', 0))          
-            if max_leverage >= 20 and symbol not in symbols:
+            max_leverage = float(lev_filter.get('maxLeverage', 0))
+            
+            if max_leverage >= 25 and symbol not in symbols:
                 symbols.append(symbol)
                 
-    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 20x leverage.") 
-            
+    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 25x leverage (including BTC).")
+
 
 async def send_webhook(payload: dict):
+    """Sends an alert JSON payload to your webhook endpoint natively."""
     global http_client
     try:
         response = await http_client.post(WEBHOOK_URL, json=payload)
         if response.status_code == 200:
-            log.info(f"[ALERT SENT] Webhook successful for {payload['symbol']}")
+            log.info(f"[ALERT WEBHOOK] Dispatched for {payload['symbol']}")
         else:
             log.error(f"[WEBHOOK ERROR] Status code: {response.status_code}")
     except Exception as e:
@@ -53,15 +69,31 @@ async def send_webhook(payload: dict):
 
 
 async def check_metrics():
-    global symbols, exchange, previous_state   
+    """Fetches tickers, calculates signals, fires webhooks, and logs to PostgreSQL."""
+    global symbols, exchange, previous_state, pipeline
+    
     try:
-        log.info("Fetching latest market tickers via REST...")
+        log.info("Polling latest market tickers...")
         tickers = await exchange.fetch_tickers(symbols=symbols)
     except Exception as e:
         log.error(f"Failed to fetch tickers: {e}")
         return
 
+    # Extract BTC 1h return for Relative Strength checks
+    btc_ticker = tickers.get(BTC_SYMBOL)
+    btc_1h_return = 0.0
+    if btc_ticker and 'info' in btc_ticker:
+        btc_info = btc_ticker['info']
+        btc_last = float(btc_info.get("lastPrice") or btc_ticker.get('last') or 0)
+        btc_prev_1h = float(btc_info.get("prevPrice1h") or btc_last or 0)
+        btc_1h_return = ((btc_last - btc_prev_1h) / btc_prev_1h) * 100 if btc_prev_1h > 0 else 0.0
+
+    now_utc = datetime.now(UTC)
+    db_alert_records = []
+
     for symbol in symbols:
+        if symbol == BTC_SYMBOL:
+            continue
 
         ticker_data = tickers.get(symbol)
         if not ticker_data or 'info' not in ticker_data:
@@ -83,73 +115,136 @@ async def check_metrics():
             change_1h = ((last_price - prev_1h) / prev_1h) * 100 if prev_1h > 0 else 0.0
             change_24h = ((last_price - prev_24h) / prev_24h) * 100 if prev_24h > 0 else 0.0
 
-            # ----- Signal Evaluation Layer (Comparing current data vs last 5-min state) -----
             if symbol in previous_state:
-                prev = previous_state[symbol]         
+                prev = previous_state[symbol]
+                
                 volume_ratio = volume_24h / prev['volume'] if prev['volume'] > 0 else 1.0
-                oi_change_pct = ((open_interest - prev['oi']) / prev['oi']) * 100 if prev['oi'] > 0 else 0.0        
+                oi_change_pct = ((open_interest - prev['oi']) / prev['oi']) * 100 if prev['oi'] > 0 else 0.0
+                relative_strength_1h = change_1h - btc_1h_return
+
                 alerts_triggered = []
 
-                # ----- Signal #1: Volume explosion along with 1h breakout momentum -----
+                # Signal #1: Volume explosion
                 if change_1h >= PRICE_CHANGE_1H_THRESHOLD and volume_ratio >= VOLUME_SPIKE_THRESHOLD:
                     alerts_triggered.append({
-                        "type": "VOLUME_EXPLOSION",
-                        "details": f"1h Price +{change_1h:.2f}% (Threshold: >={PRICE_CHANGE_1H_THRESHOLD}%) with unusual 5m volume spike of {volume_ratio:.2f}x (Threshold: >={VOLUME_SPIKE_THRESHOLD}x)"
+                        "alert_type": "VOLUME_EXPLOSION",
+                        "details": f"Price +{change_1h:.2f}% with 5m volume spike of {volume_ratio:.2f}x"
                     })
 
-                # ----- Signal #2: Open Interest Rising (Fresh Aggressive Money Entering Longs) -----
+                # Signal #2: Open Interest Rising
                 if change_1h > 0 and oi_change_pct >= OI_INCREASE_THRESHOLD and volume_ratio >= VOLUME_SPIKE_THRESHOLD:
                     alerts_triggered.append({
-                        "type": "OPEN_INTEREST_RISING",
-                        "details": f"Aggressive positioning detected. Price rising (+{change_1h:.2f}%) accompanied by rapid +{oi_change_pct:.2f}% OI growth (Threshold: >={OI_INCREASE_THRESHOLD}%)"
+                        "alert_type": "OPEN_INTEREST_RISING",
+                        "details": f"Price rising under heavy buying pressure with +{oi_change_pct:.2f}% OI growth"
                     })
 
-                # ----- Signal #3 (Alternate): Short Covering (Unstable pump) -----
+                # Signal #2 (Alternate): Short Covering
                 if change_1h >= PRICE_CHANGE_1H_THRESHOLD and oi_change_pct <= -OI_INCREASE_THRESHOLD:
                     alerts_triggered.append({
-                        "type": "SHORT_COVERING_PUMP",
-                        "details": f"Price is rising (+{change_1h:.2f}%), but Open Interest is falling rapidly (-{abs(oi_change_pct):.2f}%). This upward movement might be unsustainable short liquidations."
+                        "alert_type": "SHORT_COVERING_PUMP",
+                        "details": f"Price rising (+{change_1h:.2f}%), but open interest shedding (-{abs(oi_change_pct):.2f}%)"
                     })
 
-                # ----- Fire the webhook background task if any logic rule triggered -----
+                # Signal #4: Relative Strength
+                if relative_strength_1h >= PRICE_CHANGE_1H_THRESHOLD and volume_ratio >= 1.5:
+                    alerts_triggered.append({
+                        "alert_type": "RELATIVE_STRENGTH_OUTPERFORMANCE",
+                        "details": f"Outperforming BTC benchmark by +{relative_strength_1h:.2f}%"
+                    })
+
+                # If signals fired, log them and push to arrays
                 if alerts_triggered:
+                    # Calculate Momentum Score
+                    v_score = min(20.0, (volume_ratio / VOLUME_SPIKE_THRESHOLD) * 20.0) if VOLUME_SPIKE_THRESHOLD > 0 else 0
+                    oi_score = min(20.0, (max(0, oi_change_pct) / OI_INCREASE_THRESHOLD) * 20.0) if OI_INCREASE_THRESHOLD > 0 else 0
+                    p_score = min(20.0, (max(0, change_1h) / PRICE_CHANGE_1H_THRESHOLD) * 20.0) if PRICE_CHANGE_1H_THRESHOLD > 0 else 0
+                    rs_score = min(10.0, (max(0, relative_strength_1h) / PRICE_CHANGE_1H_THRESHOLD) * 10.0) if PRICE_CHANGE_1H_THRESHOLD > 0 else 0
+                    momentum_score = round(p_score + v_score + oi_score + rs_score, 2)
+
+                    # 1. Fire non-blocking Webhook to N8N/FastAPI
                     payload = {
                         "symbol": symbol,
                         "last_price": last_price,
                         "change_1h": change_1h,
-                        "change_24h": change_24h,
-                        "change_24ho": change_24ho,
-                        "funding_rate": funding,
-                        "open_interest": open_interest,
-                        "turnover_24h": turnover,
                         "volume_24h": volume_24h,
+                        "calculated_momentum_score": momentum_score,
                         "alerts": alerts_triggered
                     }
                     asyncio.create_task(send_webhook(payload))
 
-            # Update snapshots for the next 5-minute interval cycle check
-            previous_state[symbol] = {"price": last_price, "volume": volume_24h, "oi": open_interest}
+                    # 2. Flatten for clean relational Database rows
+                    for alert in alerts_triggered:
+                        db_alert_records.append({
+                            "timestamp": now_utc,
+                            "symbol": symbol,
+                            "alert_type": alert["alert_type"],
+                            "details": alert["details"],
+                            "last_price": last_price,
+                            "change_1h_pct": change_1h,
+                            "change_24h_pct": change_24h,
+                            "change_24ho_pct": change_24ho,
+                            "funding_rate": funding,
+                            "open_interest": open_interest,
+                            "turnover_24h": turnover,
+                            "volume_24h": volume_24h,
+                            "relative_strength_vs_btc": relative_strength_1h,
+                            "momentum_score": momentum_score
+                        })
+
+            # Save state snap
+            previous_state[symbol] = {
+                "price": last_price,
+                "volume": volume_24h,
+                "oi": open_interest
+            }
 
         except Exception as parse_err:
-            log.debug(f"Skipping calculations on {symbol}: {parse_err}")
+            log.debug(f"Skipping row error for {symbol}: {parse_err}")
+
+    # Write metrics cleanly to Postgres via DLT
+    if db_alert_records:
+        try:
+            # We run this in a threadpool executor so it doesn't halt async event tickers
+            await asyncio.to_thread(
+                pipeline.run,
+                db_alert_records,
+                table_name="triggered_signals",
+                write_disposition="append"  # We want a historical continuous log table of warnings
+            )
+            log.info(f"[POSTGRES] Streamed {len(db_alert_records)} signal records into database.")
+        except Exception as db_err:
+            log.error(f"[POSTGRES ERROR] Pipeline failed to ingest logs: {db_err}")
 
 
 async def main():
-    global exchange, http_client    
+    global exchange, http_client, pipeline
+    
     exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
     http_client = httpx.AsyncClient(timeout=10.0)
     
+    # Initialize your native dlt pipeline configuration
+    pipeline = dlt.pipeline(
+        pipeline_name="crypto_alert_bot",
+        destination=dlt.destinations.postgres(credentials=DB_URL),
+        dataset_name="bybit_alerts"
+    )
+    pipeline.drop_pending_packages()
+    
     try:
         await initialize_markets()
+        
+        # Seed initial snapshot dictionary mapping data
         await check_metrics()
-        log.info(f"Initial configurations seeded. Starting alert loop every {POLL_INTERVAL}s.")
+        log.info(f"Bot activated. Monitoring and logging directly to Postgres every {POLL_INTERVAL}s.")
 
         while True:
             await asyncio.sleep(POLL_INTERVAL)
-            start_time = time.time()        
-            await check_metrics()         
+            start_time = time.time()
+            
+            await check_metrics()
+            
             elapsed = time.time() - start_time
-            log.info(f"Completed metric screening analysis cycle in {elapsed:.2f} seconds.")
+            log.info(f"Loop completed in {elapsed:.2f} seconds.")
             
     except asyncio.CancelledError:
         log.info("Shutdown requested.")
