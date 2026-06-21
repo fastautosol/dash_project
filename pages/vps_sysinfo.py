@@ -21,7 +21,7 @@ CARD_STYLE = {
 
 TABLE_STYLE = { "backgroundColor": "transparent", "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"}
 PACKAGES = ["fastapi", "fastmcp", "pandas", "dash", "docker", "ccxt", "scikit-learn", "SQLAlchemy", "dlt", "psycopg"]
-ALLOWED_PREFIXES = ("xstock", "crypto", "n8n", "python-dash", "mcp-postgres", "crawl4ai", "postgresql") 
+ALLOWED_PREFIXES = ("crypto", "n8n", "python-dash", "postgresql") 
 
 def fetch_one_docker(c) -> dict:
     s = c.stats(stream=False)
