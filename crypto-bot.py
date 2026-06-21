@@ -27,17 +27,17 @@ previous_state = {}  # Format: {symbol: {"price": float, "volume": float, "oi": 
 
 async def initialize_markets():
     global symbols, exchange
-    log.info("Loading Bybit markets and filtering for >= 25x leverage...") 
+    log.info("Loading Bybit markets and filtering for >= 20x leverage...") 
     markets = await exchange.load_markets()
     
     for symbol, market in markets.items():
         if market.get('linear') and market.get('swap'):
             lev_filter = market.get('info', {}).get('leverageFilter', {})
             max_leverage = float(lev_filter.get('maxLeverage', 0))          
-            if max_leverage >= 25 and symbol not in symbols:
+            if max_leverage >= 20 and symbol not in symbols:
                 symbols.append(symbol)
                 
-    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 25x leverage.") 
+    log.info(f"Filtered {len(symbols)} linear contracts supporting >= 20x leverage.") 
             
 
 async def send_webhook(payload: dict):
