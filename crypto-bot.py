@@ -54,7 +54,7 @@ async def check_metrics():
     global symbols, exchange, previous_state   
     try:
         log.info("Fetching latest market tickers via REST...")
-        tickers = await exchange.fetch_derivatives_tickers(symbols=symbols)
+        tickers = await exchange.fetch_tickers(symbols=symbols)
     except Exception as e:
         log.error(f"Failed to fetch tickers: {e}")
         return
