@@ -178,7 +178,7 @@ async def check_metrics():
             await asyncio.to_thread(
                 pipeline.run,
                 db_alert_records,
-                table_name="triggered_signals",
+                table_name="bybit_crypto_signals",
                 write_disposition="append"  # We want a historical continuous log table of warnings
             )
             log.info(f"[POSTGRES] Streamed {len(db_alert_records)} signal records into database.")
