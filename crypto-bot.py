@@ -7,7 +7,7 @@ import logging
 import time
 from datetime import datetime, UTC
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 log = logging.getLogger(__name__)
 
 # =========================
@@ -50,7 +50,7 @@ async def send_webhook(payload: dict):
     try:
         response = await http_client.post(WEBHOOK_URL, json=payload)
         if response.status_code == 200:
-            log.info(f"[ALERT WEBHOOK] Dispatched for {payload['symbol']}")
+            log.info(f"[ALERT WEBHOOK] Signal for {payload['symbol']}")
         else:
             log.error(f"[WEBHOOK ERROR] Status code: {response.status_code}")
     except Exception as e:
