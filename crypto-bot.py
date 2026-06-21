@@ -109,7 +109,7 @@ async def check_metrics():
                         "alert_type": "OPEN_INTEREST_RISING",
                         "details": f"Price rising under heavy buying pressure with +{oi_change_pct:.2f}% OI growth"})
 
-                # ----- Signal #2 (Alternate): Short Covering -----
+                # ----- Signal #3 (Alternate): Short Covering -----
                 if change_1h >= PRICE_CHANGE_1H_THRESHOLD and oi_change_pct <= -OI_INCREASE_THRESHOLD:
                     alerts_triggered.append({
                         "alert_type": "SHORT_COVERING_PUMP",
