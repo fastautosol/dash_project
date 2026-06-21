@@ -19,11 +19,10 @@ WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"
 POLL_INTERVAL = 300  # 5 minutes
 
 # Advanced Strategy Thresholds
-PRICE_CHANGE_1H_THRESHOLD = 5.0   # Trigger if 1h price change exceeds +5% (or drops below -5%)
+PRICE_CHANGE_1H_THRESHOLD = 3.0   # Trigger if 1h price change exceeds +3% (or drops below -3%)
 VOLUME_SPIKE_THRESHOLD = 2.0      # Trigger if current 24h rolling volume is 2x greater than 5m ago
-OI_INCREASE_THRESHOLD = 4.0       # Trigger if Open Interest increases by 4% inside 5 minutes
-FUNDING_DIVERGENCE_LIMIT = -0.05  # -0.05% or worse implies extreme short-selling friction / squeeze vulnerability
-BTC_SYMBOL = "BTC/USDT"           
+OI_INCREASE_THRESHOLD = 3.0       # Trigger if Open Interest increases by 3% inside 5 minutes
+FUNDING_DIVERGENCE_LIMIT = -0.05  # -0.05% or worse implies extreme short-selling friction / squeeze vulnerability           
 
 # Global functional state variables
 exchange = None
