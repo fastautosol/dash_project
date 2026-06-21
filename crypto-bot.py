@@ -19,8 +19,8 @@ POLL_INTERVAL = 300  # 5 minutes
 
 # Custom Strategy Thresholds
 PRICE_CHANGE_1H_THRESHOLD = 2.0   
-VOLUME_SPIKE_THRESHOLD = 1.5      
-OI_INCREASE_THRESHOLD = 1.5                
+VOLUME_SPIKE_THRESHOLD = 1.25      
+OI_INCREASE_THRESHOLD = 1.25                
 
 exchange = None
 http_client = None
@@ -141,13 +141,13 @@ async def check_metrics():
                             "alert_type": alert["alert_type"],
                             "details": alert["details"],
                             "last_price": last_price,
-                            "change_1h_pct": change_1h,
-                            "change_24h_pct": change_24h,
-                            "change_24ho_pct": change_24ho,
-                            "funding_rate": funding,
-                            "open_interest": open_interest,
-                            "turnover_24h": turnover,
-                            "volume_24h": volume_24h,
+                            "change_1h_pct": round(change_1h, 1) if change_1h is not None else None,
+                            "change_24h_pct": round(change_24h, 1) if change_24h is not None else None,
+                            "change_24ho_pct": round(change_24ho, 1) if change_24ho is not None else None,
+                            "funding_rate": round(funding, 5) if funding is not None else None,
+                            "open_interest": round(open_interest, 1) if open_interest is not None else None,
+                            "turnover_24h": round(turnover, 0) if turnover is not None else None,
+                            "volume_24h": round(volume_24h, 0) if volume_24h is not None else None,
                             "momentum_score": momentum_score
                         })
 
