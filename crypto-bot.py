@@ -1,4 +1,4 @@
-# 2026.06.21  11.00
+# 2026.06.21  17.00
 import asyncio
 import ccxt.async_support as ccxt
 import httpx
@@ -12,9 +12,9 @@ WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"
 POLL_INTERVAL = 300  # 5 minutes
 
 # Custom Strategy Thresholds
-PRICE_CHANGE_1H_THRESHOLD = 5.0   # Trigger if 1h price change exceeds +5% (or drops below -5%)
+PRICE_CHANGE_1H_THRESHOLD = 2.0   # Trigger if 1h price change exceeds +2% (or drops below -2%)
 VOLUME_SPIKE_THRESHOLD = 2.0      # Trigger if current 24h rolling volume is 2x greater than 5m ago
-OI_INCREASE_THRESHOLD = 4.0       # Trigger if Open Interest increases by 4% inside 5 minutes
+OI_INCREASE_THRESHOLD = 3.0       # Trigger if Open Interest increases by 3% inside 5 minutes
 
 exchange = None
 http_client = None
