@@ -1,4 +1,4 @@
-# 2026.06.22
+# 2026.06.22  18.00
 import asyncio
 import ccxt.async_support as ccxt
 import dlt
@@ -35,6 +35,7 @@ http_client = None
 pipeline = None
 symbols = []
 previous_state = {}  # {symbol: {"price", "volume", "oi", "funding", "vol_spike_count"}}
+webhook_semaphore = asyncio.Semaphore(3)
 
 # =========================
 # FUNCTIONS
@@ -55,14 +56,15 @@ async def initialize_markets():
 
 async def send_webhook(payload: dict):
     global http_client
-    try:
-        response = await http_client.post(WEBHOOK_URL, json=payload)
-        if response.status_code == 200:
-            log.info(f"[ALERT WEBHOOK] Signal for {payload['symbol']}")
-        else:
-            log.error(f"[WEBHOOK ERROR] Status code: {response.status_code}")
-    except Exception as e:
-        log.error(f"[WEBHOOK FAILED] Could not connect to webhook server: {e}")
+    async with webhook_semaphore:
+        try:
+            response = await http_client.post(WEBHOOK_URL, json=payload)
+            if response.status_code == 200:
+                log.info(f"[ALERT WEBHOOK] Signal for {payload['symbol']}")
+            else:
+                log.error(f"[WEBHOOK ERROR] Status code: {response.status_code}")
+        except Exception as e:
+            log.error(f"[WEBHOOK FAILED] Could not connect to webhook server: {e}")
 
 
 async def check_metrics():
