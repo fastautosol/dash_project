@@ -26,7 +26,7 @@ OI_INCREASE_THRESHOLD = 1.5
 # --- Early detection thresholds ---
 STEALTH_VOL_THRESHOLD = 2.0        # Volume 2x with flat price
 STEALTH_PRICE_MAX = 0.5            # Max price move to qualify as "stealth"
-OI_BUILDUP_THRESHOLD = 3.0         # OI surge without price move
+OI_BUILDUP_THRESHOLD = 5.0         # OI surge without price move
 FUNDING_BULLISH_THRESHOLD = 0.0001 # Funding crossing zero into positive
 CONSECUTIVE_SPIKE_MIN = 2          # Consecutive vol spikes to confirm sustained surge
 
@@ -125,7 +125,7 @@ async def check_metrics():
                     })
 
                 # Signal #5: OI Buildup without price move — positions being loaded
-                if oi_change_pct >= OI_BUILDUP_THRESHOLD and abs(change_1h) < STEALTH_PRICE_MAX:
+                if oi_change_pct >= OI_BUILDUP_THRESHOLD and abs(change_1h) < STEALTH_PRICE_MAX and volume_ratio >= 1.2:
                     alerts_triggered.append({
                         "alert_type": "OI_BUILDUP",
                         "details": f"OI surging +{oi_change_pct:.2f}% with flat price {change_1h:.2f}% — positions being loaded"
