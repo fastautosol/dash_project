@@ -20,6 +20,11 @@ router = APIRouter()
 
 def sync_youtube_incremental():
     try:
+        
+        if not YOUTUBE_KEY:
+            print("CRITICAL ERROR: YOUTUBE_API_KEY environment variable is empty!")
+            return
+            
         db_cache = PostgresCache(
             **POSTGRES_PARAMS,
             schema_name="youtube_raw",
@@ -29,7 +34,7 @@ def sync_youtube_incremental():
             "source-youtube-data",
             config={
                 "credentials": {
-                    "auth_type": "api_key",
+                    "auth_method": "api_key",
                     "api_key": YOUTUBE_KEY
                 },
                 "channel_ids": [
