@@ -25,8 +25,21 @@ def sync_youtube_incremental():
             schema_name="youtube_raw",
         )
 
-        source = ab.get_source("source-youtube-data", config={"api_key": YOUTUBE_KEY,
-            "channel_ids": ["UC_x5XG1OV2P6uZZ5FSM9Ttw", "UCcjk85TZJfmvBRpL1qJjChA", "UCwqB3JaGWAXgBtf59nWVf_w"]})
+        source = ab.get_source(
+            "source-youtube-data",
+            config={
+                "credentials": {
+                    "auth_type": "api_key",
+                    "api_key": YOUTUBE_KEY
+                },
+                "channel_ids": [
+                    "UC_x5XG1OV2P6uZZ5FSM9Ttw",
+                    "UCcjk85TZJfmvBRpL1qJjChA",
+                    "UCwqB3JaGWAXgBtf59nWVf_w",
+                ],
+            },
+        )
+        
         source.check()
         source.select_all_streams()
         source.read(cache=db_cache, force_full_refresh=False)
