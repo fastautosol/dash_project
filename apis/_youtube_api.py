@@ -25,7 +25,7 @@ from fastapi import FastAPI, BackgroundTasks
 
 app = FastAPI()
 
-POSTGRES_CONN_STR = "postgresql://username:password@localhost:5432/my_analytics_db"
+POSTGRES_CONN_STR = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 def sync_youtube_incremental():
     try:
