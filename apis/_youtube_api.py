@@ -52,10 +52,7 @@ def sync_youtube_incremental():
         # A force_full_refresh=False (ez az alapértelmezett) arra kényszeríti a PyAirbyte-ot,
         # hogy olvassa ki a Postgres-ből a legutóbbi állapotot (State-et).
         # Így a Google API-tól CSAK az új videókat és az új kommenteket fogja elkérni!
-        source.read(
-            cache=db_cache,
-            force_full_refresh=False  
-        )
+        source.read(cache=db_cache, force_full_refresh=False)
         print("Inkrementális YouTube szinkronizáció sikeres.")
 
     except Exception as e:
