@@ -41,7 +41,7 @@ def sync_youtube_incremental():
             "source-youtube-data",
             config={
                 "api_key": "YOUR_GOOGLE_API_KEY",
-                "channel_ids": ["UC_x5XG1OV2P6uZZ5FSM9Ttw"]
+                "channel_ids": ["UC_x5XG1OV2P6uZZ5FSM9Ttw","UCcjk85TZJfmvBRpL1qJjChA","UCwqB3JaGWAXgBtf59nWVf_w"]
             }
         )
 
