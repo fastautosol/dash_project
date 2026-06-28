@@ -11,6 +11,7 @@ import apis.lufthansa_api as lufthansa_api
 import apis.serper_places_api as serper_places
 import apis.serper_places_api_email as serper_places_email
 import apis.youtube_api as youtube_api
+import apis.youtube_api2 as youtube_api2
 
 # ----- 1. Initalize Dash -----
 app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True, #assets_folder="assets", assets_url_path="/assets",
@@ -30,6 +31,7 @@ server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tag
 server.include_router(serper_places.router, prefix="/api/serper",        tags=["Serper Places"])
 server.include_router(serper_places_email.router, prefix="/api/serper_email",        tags=["Serper Places Email"])
 server.include_router(youtube_api.router,       prefix="/api/youtube",       tags=["Youtube Single/Multi Channel"])
+server.include_router(youtube_api2.router,       prefix="/api/youtube2",       tags=["Youtube Single/Multi Channel"])
 
 # ----- 5. HEALTH ENDPOINT -----
 @server.get("/health")
