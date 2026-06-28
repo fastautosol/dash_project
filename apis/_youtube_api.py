@@ -61,7 +61,7 @@ def sync_youtube_incremental():
     except Exception as e:
         print(f"Hiba történt: {str(e)}")
 
-@app.post("/sync/youtube/incremental", tags=["YouTube"])
+@router.post("/sync/youtube/incremental", tags=["YouTube"])
 async def trigger_youtube_sync(background_tasks: BackgroundTasks):
     background_tasks.add_task(sync_youtube_incremental)
     return {"status": "Incremental YouTube sync started"}
