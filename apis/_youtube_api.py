@@ -20,124 +20,49 @@ router = APIRouter()
 
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 
-# --- PYDANTIC MODEL ---
-class YouTubeRequest(BaseModel):
-    channels: List[str] = Field(..., min_length=1, description="List of YouTube channel handles")
-    maxVideos: int = Field(5, ge=1, le=50)
-    maxComments: int = Field(5, ge=0, le=50)
+import airbyte as ab
+from fastapi import FastAPI, BackgroundTasks
 
-# --- GENERIC YT REQUEST ---
-async def yt_get(session, endpoint, params):
-    params["key"] = YOUTUBE_KEY
-    async with semaphore:
-        async with session.get(f"{BASE_URL}/{endpoint}", params=params) as resp:
-            if resp.status != 200:
-                text = await resp.text()
-                raise Exception(f"YT API error {resp.status}: {text}")
-            return await resp.json()
+app = FastAPI()
 
+POSTGRES_CONN_STR = "postgresql://username:password@localhost:5432/my_analytics_db"
 
-@dlt.resource(name="youtube_metrics", max_table_nesting=0)
-def youtube_resource(rows: list[dict]):
-    for r in rows:
-        yield r
-
-@router.post("/")
-async def get_youtube_metrics_api(req: YouTubeRequest):
-
-    data = await fetch_youtube_multich(req.channels, req.maxVideos, req.maxComments)
-    if not data:
-        return {"status": "no_data"}
-
-    for row in data:
-        row["_ingested_at"] = datetime.utcnow().isoformat()
-
-    pipeline = dlt.pipeline(
-        pipeline_name="youtube_ingest",
-        destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-        dataset_name="bronze")
-
+def sync_youtube_incremental():
     try:
-        load_info = pipeline.run(youtube_resource(data),  
-            write_disposition={"disposition": "merge", "strategy": "upsert"},                    
-            primary_key="video_id")
+        # 1. Kapcsolódás a Postgres-hez. 
+        # A PyAirbyte ebben a sémában egy külön '_airbyte_state' táblában fogja 
+        # megjegyezni, hogy melyik videónál és kommentnél járt legutóbb!
+        db_cache = ab.caches.get_postgres_cache(
+            connection_string=POSTGRES_CONN_STR,
+            schema_name="youtube_raw"
+        )
 
-    except PipelineStepFailed as e: 
-        if (e.step in ["load", "normalize"] or "does not exist" in str(e).lower()):
-            pipeline.drop_pending_packages()
-            load_info = pipeline.run(youtube_resource(data), write_disposition="append")
-        else:
-            raise
+        source = ab.get_source(
+            "source-youtube-data",
+            config={
+                "api_key": "YOUR_GOOGLE_API_KEY",
+                "channel_ids": ["UC_x5XG1OV2P6uZZ5FSM9Ttw"]
+            }
+        )
+
+        source.check()
+        source.select_all_streams()
+
+        # 2. AZ INKREMENTÁLIS TRÜKK:
+        # A force_full_refresh=False (ez az alapértelmezett) arra kényszeríti a PyAirbyte-ot,
+        # hogy olvassa ki a Postgres-ből a legutóbbi állapotot (State-et).
+        # Így a Google API-tól CSAK az új videókat és az új kommenteket fogja elkérni!
+        source.read(
+            cache=db_cache,
+            force_full_refresh=False  
+        )
+        print("Inkrementális YouTube szinkronizáció sikeres.")
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        raise
+        print(f"Hiba történt: {str(e)}")
 
-    return {"rows_loaded": len(data), "status": "loaded", "load_info": str(load_info), "sample": data[:5]}
+@app.post("/sync/youtube/incremental", tags=["YouTube"])
+async def trigger_youtube_sync(background_tasks: BackgroundTasks):
+    background_tasks.add_task(sync_youtube_incremental)
+    return {"status": "Incremental YouTube sync started"}
 
-
-# --------- MULTI FETCH ---------
-async def fetch_youtube_multich(channels, maxVideos, maxComments):
-    timeout = aiohttp.ClientTimeout(total=60)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        tasks = [fetch_single_channel(session, ch, maxVideos, maxComments) for ch in channels]
-        results = await asyncio.gather(*tasks)
-        return [item for sublist in results for item in sublist]
-
-# --------- SINGLE CHANNEL ---------
-async def fetch_single_channel(session, channel, maxVideos, maxComments):
-    try:
-
-        ch_data = await yt_get(session, "channels", {"part": "id,snippet,statistics,contentDetails", "forHandle": channel})
-        if not ch_data.get("items"):
-            return [{"channel": channel, "error": "Channel not found"}]
-        ch_item = ch_data["items"][0]
-        playlist_id = ch_item["contentDetails"]["relatedPlaylists"]["uploads"]
-
-        pl_data = await yt_get(session, "playlistItems", {"part": "contentDetails", "playlistId": playlist_id, "maxResults": maxVideos})
-        video_ids = [item["contentDetails"]["videoId"] for item in pl_data.get("items", [])]
-        if not video_ids:
-            return []
-
-        vids_data = await yt_get(session, "videos", {"part": "snippet,contentDetails,statistics", "id": ",".join(video_ids)})
-        results = []
-        for video in vids_data.get("items", []):
-            video_id = video["id"]
-            stats = video["statistics"]
-            snippet = video["snippet"]
-            description = snippet.get("description", "")
-            links = re.findall(r'(https?://\S+)', description)
-            details = video["contentDetails"]
-            duration_sec = int(isodate.parse_duration(details["duration"]).total_seconds())
-
-            comments = []
-            if int(stats.get("commentCount", 0)) > 0:
-                try:
-                    c_data = await yt_get(session, "commentThreads", {"part": "snippet", "videoId": video_id, "maxResults": maxComments, "textFormat": "plainText"})
-                    for c_item in c_data.get("items", []):
-                        c_id = c_item["snippet"]["topLevelComment"]["id"]
-                        c = c_item["snippet"]["topLevelComment"]["snippet"]
-                        comments.append({"c_id":c_id, "c_author":c["authorDisplayName"], "c_published":c["publishedAt"], "c_text":c["textDisplay"][:150], "c_like_count":c["likeCount"]})
-
-                except Exception as e:
-                    comments.append({"c_id": None, "c_author": None, "c_published": None, "c_text": f"[error: {str(e)[:100]}]", "c_like_count": 0})
-
-            results.append({
-                "error": None,
-                "channel": ch_item["snippet"]["title"],
-                "video_id": video_id,
-                "title": snippet["title"][:75],
-                "description_snippet": description[:200],
-                "has_store_link": any("shopify" in link or "store" in link for link in links),     
-                "duration_sec": duration_sec,
-                "upload_date": snippet["publishedAt"],
-                "view_count": int(stats.get("viewCount", 0)),
-                "like_count": int(stats.get("likeCount", 0)),
-                "comment_count": int(stats.get("commentCount", 0)),
-                "comments": comments # json.dumps(comments, ensure_ascii=False)
-            })
-
-        return results
-
-    except Exception as e:
-        return [{"channel": channel, "video_id": "ERROR", "error": str(e)}]
