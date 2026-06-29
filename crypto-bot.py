@@ -16,7 +16,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 # =========================
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"
-POLL_INTERVAL = 150  # 2.5 minute — critical for early pump detection
+POLL_INTERVAL = 300  # 5 minute — critical for early pump detection
 
 # --- Original signal thresholds ---
 PRICE_CHANGE_1H_THRESHOLD = 1.5
