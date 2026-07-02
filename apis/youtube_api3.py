@@ -1,12 +1,13 @@
+# 2026.07.02  18.00
 import requests
 import dlt
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
 YOUTUBE_KEY = os.getenv("YOUTUBE_API_KEY")
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 router = APIRouter()
-DATABASE_URL = "postgresql://user:password@localhost:5432/youtube_db"
+DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 
 class ChannelRequest(BaseModel):
     channel_id: str
@@ -89,8 +90,8 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
         pipeline = dlt.pipeline(
             pipeline_name="youtube_channel_analytics",
             destination="postgres",
-            credentials=DATABASE_URL,
-            dataset_name="public"
+            credentials=DB_CONFIG,
+            dataset_name="bronze"
         )
 
         # dlt 'merge' (upsert) stratégia a duplikációk elkerülésére
@@ -105,7 +106,7 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
     except Exception as e:
         print(f"❌ pipeline hiba: {str(e)}")
 
-@app.post("/fetch-channel")
+@router.post("/fetch-channel")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
     if not YOUTUBE_API_KEY or YOUTUBE_API_KEY == "IDE_ÍRD_A_YOUTUBE_API_KULCSODAT":
         raise HTTPException(status_code=500, detail="Hiányzó YouTube API kulcs!")
