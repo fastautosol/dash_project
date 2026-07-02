@@ -16,9 +16,8 @@ class ChannelRequest(BaseModel):
 
 def get_channel_videos(channel_id: str, max_videos: int):
     """1. LÉPÉS: Lekéri a csatorna legfrissebb videóit"""
-    url = "https://googleapis.com"
     params = {
-        "key": YOUTUBE_API_KEY,
+        "key": YOUTUBE_KEY,
         "channelId": channel_id,
         "part": "snippet",
         "order": "date",       # A legfrissebbekkel kezdje
@@ -26,7 +25,7 @@ def get_channel_videos(channel_id: str, max_videos: int):
         "maxResults": max_videos
     }
     
-    response = requests.get(url, params=params)
+    response = requests.get(BASE_URL, params=params)
     if response.status_code != 200:
         print(f"❌ YouTube API Hiba (Video keresés): {response.text}")
         return []
@@ -51,18 +50,17 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
         v_title = video["title"]
         print(f"💬 Kommentek letöltése a '{v_title}' ({v_id}) videóhoz...")
         
-        url = "https://googleapis.com"
         params = {
-            "key": YOUTUBE_API_KEY,
+            "key": YOUTUBE_KEY,
             "textFormat": "plainText",
             "part": "snippet",
             "videoId": v_id,
             "maxResults": min(max_comments_per_video, 100) # Maximum 100-at enged a YouTube egyszerre
         }
         
-        response = requests.get(url, params=params)
+        response = requests.get(BASE_URL, params=params)
         if response.status_code != 200:
-            print(f"⚠️ Nem sikerült letölteni a kommenteket ehhez a videóhoz: {v_id} (Lehet, hogy le vannak tiltva).")
+            print(f"Nem sikerült letölteni a kommenteket ehhez a videóhoz: {v_id} (Lehet, hogy le vannak tiltva).")
             continue
             
         data = response.json()
@@ -108,9 +106,7 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
 
 @router.post("/fetch-channel")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
-    if not YOUTUBE_API_KEY or YOUTUBE_API_KEY == "IDE_ÍRD_A_YOUTUBE_API_KULCSODAT":
-        raise HTTPException(status_code=500, detail="Hiányzó YouTube API kulcs!")
-        
+       
     background_tasks.add_task(
         run_dlt_pipeline, 
         request.channel_id, 
