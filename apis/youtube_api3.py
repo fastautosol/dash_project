@@ -3,9 +3,9 @@ import dlt
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
-app = FastAPI(title="YouTube Csatorna ETL Pipeline via dlt")
-
-YOUTUBE_API_KEY = "IDE_ÍRD_A_YOUTUBE_API_KULCSODAT"
+YOUTUBE_KEY = os.getenv("YOUTUBE_API_KEY")
+BASE_URL = "https://www.googleapis.com/youtube/v3"
+router = APIRouter()
 DATABASE_URL = "postgresql://user:password@localhost:5432/youtube_db"
 
 class ChannelRequest(BaseModel):
