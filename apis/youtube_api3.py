@@ -3,6 +3,7 @@ import requests
 import dlt
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
+import os
 
 YOUTUBE_KEY = os.getenv("YOUTUBE_API_KEY")
 BASE_URL = "https://www.googleapis.com/youtube/v3"
