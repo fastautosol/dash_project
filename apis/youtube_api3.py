@@ -27,7 +27,7 @@ def get_channel_videos(channel_id: str, max_videos: int):
     
     response = requests.get(BASE_URL, params=params)
     if response.status_code != 200:
-        print(f"❌ YouTube API Hiba (Video keresés): {response.text}")
+        print(f"YouTube API Hiba (Video keresés): {response.text}")
         return []
         
     videos = []
@@ -40,15 +40,11 @@ def get_channel_videos(channel_id: str, max_videos: int):
 
 def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
     """2. LÉPÉS: Generátor, amely végigmegy a videókon és kigyűjti a kommenteket"""
-    
-    # Lekérjük a videók listáját
+
     videos = get_channel_videos(channel_id, max_videos)
-    print(f"📹 Talált videók száma a csatornán: {len(videos)}")
-    
     for video in videos:
         v_id = video["video_id"]
         v_title = video["title"]
-        print(f"💬 Kommentek letöltése a '{v_title}' ({v_id}) videóhoz...")
         
         params = {
             "key": YOUTUBE_KEY,
@@ -65,9 +61,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
             
         data = response.json()
         
-        # Csak a kért mennyiségű kommentet dolgozzuk fel videónként
-        comments = data.get("items", [])[:max_comments_per_video]
-        
+        comments = data.get("items", [])[:max_comments_per_video]     
         for item in comments:
             snippet = item["snippet"]["topLevelComment"]["snippet"]
             
@@ -102,7 +96,7 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
         print(f"✅ dlt sikeresen végrehajtva: {info}")
 
     except Exception as e:
-        print(f"❌ pipeline hiba: {str(e)}")
+        print(f"pipeline hiba: {str(e)}")
 
 @router.post("/fetch-channel")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
