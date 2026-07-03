@@ -17,9 +17,9 @@ DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": 
 STORE_KEYWORDS = ("shopify", "store", "gumroad", "etsy", "tiktokshop", "merch", "shop")
 
 class ChannelRequest(BaseModel):
-    channel_id: str                    # elfogad UC-s channel_id-t VAGY @handle-t (pl. "@big_ch")
-    max_videos: int = 3                # Alapértelmezetten csak az utolsó 3 videó
-    max_comments_per_video: int = 20   # Alapértelmezetten videónként csak 20 komment
+    channel_id: str             
+    max_videos: int = 5             
+    max_comments_per_video: int = 10  
 
 
 def yt_get(endpoint: str, params: dict):
@@ -108,8 +108,9 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
 
         if not comments:
             # Videó szintű rekord akkor is, ha nincs komment — így a videó sosem veszik el
+            # (comment_id sosem lehet NULL, mert az része a merge primary key-nek)
             yield {
-                "comment_id": None,
+                "comment_id": f"NO_COMMENT_{v_id}",
                 "video_id": v_id,
                 "video_title": v_title,
                 "channel_id": channel_id,
@@ -170,6 +171,8 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
 
 @router.post("/fetch-channel")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
+    if not YOUTUBE_KEY:
+        raise HTTPException(status_code=500, detail="Hiányzó YOUTUBE_API_KEY környezeti változó!")
 
     background_tasks.add_task(
         run_dlt_pipeline,
@@ -177,6 +180,7 @@ async def trigger_channel_fetch(request: ChannelRequest, background_tasks: Backg
         request.max_videos,
         request.max_comments_per_video
     )
+
     return {
         "status": "success",
         "message": f"Channel: ({request.channel_id}) data gathering in background. "
