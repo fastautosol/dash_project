@@ -1,4 +1,4 @@
-# 2026.07.03  updated
+# 2026.07.03 12.00
 import requests
 import dlt
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -15,7 +15,7 @@ DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": 
 
 
 class ChannelRequest(BaseModel):
-    channel_id: str
+    channel_id: str                    # elfogad UC-s channel_id-t VAGY @handle-t (pl. "@big_ch")
     max_videos: int = 3                # Alapértelmezetten csak az utolsó 3 videó
     max_comments_per_video: int = 20   # Alapértelmezetten videónként csak 20 komment
 
@@ -29,12 +29,12 @@ def yt_get(endpoint: str, params: dict):
     return response.json()
 
 
-def get_uploads_playlist_id(channel_id: str) -> str | None:
+def get_uploads_playlist_id(channel: str) -> str | None:
     """1. LÉPÉS: channels.list — a csatorna 'uploads' playlist ID-ja (1 quota unit)"""
-    data = yt_get("channels", {"part": "contentDetails", "id": channel_id})
+    data = yt_get("channels", {"part": "contentDetails", "forHandle": channel})
     items = data.get("items", [])
     if not items:
-        logger.warning("Channel not found: %s", channel_id)
+        logger.warning("Channel not found: %s", channel)
         return None
     return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
 
