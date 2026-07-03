@@ -13,10 +13,12 @@ BASE_URL = "https://www.googleapis.com/youtube/v3"
 router = APIRouter()
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 
+
 class ChannelRequest(BaseModel):
     channel_id: str
     max_videos: int = 3                # Alapértelmezetten csak az utolsó 3 videó
     max_comments_per_video: int = 20   # Alapértelmezetten videónként csak 20 komment
+
 
 def yt_get(endpoint: str, params: dict):
     """Egységes YouTube API hívás, mindig a helyes végponttal."""
@@ -25,6 +27,7 @@ def yt_get(endpoint: str, params: dict):
     if response.status_code != 200:
         raise Exception(f"YT API error {response.status_code} on /{endpoint}: {response.text}")
     return response.json()
+
 
 def get_uploads_playlist_id(channel_id: str) -> str | None:
     """1. LÉPÉS: channels.list — a csatorna 'uploads' playlist ID-ja (1 quota unit)"""
@@ -35,10 +38,12 @@ def get_uploads_playlist_id(channel_id: str) -> str | None:
         return None
     return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
 
+
 def get_playlist_video_ids(playlist_id: str, max_videos: int) -> list[str]:
     """2. LÉPÉS: playlistItems.list — legfrissebb videó ID-k (1 quota unit)"""
     data = yt_get("playlistItems", {"part": "contentDetails", "playlistId": playlist_id, "maxResults": max_videos})
     return [item["contentDetails"]["videoId"] for item in data.get("items", [])]
+
 
 def get_videos_details(video_ids: list[str]) -> list[dict]:
     """3. LÉPÉS: videos.list — cím + statisztika egy batch hívásban (1 quota unit, max 50 ID/hívás)"""
@@ -46,6 +51,7 @@ def get_videos_details(video_ids: list[str]) -> list[dict]:
         return []
     data = yt_get("videos", {"part": "snippet,statistics", "id": ",".join(video_ids)})
     return data.get("items", [])
+
 
 def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
     """4. LÉPÉS: commentThreads.list — top-level kommentek (1 quota unit)"""
@@ -128,8 +134,7 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
     try:
         pipeline = dlt.pipeline(
             pipeline_name="youtube_channel_analytics",
-            destination="postgres",
-            credentials=DB_CONFIG,
+            destination=dlt.destinations.postgres(credentials=DB_CONFIG),
             dataset_name="bronze"
         )
 
