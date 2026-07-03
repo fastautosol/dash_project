@@ -32,7 +32,7 @@ def yt_get(endpoint: str, params: dict):
 
 
 def get_uploads_playlist_id(channel: str) -> str | None:
-    """1. LÉPÉS: channels.list — a csatorna 'uploads' playlist ID-ja (1 quota unit)
+    """1. LÉPÉS: channels.list — a csatorna 'uploads' playlist ID-ja (1 quota unit)"""
     data = yt_get("channels", {"part": "contentDetails", "forHandle": channel})
     items = data.get("items", [])
     if not items:
