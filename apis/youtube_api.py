@@ -1,4 +1,4 @@
-# 2026.07.03 12.00
+# 2026.07.03 18.00
 import requests
 import dlt
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -15,22 +15,18 @@ DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": 
 
 
 class ChannelRequest(BaseModel):
-    channel_id: str                    # elfogad UC-s channel_id-t VAGY @handle-t (pl. "@big_ch")
-    max_videos: int = 3                # Alapértelmezetten csak az utolsó 3 videó
-    max_comments_per_video: int = 20   # Alapértelmezetten videónként csak 20 komment
-
+    channel_id: str                   
+    max_videos: int = 5            
+    max_comments_per_video: int = 15  
 
 def yt_get(endpoint: str, params: dict):
-    """Egységes YouTube API hívás, mindig a helyes végponttal."""
     params["key"] = YOUTUBE_KEY
     response = requests.get(f"{BASE_URL}/{endpoint}", params=params)
     if response.status_code != 200:
         raise Exception(f"YT API error {response.status_code} on /{endpoint}: {response.text}")
     return response.json()
 
-
 def get_uploads_playlist_id(channel: str) -> str | None:
-    """1. LÉPÉS: channels.list — a csatorna 'uploads' playlist ID-ja (1 quota unit)"""
     data = yt_get("channels", {"part": "contentDetails", "forHandle": channel})
     items = data.get("items", [])
     if not items:
@@ -40,13 +36,12 @@ def get_uploads_playlist_id(channel: str) -> str | None:
 
 
 def get_playlist_video_ids(playlist_id: str, max_videos: int) -> list[str]:
-    """2. LÉPÉS: playlistItems.list — legfrissebb videó ID-k (1 quota unit)"""
     data = yt_get("playlistItems", {"part": "contentDetails", "playlistId": playlist_id, "maxResults": max_videos})
     return [item["contentDetails"]["videoId"] for item in data.get("items", [])]
 
 
 def get_videos_details(video_ids: list[str]) -> list[dict]:
-    """3. LÉPÉS: videos.list — cím + statisztika egy batch hívásban (1 quota unit, max 50 ID/hívás)"""
+    """ 1 quota unit, max 50 ID/call)"""
     if not video_ids:
         return []
     data = yt_get("videos", {"part": "snippet,statistics", "id": ",".join(video_ids)})
@@ -54,7 +49,6 @@ def get_videos_details(video_ids: list[str]) -> list[dict]:
 
 
 def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
-    """4. LÉPÉS: commentThreads.list — top-level kommentek (1 quota unit)"""
     try:
         data = yt_get("commentThreads", {
             "part": "snippet",
@@ -80,16 +74,15 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
 
 
 def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
-    """Generátor: videók + kommentek összegyűjtése a dlt számára"""
     playlist_id = get_uploads_playlist_id(channel_id)
     if not playlist_id:
         return
-
     video_ids = get_playlist_video_ids(playlist_id, max_videos)
+    
     if not video_ids:
         logger.info("No videos found for channel %s", channel_id)
         return
-
+        
     videos = get_videos_details(video_ids)
     logger.info("Fetched %d video(s) for channel %s", len(videos), channel_id)
 
