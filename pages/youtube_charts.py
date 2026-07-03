@@ -40,12 +40,10 @@ DASH_ID_TAG = "youtube"
 layout = dbc.Container([
 
     html.Div([
-        html.H2("YouTube Metrics Dashboard",
-            className="text-light fw-bold mb-0")
+        html.H2("YouTube Metrics Dashboard", className="text-light fw-bold mb-0")
     ], className="mb-3"),
 
     dcc.Interval(id='refresh', interval=60000),
-
     dcc.Store(id=f"{DASH_ID_TAG}-df-store"),
 
     # MINI CHARTS
@@ -59,7 +57,7 @@ layout = dbc.Container([
 
     # COMMENT LOG
     html.Div([
-        html.H5("Latest Comments", className="text-success mb-2", style={ "color": "#ef4444", "fontWeight": "500"}),
+        html.H5( "Latest Comments", className="text-success mb-2", style={ "color": "#ef4444", "fontWeight": "500"}),
         html.Div(id=f"{DASH_ID_TAG}-log-table", style={"height": "350px", "overflowY": "auto",  "fontSize": "12px"})
     ], style=CARD_STYLE)
 
