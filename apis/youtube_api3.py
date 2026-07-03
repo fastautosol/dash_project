@@ -74,6 +74,7 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
             "comment_id": item["id"],
             "author": snippet["authorDisplayName"],
             "comment_text": snippet["textDisplay"],
+            "comment_published_at": snippet["publishedAt"],
         })
     return comments
 
@@ -107,6 +108,8 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "channel_id": channel_id,
                 "author": None,
                 "comment_text": None,
+                "comment_published_at": None,
+                "upload_date": video["snippet"]["publishedAt"],
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
                 "comment_count": int(video["statistics"].get("commentCount", 0)),
@@ -122,6 +125,8 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "channel_id": channel_id,
                 "author": c["author"],
                 "comment_text": c["comment_text"],
+                "comment_published_at": c["comment_published_at"],
+                "upload_date": video["snippet"]["publishedAt"],
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
                 "comment_count": int(video["statistics"].get("commentCount", 0)),
@@ -142,7 +147,7 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
             fetch_channel_analytics_pipeline(channel_id, max_videos, max_comments_per_video),
             table_name="youtube_comments_raw",
             write_disposition="merge",
-            primary_key="comment_id"
+            primary_key=["video_id", "comment_id"]
         )
         logger.info("dlt sikeresen végrehajtva: %s", info)
 
@@ -163,6 +168,6 @@ async def trigger_channel_fetch(request: ChannelRequest, background_tasks: Backg
     )
     return {
         "status": "success",
-        "message": f"A csatorna ({request.channel_id}) adatainak gyűjtése elindult a háttérben. "
-                   f"(Max {request.max_videos} videó, videónként max {request.max_comments_per_video} komment)"
+        "message": f"The channel ({request.channel_id}) data gathering in the background. "
+                   f"(Max {request.max_videos} videos, {request.max_comments_per_video} comment/video)"
     }
