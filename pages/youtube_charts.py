@@ -1,3 +1,4 @@
+# 2026.07.03  18.00
 import dash
 import pandas as pd
 import numpy as np
@@ -48,23 +49,18 @@ layout = dbc.Container([
     dcc.Store(id=f"{DASH_ID_TAG}-df-store"),
 
     # MINI CHARTS
-    dbc.Row(id=f"{DASH_ID_TAG}-mini-charts",
-        className="g-3 mb-3"),
+    dbc.Row(id=f"{DASH_ID_TAG}-mini-charts", className="g-3 mb-3"),
+
+    # EXTRA CHARTS (store-link / duration)
+    dbc.Row(id=f"{DASH_ID_TAG}-extra-charts", className="g-3 mb-3"),
 
     # MINI TABLES
-    dbc.Row(id=f"{DASH_ID_TAG}-mini-tables",
-        className="g-3 mb-3"),
+    dbc.Row(id=f"{DASH_ID_TAG}-mini-tables", className="g-3 mb-3"),
 
     # COMMENT LOG
     html.Div([
-
-        html.H5( "Latest Comments", className="text-success mb-2",
-            style={ "color": "#ef4444", "fontWeight": "500"}),
-
-        html.Div(
-            id=f"{DASH_ID_TAG}-log-table",
-            style={"height": "350px", "overflowY": "auto",  "fontSize": "12px"})
-
+        html.H5("Latest Comments", className="text-success mb-2", style={ "color": "#ef4444", "fontWeight": "500"}),
+        html.Div(id=f"{DASH_ID_TAG}-log-table", style={"height": "350px", "overflowY": "auto",  "fontSize": "12px"})
     ], style=CARD_STYLE)
 
 ], fluid=True)
@@ -96,6 +92,7 @@ def make_table(df_table):
 @callback(
     Output(f"{DASH_ID_TAG}-df-store", "data"),
     Output(f"{DASH_ID_TAG}-mini-charts", "children"),
+    Output(f"{DASH_ID_TAG}-extra-charts", "children"),
     Output(f"{DASH_ID_TAG}-mini-tables", "children"),
     Output(f"{DASH_ID_TAG}-log-table", "children"),
     Input("refresh", "n_intervals")
@@ -103,11 +100,13 @@ def make_table(df_table):
 
 def load_youtube_data(_):
 
-    query = "SELECT * FROM bronze.youtube_metrics ORDER BY _ingested_at DESC LIMIT 500"
+    # youtube_comments_raw = ONE ROW PER COMMENT (video-level fields repeat per comment row).
+    # Rows with no real comments have comment_id = 'NO_COMMENT_<video_id>' and comment_text IS NULL.
+    query = "SELECT * FROM bronze.youtube_comments_raw ORDER BY upload_date DESC LIMIT 5000"
     with sql_engine.connect() as conn:
         df = pd.read_sql(query, conn)
     if df.empty:
-        return None, [], [], None
+        return None, [], [], [], None
 
     df.columns = [c.lower() for c in df.columns]
     numeric_cols = ["view_count", "like_count", "comment_count", "duration_sec"]
@@ -115,12 +114,17 @@ def load_youtube_data(_):
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
     df["upload_date"] = pd.to_datetime(df["upload_date"], errors="coerce")
-    df["_ingested_at"] = pd.to_datetime(df["_ingested_at"], errors="coerce")
+    df["comment_published_at"] = pd.to_datetime(df["comment_published_at"], errors="coerce")
+    df["has_store_link"] = df["has_store_link"].fillna(False).astype(bool)
 
-    df = df.sort_values("_ingested_at").drop_duplicates(subset=["video_id"], keep="last")
-
-    df["engagement_rate"] = ((df["like_count"] + df["comment_count"]) / df["view_count"].replace(0, np.nan)) * 100
-    df["duration_min"] = (df["duration_sec"] / 60).round(1)
+    # -------------------------------------------------
+    # VIDEO-LEVEL DATAFRAME
+    # video/channel-level fields (view_count, duration_sec, has_store_link, etc.)
+    # repeat identically across every comment row of the same video_id — collapse to 1 row/video.
+    # -------------------------------------------------
+    video_df = df.drop_duplicates(subset=["video_id"], keep="first").copy()
+    video_df["engagement_rate"] = ((video_df["like_count"] + video_df["comment_count"]) / video_df["view_count"].replace(0, np.nan)) * 100
+    video_df["duration_min"] = (video_df["duration_sec"] / 60).round(1)
 
     # -------------------------------------------------
     # MINI CHARTS
@@ -128,69 +132,83 @@ def load_youtube_data(_):
 
     mini_charts = []
 
-    ch_views = (df.groupby("channel")["view_count"].sum().sort_values(ascending=False).head(10).reset_index())
-    fig1 = px.bar(ch_views, x="channel", y="view_count", template="plotly_dark")
+    ch_views = (video_df.groupby("channel_id")["view_count"].sum().sort_values(ascending=False).head(10).reset_index())
+    fig1 = px.bar(ch_views, x="channel_id", y="view_count", template="plotly_dark")
     fig1.update_xaxes(tickangle=-25)
     mini_charts.append(make_card("Views by Channel", fig1, md_col=4))
 
-    trend_df = (df.groupby(df["upload_date"].dt.date).agg({"video_id": "count","view_count": "sum"}).reset_index())
+    trend_df = (video_df.groupby(video_df["upload_date"].dt.date).agg({"video_id": "count", "view_count": "sum"}).reset_index())
     fig2 = px.line(trend_df, x="upload_date", y="view_count", markers=True, template="plotly_dark")
     mini_charts.append(make_card("Daily Views Trend", fig2, md_col=4))
 
-    eng_df = (df.groupby("channel")["engagement_rate"].mean().sort_values(ascending=False).head(10).reset_index())
-    fig3 = px.bar(eng_df, x="channel", y="engagement_rate", template="plotly_dark")
+    eng_df = (video_df.groupby("channel_id")["engagement_rate"].mean().sort_values(ascending=False).head(10).reset_index())
+    fig3 = px.bar(eng_df, x="channel_id", y="engagement_rate", template="plotly_dark")
     fig3.update_xaxes(tickangle=-25)
     mini_charts.append(make_card("Avg Engagement %", fig3, md_col=4))
+
+    # -------------------------------------------------
+    # EXTRA CHARTS — new fields: has_store_link, duration_sec
+    # -------------------------------------------------
+
+    extra_charts = []
+
+    store_counts = video_df["has_store_link"].value_counts().rename({True: "Store link", False: "No store link"}).reset_index()
+    store_counts.columns = ["label", "count"]
+    fig4 = px.pie(store_counts, names="label", values="count", template="plotly_dark", hole=0.5)
+    extra_charts.append(make_card("Videos with Store Links", fig4, md_col=4))
+
+    store_views = (video_df.groupby("has_store_link")["view_count"].mean().rename({True: "Store link", False: "No store link"}).reset_index())
+    store_views.columns = ["label", "avg_views"]
+    fig5 = px.bar(store_views, x="label", y="avg_views", template="plotly_dark")
+    extra_charts.append(make_card("Avg Views: Store-Link vs Not", fig5, md_col=4))
+
+    fig6 = px.histogram(video_df, x="duration_min", nbins=20, template="plotly_dark")
+    extra_charts.append(make_card("Video Duration Distribution (min)", fig6, md_col=4))
 
     # -------------------------------------------------
     # MINI TABLES
     # -------------------------------------------------
 
-    # Top videos
-    top_videos = (df[["channel", "title", "view_count", "like_count", "comment_count"]].sort_values("view_count", ascending=False).head(15))
-    top_videos["title"] = top_videos["title"].apply(lambda x: str(x)[:55] + "..." if len(str(x)) > 55 else str(x))
+    top_videos = (video_df[["channel_id", "video_title", "view_count", "like_count", "comment_count"]].sort_values("view_count", ascending=False).head(15))
+    top_videos["video_title"] = top_videos["video_title"].apply(lambda x: str(x)[:55] + "..." if len(str(x)) > 55 else str(x))
+    top_videos = top_videos.rename(columns={"video_title": "title"})
 
-    # Best engagement
-    best_eng = (df[["channel", "title", "engagement_rate", "view_count"]].sort_values("engagement_rate", ascending=False).head(15))
+    best_eng = (video_df[["channel_id", "video_title", "engagement_rate", "view_count"]].sort_values("engagement_rate", ascending=False).head(15))
     best_eng["engagement_rate"] = best_eng["engagement_rate"].round(2)
-    best_eng["title"] = best_eng["title"].apply(lambda x: str(x)[:55] + "..." if len(str(x)) > 55 else str(x))
+    best_eng["video_title"] = best_eng["video_title"].apply(lambda x: str(x)[:55] + "..." if len(str(x)) > 55 else str(x))
+    best_eng = best_eng.rename(columns={"video_title": "title"})
+
+    store_videos = (video_df[video_df["has_store_link"]][["channel_id", "video_title", "view_count"]].sort_values("view_count", ascending=False).head(15))
+    store_videos["video_title"] = store_videos["video_title"].apply(lambda x: str(x)[:55] + "..." if len(str(x)) > 55 else str(x))
+    store_videos = store_videos.rename(columns={"video_title": "title"})
 
     mini_tables = [
-        make_card("Top Videos", make_table(top_videos), is_graph=False, md_col=6),
-        make_card("Best Engagement", make_table(best_eng), is_graph=False, md_col=6)
+        make_card("Top Videos", make_table(top_videos), is_graph=False, md_col=4),
+        make_card("Best Engagement", make_table(best_eng), is_graph=False, md_col=4),
+        make_card("Top Store-Link Videos", make_table(store_videos), is_graph=False, md_col=4),
     ]
 
     # -------------------------------------------------
     # COMMENTS LOG TABLE
+    # Table is already flat (1 row/comment) — no nested JSON to unpack anymore.
+    # Exclude placeholder "no comment" rows (comment_id starts with NO_COMMENT_).
+    # NOTE: per-comment like count isn't captured by the current ingest pipeline,
+    # so there's no "likes" column here (unlike the old nested-comments version).
     # -------------------------------------------------
 
-    comment_rows = []
-    for _, row in df.iterrows():
-        
-        comments = row.get("comments")
-        if not comments:
-            continue
+    comments_df = df[df["comment_text"].notna()][
+        ["channel_id", "video_title", "author", "comment_text", "comment_published_at"]
+    ].copy()
 
-        if isinstance(comments, list):
-            for c in comments:
-                comment_rows.append({
-                    "channel": row["channel"],
-                    "video": str(row["title"])[:45],
-                    "author": c.get("c_author"),
-                    "comment": str(c.get("c_text"))[:120],
-                    "likes": c.get("c_like_count"),
-                    "published": c.get("c_published")
-                })
-
-    comments_df = pd.DataFrame(comment_rows)
+    comments_df = comments_df.rename(columns={"video_title": "video", "comment_text": "comment", "comment_published_at": "published"})
+    comments_df["video"] = comments_df["video"].apply(lambda x: str(x)[:45])
+    comments_df["comment"] = comments_df["comment"].apply(lambda x: str(x)[:120])
 
     if not comments_df.empty:
-
-        comments_df["published"] = pd.to_datetime(comments_df["published"], errors="coerce")
         comments_df = comments_df.sort_values("published", ascending=False).head(150)
         comments_df["published"] = comments_df["published"].dt.strftime("%Y-%m-%d %H:%M")
 
     log_table = dbc.Table.from_dataframe(comments_df, striped=False, hover=True, responsive=True, borderless=True, className="text-light text-success small",
         style={"backgroundColor": "transparent", "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white", "fontSize": "11px"})
 
-    return df.to_dict("records"), mini_charts, mini_tables, log_table
+    return video_df.to_dict("records"), mini_charts, extra_charts, mini_tables, log_table
