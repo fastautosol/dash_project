@@ -7,6 +7,7 @@ import os
 import re
 import logging
 import isodate
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,9 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
 
 def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
     """Generátor: videók + kommentek összegyűjtése a dlt számára"""
+
+    ingested_at = datetime.now(timezone.utc).isoformat()
+    
     playlist_id = get_uploads_playlist_id(channel_id)
     if not playlist_id:
         return
