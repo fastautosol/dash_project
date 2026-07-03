@@ -125,6 +125,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "has_store_link": has_store_link,
                 "duration_sec": duration_sec,
                 "processed": False,
+                "_ingested_at": ingested_at
             }
             continue
 
@@ -145,6 +146,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "has_store_link": has_store_link,
                 "duration_sec": duration_sec,
                 "processed": False,
+                "_ingested_at": ingested_at
             }
 
 
