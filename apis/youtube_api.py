@@ -29,13 +29,13 @@ EMOJI_PATTERN = re.compile(
     flags=re.UNICODE)
 
 
-def clean_comment_text(text: str) -> str:
+def clean_text(text: str) -> str:
     if not text:
         return text
     text = html.unescape(text)                  # &amp; -> &, &#39; -> ' stb.
-    text = re.sub(r"<[^>]+>", " ", text)         # esetleges maradék HTML tagek (pl. <br>)
+    text = re.sub(r"<[^>]+>", " ", text)        # esetleges maradék HTML tagek (pl. <br>)
     text = EMOJI_PATTERN.sub("", text)          # emoji eltávolítása
-    text = re.sub(r"\s+", " ", text).strip()     # többszörös szóköz összevonása
+    text = re.sub(r"\s+", " ", text).strip()    # többszörös szóköz összevonása
     return text
 
 
@@ -146,7 +146,7 @@ def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
                 "comment_count": int(video["statistics"].get("commentCount", 0)),
-                "description_snippet": description[:200],
+                 "description_snippet": clean_text(description)[:200],
                 "has_store_link": has_store_link,
                 "duration_sec": duration_sec,
                 "processed": False,
@@ -172,7 +172,7 @@ def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
                 "comment_count": int(video["statistics"].get("commentCount", 0)),
-                "description_snippet": description[:200],
+                "description_snippet": clean_text(description)[:200],
                 "has_store_link": has_store_link,
                 "duration_sec": duration_sec,
                 "processed": False,
