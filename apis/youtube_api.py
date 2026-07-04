@@ -81,21 +81,21 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
     return comments
 
 
-def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
+def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments_per_video: int):
     """Generátor: videók + kommentek összegyűjtése a dlt számára"""
     ingested_at = datetime.now(timezone.utc).isoformat()
 
-    playlist_id = get_uploads_playlist_id(channel_id)
+    playlist_id = get_uploads_playlist_id(channel)
     if not playlist_id:
         return
 
     video_ids = get_playlist_video_ids(playlist_id, max_videos)
     if not video_ids:
-        logger.info("No videos found for channel %s", channel_id)
+        logger.info("No videos found for channel %s", channel)
         return
 
     videos = get_videos_details(video_ids)
-    logger.info("Fetched %d video(s) for channel %s", len(videos), channel_id)
+    logger.info("Fetched %d video(s) for channel %s", len(videos), channel)
 
     for video in videos:
         v_id = video["id"]
