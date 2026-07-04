@@ -190,4 +190,4 @@ async def trigger_channel_fetch(request: ChannelRequest, background_tasks: Backg
         request.max_videos,
         request.max_comments_per_video)
 
-    return {"status": "success", "message": f"Channel: ({request.channel}) data gathering in background"}
+    return {"status": "success", "message": f"Channel: {request.channel} data gathering in background"}
