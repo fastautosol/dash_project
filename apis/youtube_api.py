@@ -18,7 +18,7 @@ DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": 
 STORE_KEYWORDS = ("shopify", "store", "gumroad", "etsy", "tiktokshop", "merch", "shop")
 
 class ChannelRequest(BaseModel):
-    channel_id: str             
+    channel: str             
     max_videos: int = 5             
     max_comments_per_video: int = 10  
 
@@ -173,11 +173,6 @@ async def trigger_channel_fetch(request: ChannelRequest, background_tasks: Backg
         run_dlt_pipeline,
         request.channel_id,
         request.max_videos,
-        request.max_comments_per_video
-    )
+        request.max_comments_per_video)
 
-    return {
-        "status": "success",
-        "message": f"Channel: ({request.channel_id}) data gathering in background. "
-                   f"(Max {request.max_videos} videos, {request.max_comments_per_video} comments/vid)"
-    }
+    return {"status": "success", "message": f"Channel: ({request.channel_id}) data gathering in background"}
