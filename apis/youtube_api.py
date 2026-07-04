@@ -117,7 +117,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "comment_id": f"NO_COMMENT_{v_id}",
                 "video_id": v_id,
                 "video_title": v_title,
-                "channel_id": channel_id,
+                "channel": channel,
                 "author": None,
                 "comment_text": None,
                 "comment_published_at": None,
@@ -143,7 +143,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "comment_id": c["comment_id"],
                 "video_id": v_id,
                 "video_title": v_title,
-                "channel_id": channel_id,
+                "channel": channel,
                 "author": c["author"],
                 "comment_text": c["comment_text"],
                 "comment_published_at": c["comment_published_at"],
@@ -164,7 +164,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
             }
 
 
-def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
+def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int):
     """dlt futtatása és Postgresbe mentés"""
     try:
         pipeline = dlt.pipeline(
@@ -183,10 +183,8 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
         logger.exception("pipeline hiba: %s", e)
 
 
-@router.post("/fetch-channel")
+@router.post("/")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
-    if not YOUTUBE_KEY:
-        raise HTTPException(status_code=500, detail="Hiányzó YOUTUBE_API_KEY környezeti változó!")
 
     background_tasks.add_task(
         run_dlt_pipeline,
