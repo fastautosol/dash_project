@@ -146,7 +146,7 @@ def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
                 "comment_count": int(video["statistics"].get("commentCount", 0)),
-                 "description_snippet": clean_text(description)[:200],
+                "description_snippet": clean_text(description)[:200],
                 "has_store_link": has_store_link,
                 "duration_sec": duration_sec,
                 "processed": False,
