@@ -1,10 +1,11 @@
-# 2026.07.04 17.00
+# 2026.07.04 18.00
 import requests
 import dlt
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 import os
 import re
+import html
 import logging
 import isodate
 from datetime import datetime, timezone
@@ -18,11 +19,32 @@ DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": 
 
 STORE_KEYWORDS = ("shopify", "store", "gumroad", "etsy", "tiktokshop", "merch", "shop")
 
+_EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F300-\U0001FAFF"  # symbols, pictographs, supplemental symbols
+    "\U00002600-\U000027BF"  # misc symbols, dingbats
+    "\U0001F1E0-\U0001F1FF"  # flags
+    "\U00002B00-\U00002BFF"  # misc arrows/symbols often used as emoji
+    "\U0000FE0F"             # variation selector (emoji presentation)
+    "]+",
+    flags=re.UNICODE)
+
+
+def clean_comment_text(text: str) -> str:
+    if not text:
+        return text
+    text = html.unescape(text)                  # &amp; -> &, &#39; -> ' stb.
+    text = re.sub(r"<[^>]+>", " ", text)         # esetleges maradék HTML tagek (pl. <br>)
+    text = _EMOJI_PATTERN.sub("", text)          # emoji eltávolítása
+    text = re.sub(r"\s+", " ", text).strip()     # többszörös szóköz összevonása
+    return text
+
 
 class ChannelRequest(BaseModel):
-    channel: str                  
-    max_videos: int = 3                
-    max_comments_per_video: int = 20  
+    channel_id: str                    # elfogad UC-s channel_id-t VAGY @handle-t (pl. "@big_ch")
+    max_videos: int = 5                # Alapértelmezetten csak az utolsó 3 videó
+    max_comments_per_video: int = 15   # Alapértelmezetten videónként csak 20 komment
+
 
 def yt_get(endpoint: str, params: dict):
     params["key"] = YOUTUBE_KEY
@@ -33,7 +55,7 @@ def yt_get(endpoint: str, params: dict):
 
 
 def get_uploads_playlist_id(channel: str) -> str | None:
-    data = yt_get("channels",  {"part": "contentDetails", "forHandle": channel})
+    data = yt_get("channels", {"part": "contentDetails", "forHandle": channel})
     items = data.get("items", [])
     if not items:
         logger.warning("Channel not found: %s", channel)
@@ -54,7 +76,6 @@ def get_videos_details(video_ids: list[str]) -> list[dict]:
 
 
 def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
-    """4. LÉPÉS: commentThreads.list — top-level kommentek (1 quota unit)"""
     try:
         data = yt_get("commentThreads", {
             "part": "snippet",
@@ -73,7 +94,7 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
         comments.append({
             "comment_id": item["id"],
             "author": snippet["authorDisplayName"],
-            "comment_text": snippet["textDisplay"],
+            "comment_text": clean_comment_text(snippet.get("textOriginal", snippet.get("textDisplay", "")))[:500],
             "comment_published_at": snippet["publishedAt"],
             "comment_like_count": int(snippet.get("likeCount", 0)),
             "comment_reply_count": int(item["snippet"].get("totalReplyCount", 0)),
@@ -81,21 +102,19 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
     return comments
 
 
-def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments_per_video: int):
-    """Generátor: videók + kommentek összegyűjtése a dlt számára"""
+def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
     ingested_at = datetime.now(timezone.utc).isoformat()
-
-    playlist_id = get_uploads_playlist_id(channel)
+    playlist_id = get_uploads_playlist_id(channel_id)
     if not playlist_id:
         return
 
     video_ids = get_playlist_video_ids(playlist_id, max_videos)
     if not video_ids:
-        logger.info("No videos found for channel %s", channel)
+        logger.info("No videos found for channel %s", channel_id)
         return
 
     videos = get_videos_details(video_ids)
-    logger.info("Fetched %d video(s) for channel %s", len(videos), channel)
+    logger.info("Fetched %d video(s) for channel %s", len(videos), channel_id)
 
     for video in videos:
         v_id = video["id"]
@@ -111,6 +130,8 @@ def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments
         comments = get_video_comments(v_id, max_comments_per_video) if max_comments_per_video > 0 else []
 
         if not comments:
+            # Videó szintű rekord akkor is, ha nincs komment — így a videó sosem veszik el
+            # (comment_id sosem lehet NULL, mert az része a merge primary key-nek)
             yield {
                 "comment_id": f"NO_COMMENT_{v_id}",
                 "video_id": v_id,
@@ -162,19 +183,21 @@ def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments
             }
 
 
-def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int):
+def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
     """dlt futtatása és Postgresbe mentés"""
     try:
         pipeline = dlt.pipeline(
-            pipeline_name="youtube_channels",
+            pipeline_name="youtube_channel_analytics",
             destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-            dataset_name="bronze")
+            dataset_name="bronze"
+        )
 
         info = pipeline.run(
             fetch_channel_analytics_pipeline(channel, max_videos, max_comments_per_video),
-            table_name="youtube_rawdata",
+            table_name="youtube_comments_raw",
             write_disposition="merge",
-            primary_key=["video_id", "comment_id"])
+            primary_key=["video_id", "comment_id"]
+        )
         logger.info("dlt sikeresen végrehajtva: %s", info)
 
     except Exception as e:
@@ -183,11 +206,14 @@ def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int)
 
 @router.post("/")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
+    if not YOUTUBE_KEY:
+        raise HTTPException(status_code=500, detail="Hiányzó YOUTUBE_API_KEY környezeti változó!")
 
     background_tasks.add_task(
         run_dlt_pipeline,
         request.channel,
         request.max_videos,
-        request.max_comments_per_video)
+        request.max_comments_per_video
+    )
 
     return {"status": "success", "message": f"Channel: {request.channel} data gathering in background"}
