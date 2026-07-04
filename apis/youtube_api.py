@@ -16,7 +16,6 @@ YOUTUBE_KEY = os.getenv("YOUTUBE_API_KEY")
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 router = APIRouter()
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
-
 STORE_KEYWORDS = ("shopify", "store", "gumroad", "etsy", "tiktokshop", "merch", "shop")
 
 _EMOJI_PATTERN = re.compile(
@@ -41,9 +40,9 @@ def clean_comment_text(text: str) -> str:
 
 
 class ChannelRequest(BaseModel):
-    channel_id: str                    # elfogad UC-s channel_id-t VAGY @handle-t (pl. "@big_ch")
-    max_videos: int = 5                # Alapértelmezetten csak az utolsó 3 videó
-    max_comments_per_video: int = 15   # Alapértelmezetten videónként csak 20 komment
+    channel_id: str                   
+    max_videos: int = 5             
+    max_comments_per_video: int = 15  
 
 
 def yt_get(endpoint: str, params: dict):
@@ -102,19 +101,19 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
     return comments
 
 
-def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
+def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments_per_video: int):
     ingested_at = datetime.now(timezone.utc).isoformat()
-    playlist_id = get_uploads_playlist_id(channel_id)
+    playlist_id = get_uploads_playlist_id(channel)
     if not playlist_id:
         return
 
     video_ids = get_playlist_video_ids(playlist_id, max_videos)
     if not video_ids:
-        logger.info("No videos found for channel %s", channel_id)
+        logger.info("No videos found for channel %s", channel)
         return
 
     videos = get_videos_details(video_ids)
-    logger.info("Fetched %d video(s) for channel %s", len(videos), channel_id)
+    logger.info("Fetched %d video(s) for channel %s", len(videos), channel)
 
     for video in videos:
         v_id = video["id"]
@@ -130,8 +129,6 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
         comments = get_video_comments(v_id, max_comments_per_video) if max_comments_per_video > 0 else []
 
         if not comments:
-            # Videó szintű rekord akkor is, ha nincs komment — így a videó sosem veszik el
-            # (comment_id sosem lehet NULL, mert az része a merge primary key-nek)
             yield {
                 "comment_id": f"NO_COMMENT_{v_id}",
                 "video_id": v_id,
@@ -183,37 +180,31 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
             }
 
 
-def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
+def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int):
     """dlt futtatása és Postgresbe mentés"""
     try:
         pipeline = dlt.pipeline(
-            pipeline_name="youtube_channel_analytics",
+            pipeline_name="youtube_channel",
             destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-            dataset_name="bronze"
-        )
+            dataset_name="bronze")
 
         info = pipeline.run(
             fetch_channel_analytics_pipeline(channel, max_videos, max_comments_per_video),
-            table_name="youtube_comments_raw",
+            table_name="youtube_rawdata",
             write_disposition="merge",
-            primary_key=["video_id", "comment_id"]
-        )
+            primary_key=["video_id", "comment_id"])
         logger.info("dlt sikeresen végrehajtva: %s", info)
 
     except Exception as e:
         logger.exception("pipeline hiba: %s", e)
 
-
 @router.post("/")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
-    if not YOUTUBE_KEY:
-        raise HTTPException(status_code=500, detail="Hiányzó YOUTUBE_API_KEY környezeti változó!")
 
     background_tasks.add_task(
         run_dlt_pipeline,
         request.channel,
         request.max_videos,
-        request.max_comments_per_video
-    )
+        request.max_comments_per_video)
 
     return {"status": "success", "message": f"Channel: {request.channel} data gathering in background"}
