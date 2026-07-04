@@ -1,4 +1,4 @@
-# 2026.07.04 12.00
+# 2026.07.04 17.00
 import requests
 import dlt
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -111,8 +111,6 @@ def fetch_channel_analytics_pipeline(channel: str, max_videos: int, max_comments
         comments = get_video_comments(v_id, max_comments_per_video) if max_comments_per_video > 0 else []
 
         if not comments:
-            # Videó szintű rekord akkor is, ha nincs komment — így a videó sosem veszik el
-            # (comment_id sosem lehet NULL, mert az része a merge primary key-nek)
             yield {
                 "comment_id": f"NO_COMMENT_{v_id}",
                 "video_id": v_id,
@@ -168,13 +166,13 @@ def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int)
     """dlt futtatása és Postgresbe mentés"""
     try:
         pipeline = dlt.pipeline(
-            pipeline_name="youtube_channel_analytics",
+            pipeline_name="youtube_channels",
             destination=dlt.destinations.postgres(credentials=DB_CONFIG),
             dataset_name="bronze")
 
         info = pipeline.run(
             fetch_channel_analytics_pipeline(channel, max_videos, max_comments_per_video),
-            table_name="youtube_comments_raw",
+            table_name="youtube_data",
             write_disposition="merge",
             primary_key=["video_id", "comment_id"])
         logger.info("dlt sikeresen végrehajtva: %s", info)
