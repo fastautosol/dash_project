@@ -172,7 +172,7 @@ def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int)
 
         info = pipeline.run(
             fetch_channel_analytics_pipeline(channel, max_videos, max_comments_per_video),
-            table_name="youtube_data",
+            table_name="youtube_rawdata",
             write_disposition="merge",
             primary_key=["video_id", "comment_id"])
         logger.info("dlt sikeresen végrehajtva: %s", info)
