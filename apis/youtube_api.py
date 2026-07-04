@@ -1,4 +1,4 @@
-# 2026.07.03 18.00
+# 2026.07.04 11.00
 import requests
 import dlt
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -24,7 +24,6 @@ class ChannelRequest(BaseModel):
 
 
 def yt_get(endpoint: str, params: dict):
-    """Egységes YouTube API hívás, mindig a helyes végponttal."""
     params["key"] = YOUTUBE_KEY
     response = requests.get(f"{BASE_URL}/{endpoint}", params=params)
     if response.status_code != 200:
@@ -33,7 +32,6 @@ def yt_get(endpoint: str, params: dict):
 
 
 def get_uploads_playlist_id(channel: str) -> str | None:
-    """1. LÉPÉS: channels.list — a csatorna 'uploads' playlist ID-ja (1 quota unit)"""
     data = yt_get("channels", {"part": "contentDetails", "forHandle": channel})
     items = data.get("items", [])
     if not items:
@@ -43,13 +41,11 @@ def get_uploads_playlist_id(channel: str) -> str | None:
 
 
 def get_playlist_video_ids(playlist_id: str, max_videos: int) -> list[str]:
-    """2. LÉPÉS: playlistItems.list — legfrissebb videó ID-k (1 quota unit)"""
     data = yt_get("playlistItems", {"part": "contentDetails", "playlistId": playlist_id, "maxResults": max_videos})
     return [item["contentDetails"]["videoId"] for item in data.get("items", [])]
 
 
 def get_videos_details(video_ids: list[str]) -> list[dict]:
-    """3. LÉPÉS: videos.list — cím + statisztika egy batch hívásban (1 quota unit, max 50 ID/hívás)"""
     if not video_ids:
         return []
     data = yt_get("videos", {"part": "snippet,statistics,contentDetails", "id": ",".join(video_ids)})
@@ -57,7 +53,6 @@ def get_videos_details(video_ids: list[str]) -> list[dict]:
 
 
 def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
-    """4. LÉPÉS: commentThreads.list — top-level kommentek (1 quota unit)"""
     try:
         data = yt_get("commentThreads", {
             "part": "snippet",
@@ -107,7 +102,6 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
         links = re.findall(r'(https?://\S+)', description)
         has_store_link = any(kw in link.lower() for link in links for kw in STORE_KEYWORDS)
         duration_sec = int(isodate.parse_duration(video["contentDetails"]["duration"]).total_seconds())
-
         comments = get_video_comments(v_id, max_comments_per_video) if max_comments_per_video > 0 else []
 
         if not comments:
@@ -155,20 +149,17 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
 
 
 def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
-    """dlt futtatása és Postgresbe mentés"""
     try:
         pipeline = dlt.pipeline(
             pipeline_name="youtube_channel_analytics",
             destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-            dataset_name="bronze"
-        )
+            dataset_name="bronze")
 
         info = pipeline.run(
             fetch_channel_analytics_pipeline(channel_id, max_videos, max_comments_per_video),
             table_name="youtube_comments_raw",
             write_disposition="merge",
-            primary_key=["video_id", "comment_id"]
-        )
+            primary_key=["video_id", "comment_id"])
         logger.info("dlt sikeresen végrehajtva: %s", info)
 
     except Exception as e:
@@ -177,8 +168,6 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
 
 @router.post("/fetch-channel")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
-    if not YOUTUBE_KEY:
-        raise HTTPException(status_code=500, detail="Hiányzó YOUTUBE_API_KEY környezeti változó!")
 
     background_tasks.add_task(
         run_dlt_pipeline,
