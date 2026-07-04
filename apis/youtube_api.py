@@ -1,4 +1,4 @@
-# 2026.07.04 11.00
+# 2026.07.04 12.00
 import requests
 import dlt
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -73,6 +73,7 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
             "author": snippet["authorDisplayName"],
             "comment_text": snippet["textDisplay"],
             "comment_published_at": snippet["publishedAt"],
+            "comment_like_count": int(snippet.get("likeCount", 0))
         })
     return comments
 
@@ -115,6 +116,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "author": None,
                 "comment_text": None,
                 "comment_published_at": None,
+                "comment_like_count": 0,
                 "upload_date": video["snippet"]["publishedAt"],
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
@@ -136,6 +138,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "author": c["author"],
                 "comment_text": c["comment_text"],
                 "comment_published_at": c["comment_published_at"],
+                "comment_like_count": c["comment_like_count"],
                 "upload_date": video["snippet"]["publishedAt"],
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
