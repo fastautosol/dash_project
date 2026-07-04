@@ -173,7 +173,7 @@ def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int)
             dataset_name="bronze")
 
         info = pipeline.run(
-            fetch_channel_analytics_pipeline(channel_id, max_videos, max_comments_per_video),
+            fetch_channel_analytics_pipeline(channel, max_videos, max_comments_per_video),
             table_name="youtube_comments_raw",
             write_disposition="merge",
             primary_key=["video_id", "comment_id"])
@@ -188,8 +188,8 @@ async def trigger_channel_fetch(request: ChannelRequest, background_tasks: Backg
 
     background_tasks.add_task(
         run_dlt_pipeline,
-        request.channel_id,
+        request.channel,
         request.max_videos,
         request.max_comments_per_video)
 
-    return {"status": "success", "message": f"Channel: ({request.channel_id}) data gathering in background"}
+    return {"status": "success", "message": f"Channel: ({request.channel}) data gathering in background"}
