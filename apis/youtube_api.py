@@ -15,13 +15,14 @@ YOUTUBE_KEY = os.getenv("YOUTUBE_API_KEY")
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 router = APIRouter()
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
+
 STORE_KEYWORDS = ("shopify", "store", "gumroad", "etsy", "tiktokshop", "merch", "shop")
 
-class ChannelRequest(BaseModel):
-    channel: str             
-    max_videos: int = 5             
-    max_comments_per_video: int = 10  
 
+class ChannelRequest(BaseModel):
+    channel: str                  
+    max_videos: int = 3                
+    max_comments_per_video: int = 20  
 
 def yt_get(endpoint: str, params: dict):
     params["key"] = YOUTUBE_KEY
@@ -32,7 +33,7 @@ def yt_get(endpoint: str, params: dict):
 
 
 def get_uploads_playlist_id(channel: str) -> str | None:
-    data = yt_get("channels", {"part": "contentDetails", "forHandle": channel})
+    data = yt_get("channels",  {"part": "contentDetails", "forHandle": channel})
     items = data.get("items", [])
     if not items:
         logger.warning("Channel not found: %s", channel)
@@ -53,6 +54,7 @@ def get_videos_details(video_ids: list[str]) -> list[dict]:
 
 
 def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
+    """4. LÉPÉS: commentThreads.list — top-level kommentek (1 quota unit)"""
     try:
         data = yt_get("commentThreads", {
             "part": "snippet",
@@ -73,16 +75,16 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
             "author": snippet["authorDisplayName"],
             "comment_text": snippet["textDisplay"],
             "comment_published_at": snippet["publishedAt"],
-            "comment_like_count": int(snippet.get("likeCount", 0))
+            "comment_like_count": int(snippet.get("likeCount", 0)),
+            "comment_reply_count": int(item["snippet"].get("totalReplyCount", 0)),
         })
     return comments
 
 
 def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
     """Generátor: videók + kommentek összegyűjtése a dlt számára"""
-
     ingested_at = datetime.now(timezone.utc).isoformat()
-    
+
     playlist_id = get_uploads_playlist_id(channel_id)
     if not playlist_id:
         return
@@ -103,6 +105,9 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
         links = re.findall(r'(https?://\S+)', description)
         has_store_link = any(kw in link.lower() for link in links for kw in STORE_KEYWORDS)
         duration_sec = int(isodate.parse_duration(video["contentDetails"]["duration"]).total_seconds())
+        channel_title = video["snippet"].get("channelTitle")
+        has_captions = video["contentDetails"].get("caption") == "true"
+        video_definition = video["contentDetails"].get("definition")
         comments = get_video_comments(v_id, max_comments_per_video) if max_comments_per_video > 0 else []
 
         if not comments:
@@ -117,7 +122,11 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "comment_text": None,
                 "comment_published_at": None,
                 "comment_like_count": 0,
+                "comment_reply_count": 0,
                 "upload_date": video["snippet"]["publishedAt"],
+                "channel_title": channel_title,
+                "has_captions": has_captions,
+                "video_definition": video_definition,
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
                 "comment_count": int(video["statistics"].get("commentCount", 0)),
@@ -125,7 +134,7 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "has_store_link": has_store_link,
                 "duration_sec": duration_sec,
                 "processed": False,
-                "_ingested_at": ingested_at
+                "_ingested_at": ingested_at,
             }
             continue
 
@@ -139,7 +148,11 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "comment_text": c["comment_text"],
                 "comment_published_at": c["comment_published_at"],
                 "comment_like_count": c["comment_like_count"],
+                "comment_reply_count": c["comment_reply_count"],
                 "upload_date": video["snippet"]["publishedAt"],
+                "channel_title": channel_title,
+                "has_captions": has_captions,
+                "video_definition": video_definition,
                 "view_count": int(video["statistics"].get("viewCount", 0)),
                 "like_count": int(video["statistics"].get("likeCount", 0)),
                 "comment_count": int(video["statistics"].get("commentCount", 0)),
@@ -147,11 +160,12 @@ def fetch_channel_analytics_pipeline(channel_id: str, max_videos: int, max_comme
                 "has_store_link": has_store_link,
                 "duration_sec": duration_sec,
                 "processed": False,
-                "_ingested_at": ingested_at
+                "_ingested_at": ingested_at,
             }
 
 
 def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: int):
+    """dlt futtatása és Postgresbe mentés"""
     try:
         pipeline = dlt.pipeline(
             pipeline_name="youtube_channel_analytics",
@@ -171,6 +185,8 @@ def run_dlt_pipeline(channel_id: str, max_videos: int, max_comments_per_video: i
 
 @router.post("/fetch-channel")
 async def trigger_channel_fetch(request: ChannelRequest, background_tasks: BackgroundTasks):
+    if not YOUTUBE_KEY:
+        raise HTTPException(status_code=500, detail="Hiányzó YOUTUBE_API_KEY környezeti változó!")
 
     background_tasks.add_task(
         run_dlt_pipeline,
