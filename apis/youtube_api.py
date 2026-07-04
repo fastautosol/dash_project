@@ -18,7 +18,7 @@ router = APIRouter()
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 STORE_KEYWORDS = ("shopify", "store", "gumroad", "etsy", "tiktokshop", "merch", "shop")
 
-_EMOJI_PATTERN = re.compile(
+EMOJI_PATTERN = re.compile(
     "["
     "\U0001F300-\U0001FAFF"  # symbols, pictographs, supplemental symbols
     "\U00002600-\U000027BF"  # misc symbols, dingbats
@@ -34,7 +34,7 @@ def clean_comment_text(text: str) -> str:
         return text
     text = html.unescape(text)                  # &amp; -> &, &#39; -> ' stb.
     text = re.sub(r"<[^>]+>", " ", text)         # esetleges maradék HTML tagek (pl. <br>)
-    text = _EMOJI_PATTERN.sub("", text)          # emoji eltávolítása
+    text = EMOJI_PATTERN.sub("", text)          # emoji eltávolítása
     text = re.sub(r"\s+", " ", text).strip()     # többszörös szóköz összevonása
     return text
 
