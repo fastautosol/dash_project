@@ -93,7 +93,7 @@ def get_video_comments(video_id: str, max_comments: int) -> list[dict]:
         comments.append({
             "comment_id": item["id"],
             "author": snippet["authorDisplayName"],
-            "comment_text": clean_comment_text(snippet.get("textOriginal", snippet.get("textDisplay", "")))[:500],
+            "comment_text": clean_text(snippet.get("textOriginal", snippet.get("textDisplay", "")))[:500],
             "comment_published_at": snippet["publishedAt"],
             "comment_like_count": int(snippet.get("likeCount", 0)),
             "comment_reply_count": int(item["snippet"].get("totalReplyCount", 0)),
@@ -184,7 +184,7 @@ def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int)
     """dlt futtatása és Postgresbe mentés"""
     try:
         pipeline = dlt.pipeline(
-            pipeline_name="youtube_channel_stats",
+            pipeline_name="youtube_channel",
             destination=dlt.destinations.postgres(credentials=DB_CONFIG),
             dataset_name="bronze")
 
