@@ -184,7 +184,7 @@ def run_dlt_pipeline(channel: str, max_videos: int, max_comments_per_video: int)
     """dlt futtatása és Postgresbe mentés"""
     try:
         pipeline = dlt.pipeline(
-            pipeline_name="youtube_channel",
+            pipeline_name="youtube_channel_stats",
             destination=dlt.destinations.postgres(credentials=DB_CONFIG),
             dataset_name="bronze")
 
