@@ -40,7 +40,7 @@ def clean_comment_text(text: str) -> str:
 
 
 class ChannelRequest(BaseModel):
-    channel_id: str                   
+    channel: str                   
     max_videos: int = 5             
     max_comments_per_video: int = 15  
 
