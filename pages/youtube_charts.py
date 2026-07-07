@@ -1,4 +1,4 @@
-# 2026.07.03  18.00
+# 2026.07.07  18.00
 import dash
 import pandas as pd
 import numpy as np
@@ -97,10 +97,7 @@ def make_table(df_table):
 )
 
 def load_youtube_data(_):
-
-    # youtube_comments_raw = ONE ROW PER COMMENT (video-level fields repeat per comment row).
-    # Rows with no real comments have comment_id = 'NO_COMMENT_<video_id>' and comment_text IS NULL.
-    query = "SELECT * FROM bronze.youtube_comments_raw ORDER BY upload_date DESC LIMIT 5000"
+    query = "SELECT * FROM bronze.youtube_rawdata ORDER BY upload_date DESC LIMIT 5000"
     with sql_engine.connect() as conn:
         df = pd.read_sql(query, conn)
     if df.empty:
