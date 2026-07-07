@@ -100,6 +100,7 @@ services:
     expose:
       - "8000"
     environment:
+      - APP_MODULE=home:server 
       DB_HOST: postgresql
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-n8n}
@@ -139,6 +140,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
+      - APP_MODULE=app:server
       DB_HOST: postgresql
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-n8n}
