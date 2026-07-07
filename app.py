@@ -83,4 +83,5 @@ def health():
     return {"status": "ok"}
 
 # ----- 6. Mount Dash — LAST, after layout is set and assets are mounted -----
+server.mount("/assets", StaticFiles(directory="assets"), name="assets")
 server.mount("/", WSGIMiddleware(app.server))
