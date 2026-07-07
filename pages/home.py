@@ -1,5 +1,19 @@
 # 2026.05.20  18.00
 import dash
+from dash import html
+import dash_bootstrap_components as dbc
+
+# Crucial: path="/" ensures this loads at https://fastautosol.com
+dash.register_page(__name__, path="/")
+
+layout = dbc.Container([
+    html.H1("FastAutoSol Media Platform", className="text-center mt-5"),
+    html.P("Welcome to our consumer-facing AI and Automation publication network.", className="lead text-center"),
+    # Add your blog grid, privacy policies, and contact information links here
+], fluid=True)
+
+
+import dash
 from dash import html, dcc, callback, Output, Input
 from datetime import datetime
 import dash_bootstrap_components as dbc
