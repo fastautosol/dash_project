@@ -14,7 +14,8 @@ import apis.serper_places_api_email as serper_places_email
 import apis.youtube_api as youtube_api
 
 # ----- 1. Initialize Dash -----
-app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True,     
+app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True,  
+    meta_tags=[{"name": "impact-site-verification",  "content": "d9a897f9-f49b-48be-9813-8a019d18dc6c"}],
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
     external_scripts=["https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"])
 
@@ -82,21 +83,6 @@ server.include_router(youtube_api.router,           prefix="/api/youtube",      
 @server.get("/health")
 def health():
     return {"status": "ok"}
-
-@server.get("/verify-impact", response_class=HTMLResponse)
-def verify_impact_page():
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta name="impact-site-verification" content="d9a897f9-f49b-48be-9813-8a019d18dc6c">
-        <title>Verification Page</title>
-    </head>
-    <body>
-        <p>Impact Verification Endpoint Active.</p>
-    </body>
-    </html>
-    """
 
 # ----- 6. Mount Dash — LAST, after layout is set and assets are mounted -----
 server.mount("/", WSGIMiddleware(app.server))
