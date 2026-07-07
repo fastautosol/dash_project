@@ -125,11 +125,11 @@ services:
       - n8n-shared-net
 
 
-  python-dash-app:
+  demo-dash-app:
     build:
       context: .
       dockerfile: Dockerfile.dash
-    container_name: python-dash-app
+    container_name: demo-dash-app
     restart: unless-stopped
     depends_on:
       postgresql:
