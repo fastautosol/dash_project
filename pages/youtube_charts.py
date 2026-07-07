@@ -191,9 +191,7 @@ def load_youtube_data(_):
     # so there's no "likes" column here (unlike the old nested-comments version).
     # -------------------------------------------------
 
-    comments_df = df[df["comment_text"].notna()][
-        ["channel_id", "video_title", "author", "comment_text", "comment_published_at"]
-    ].copy()
+    comments_df = df[df["comment_text"].notna()][["channel", "video_title", "author", "comment_text", "comment_published_at"]].copy()
 
     comments_df = comments_df.rename(columns={"video_title": "video", "comment_text": "comment", "comment_published_at": "published"})
     comments_df["video"] = comments_df["video"].apply(lambda x: str(x)[:45])
