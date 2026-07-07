@@ -127,8 +127,8 @@ def load_youtube_data(_):
 
     mini_charts = []
 
-    ch_views = (video_df.groupby("channel_id")["view_count"].sum().sort_values(ascending=False).head(10).reset_index())
-    fig1 = px.bar(ch_views, x="channel_id", y="view_count", template="plotly_dark")
+    ch_views = (video_df.groupby("channel")["view_count"].sum().sort_values(ascending=False).head(10).reset_index())
+    fig1 = px.bar(ch_views, x="channel", y="view_count", template="plotly_dark")
     fig1.update_xaxes(tickangle=-25)
     mini_charts.append(make_card("Views by Channel", fig1, md_col=4))
 
@@ -136,8 +136,8 @@ def load_youtube_data(_):
     fig2 = px.line(trend_df, x="upload_date", y="view_count", markers=True, template="plotly_dark")
     mini_charts.append(make_card("Daily Views Trend", fig2, md_col=4))
 
-    eng_df = (video_df.groupby("channel_id")["engagement_rate"].mean().sort_values(ascending=False).head(10).reset_index())
-    fig3 = px.bar(eng_df, x="channel_id", y="engagement_rate", template="plotly_dark")
+    eng_df = (video_df.groupby("channel")["engagement_rate"].mean().sort_values(ascending=False).head(10).reset_index())
+    fig3 = px.bar(eng_df, x="channel", y="engagement_rate", template="plotly_dark")
     fig3.update_xaxes(tickangle=-25)
     mini_charts.append(make_card("Avg Engagement %", fig3, md_col=4))
 
