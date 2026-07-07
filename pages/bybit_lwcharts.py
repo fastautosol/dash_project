@@ -75,7 +75,7 @@ def fetch_candles(symbol):
 # REGISTER PAGE & LAYOUT
 # ─────────────────────────────────────────────────────────────
 
-dash.register_page(__name__, path="/bybit-lwcharts", name="Bybit LWCharts", order=3, assets_folder="assets")
+dash.register_page(__name__, path="/", name="Bybit LWCharts", order=0, assets_folder="assets")
 
 layout = dbc.Container(
     [
