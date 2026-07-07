@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 
+from pages import bybit_lwcharts, crm_serper, crm_shopify, databricks, lufthansa_charts, youtube_charts, vps_sysinfo
 import apis.crm_shopify_api as crm_shopify_api
 import apis.lufthansa_api as lufthansa_api
 import apis.serper_places_api as serper_places
