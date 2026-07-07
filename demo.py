@@ -69,7 +69,7 @@ app.layout = html.Div([
 ])
 
 # ----- 3. FastAPI app -----
-server = FastAPI(title="Dash Main App")
+server = FastAPI(title="Dash Demo App")
 
 # ----- 4. API routers -----
 server.include_router(crm_shopify_api.router,      prefix="/api/crm_shopify",   tags=["CRM Shopify"])
