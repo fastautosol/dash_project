@@ -164,16 +164,16 @@ def load_youtube_data(_):
     # MINI TABLES
     # -------------------------------------------------
 
-    top_videos = (video_df[["channel_id", "video_title", "view_count", "like_count", "comment_count"]].sort_values("view_count", ascending=False).head(15))
+    top_videos = (video_df[["channel", "video_title", "view_count", "like_count", "comment_count"]].sort_values("view_count", ascending=False).head(15))
     top_videos["video_title"] = top_videos["video_title"].apply(lambda x: str(x)[:55] + "..." if len(str(x)) > 55 else str(x))
     top_videos = top_videos.rename(columns={"video_title": "title"})
 
-    best_eng = (video_df[["channel_id", "video_title", "engagement_rate", "view_count"]].sort_values("engagement_rate", ascending=False).head(15))
+    best_eng = (video_df[["channel", "video_title", "engagement_rate", "view_count"]].sort_values("engagement_rate", ascending=False).head(15))
     best_eng["engagement_rate"] = best_eng["engagement_rate"].round(2)
     best_eng["video_title"] = best_eng["video_title"].apply(lambda x: str(x)[:55] + "..." if len(str(x)) > 55 else str(x))
     best_eng = best_eng.rename(columns={"video_title": "title"})
 
-    store_videos = (video_df[video_df["has_store_link"]][["channel_id", "video_title", "view_count"]].sort_values("view_count", ascending=False).head(15))
+    store_videos = (video_df[video_df["has_store_link"]][["channel", "video_title", "view_count"]].sort_values("view_count", ascending=False).head(15))
     store_videos["video_title"] = store_videos["video_title"].apply(lambda x: str(x)[:55] + "..." if len(str(x)) > 55 else str(x))
     store_videos = store_videos.rename(columns={"video_title": "title"})
 
