@@ -83,11 +83,6 @@ server.include_router(youtube_api.router,           prefix="/api/youtube",      
 def health():
     return {"status": "ok"}
 
-# ----- 5. Health endpoint -----
-@server.get("/health")
-def health():
-    return {"status": "ok"}
-
 @server.get("/verify-impact", response_class=HTMLResponse)
 def verify_impact_page():
     return """
