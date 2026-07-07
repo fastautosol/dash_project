@@ -3,7 +3,6 @@ import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 
