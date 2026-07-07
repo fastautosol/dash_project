@@ -1,4 +1,4 @@
-# 2026.07.03  18.00
+# 2026.07.07  12.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -14,6 +14,7 @@ import apis.youtube_api as youtube_api
 
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True,
+    meta_tags=[{"name": "impact-site-verification", "content": "d9a897f9-f49b-48be-9813-8a019d18dc6c"}],                
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
     external_scripts=["https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"])
 
