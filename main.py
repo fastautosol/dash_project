@@ -3,6 +3,7 @@ import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 
@@ -82,6 +83,26 @@ server.include_router(youtube_api.router,           prefix="/api/youtube",      
 @server.get("/health")
 def health():
     return {"status": "ok"}
+
+# ----- 5. Health endpoint -----
+@server.get("/health")
+def health():
+    return {"status": "ok"}
+
+@server.get("/verify-impact", response_class=HTMLResponse)
+def verify_impact_page():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="impact-site-verification" content="d9a897f9-f49b-48be-9813-8a019d18dc6c">
+        <title>Verification Page</title>
+    </head>
+    <body>
+        <p>Impact Verification Endpoint Active.</p>
+    </body>
+    </html>
+    """
 
 # ----- 6. Mount Dash — LAST, after layout is set and assets are mounted -----
 server.mount("/", WSGIMiddleware(app.server))
