@@ -18,7 +18,7 @@ EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -fsS http://localhost:8000/health || exit 1
 
-CMD gunicorn main:server -k uvicorn.workers.UvicornWorker \
+CMD gunicorn app:server -k uvicorn.workers.UvicornWorker \
     --workers=${UVICORN_WORKERS:-1} \
     --threads=${GUNICORN_THREADS:-4} \
     --timeout=${GUNICORN_TIMEOUT:-120} \
