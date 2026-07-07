@@ -14,11 +14,8 @@ import apis.youtube_api as youtube_api
 
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, suppress_callback_exceptions=True,  
-    meta_tags=[{"name": "impact-site-verification",  "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}],
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
     external_scripts=["https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"])
-
-from pages import bybit_lwcharts, crm_serper, crm_shopify, databricks, lufthansa_charts, youtube_charts, vps_sysinfo
 
 # ----- 2. SIDEBAR & LAYOUT — must be defined BEFORE the WSGI mount -----
 SIDEBAR_STYLE = {
