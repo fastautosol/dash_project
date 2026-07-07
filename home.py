@@ -7,11 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 
 # ----- 1. Initialize Dash (single page, no use_pages) -----
-app = dash.Dash(
-    __name__,
-    external_stylesheets=[dbc.themes.DARKLY],
-    meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}],
-)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY],
+    meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}])
 
 CARD_STYLE = {
     "background": "rgba(255, 255, 255, 0.03)",
