@@ -1,21 +1,6 @@
-# 2026.05.20  18.00
+# 2026.07.07  18.00
 import dash
-from dash import html
-import dash_bootstrap_components as dbc
-
-# Crucial: path="/" ensures this loads at https://fastautosol.com
-dash.register_page(__name__, path="/")
-
-layout = dbc.Container([
-    html.H1("FastAutoSol Media Platform", className="text-center mt-5"),
-    html.P("Welcome to our consumer-facing AI and Automation publication network.", className="lead text-center"),
-    # Add your blog grid, privacy policies, and contact information links here
-], fluid=True)
-
-
-import dash
-from dash import html, dcc, callback, Output, Input
-from datetime import datetime
+from dash import html, dcc
 import dash_bootstrap_components as dbc
 
 dash.register_page(__name__, path="/", icon="fa-solid fa-home", name="Home", order=0)
@@ -28,44 +13,75 @@ CARD_STYLE = {
     "padding": "15px",
     "width": "100%",
     "height": "100%",
+    "display": "flex",
+    "flexDirection": "column",
 }
 
-CARDS = [
-    {"icon": "fa-solid fa-chart-line",  "title": "Analytics",     "img": "https://placehold.co/400x160/1a1a2e/7eb3ff?text=Analytics",    "desc": "Track key metrics and trends across your trading systems in real time."},
-    {"icon": "fa-solid fa-robot",       "title": "Bots",          "img": "https://placehold.co/400x160/1a1a2e/7eb3ff?text=Bots",          "desc": "Manage and monitor your automated trading bots and their performance."},
-    {"icon": "fa-solid fa-database",    "title": "Database",      "img": "https://placehold.co/400x160/1a1a2e/7eb3ff?text=Database",      "desc": "Inspect PostgreSQL tables, run queries and review stored data."},
-    {"icon": "fa-solid fa-webhook",     "title": "Webhooks",      "img": "https://placehold.co/400x160/1a1a2e/7eb3ff?text=Webhooks",      "desc": "Incoming signal endpoints, logs and webhook health status."},
-    {"icon": "fa-solid fa-server",      "title": "VPS SysInfo",   "img": "https://placehold.co/400x160/1a1a2e/7eb3ff?text=SysInfo",       "desc": "Live CPU, memory and disk stats for the VPS host and containers."},
-    {"icon": "fa-solid fa-gear",        "title": "Settings",      "img": "https://placehold.co/400x160/1a1a2e/7eb3ff?text=Settings",      "desc": "Configure API keys, notifications and application preferences."},
+# 12 AI Models/Influencers Profile Mock Data
+AI_GIRLS = [
+    {"name": "Amara Vance",    "niche": "Virtual Fashion & Styling",  "img": "https://unsplash.com", "reach": "145K"},
+    {"name": "Chloe Thorne",   "niche": "Cyberpunk Lifestyle & Tech", "img": "https://unsplash.com", "reach": "320K"},
+    {"name": "Yuki Tanaka",    "niche": "Streetwear & Tokyo Culture", "img": "https://unsplash.com", "reach": "95K"},
+    {"name": "Sienna Brooks",  "niche": "Eco-Travel & Digital Nomad", "img": "https://unsplash.com", "reach": "210K"},
+    {"name": "Nova Sterling",  "niche": "Futuristic Fitness & Health","img": "https://unsplash.com", "reach": "185K"},
+    {"name": "Elena Rostova",  "niche": "High-End Luxury & Runway",   "img": "https://unsplash.com", "reach": "410K"},
+    {"name": "Maya Lin",       "niche": "Minimalist Design & Art",    "img": "https://unsplash.com", "reach": "125K"},
+    {"name": "Zuri Jones",     "niche": "Afrofuturism & Music Vibe",  "img": "https://unsplash.com", "reach": "300K"},
+    {"name": "Aria Wilde",     "niche": "Alternative Rock & Gaming",  "img": "https://unsplash.com", "reach": "240K"},
+    {"name": "Leila Kincaid",  "niche": "Coastal Living & Wellness",  "img": "https://unsplash.com", "reach": "165K"},
+    {"name": "Iris Dubois",    "niche": "Parisian Beauty & Skincare", "img": "https://unsplash.com", "reach": "190K"},
+    {"name": "Tessa Vance",    "niche": "Skateboarding & Street Art", "img": "https://unsplash.com", "reach": "115K"}
 ]
 
-
-def make_card(c):
+def make_influencer_card(girl):
     return dbc.Card([
-        dbc.CardHeader([
-            html.I(className=f"{c['icon']} me-2 text-info"),
-            html.Span(c["title"], className="fw-semibold text-light"),
-        ], style={"background": "rgba(255,255,255,0.05)", "border": "none"}),
-        html.Img(src=c["img"], style={"width": "100%", "height": "160px", "objectFit": "cover"}),
-        dbc.CardBody(
-            html.P(c["desc"], className="text-muted small m-0"),
+        html.Img(
+            src=girl["img"], 
+            style={"width": "100%", "height": "280px", "objectFit": "cover", "borderRadius": "10px 10px 0 0"}
         ),
+        dbc.CardBody([
+            html.H5(girl["name"], className="fw-bold text-light mb-1"),
+            html.P(girl["niche"], className="text-info small mb-3"),
+            html.Div([
+                html.Span([html.I(className="fa-solid fa-users me-1"), f"{girl['reach']} Reach"], className="badge bg-secondary text-light")
+            ], className="d-flex justify-content-between align-items-center mt-auto")
+        ], className="px-2 pt-3 pb-1")
     ], style=CARD_STYLE)
-
 
 layout = dbc.Container([
 
-    # ── Top-centre logo ───
+    # ── Header & Logo Section ───
     dbc.Row(
-    dbc.Col(
-        html.Img(src="/assets/fastautosol_header.jpg", style={"height": "70%", "width": "auto"}), 
-        className="text-center"), className="mb-4",
+        dbc.Col([
+            html.Img(src="/assets/fastautosol_header.jpg", style={"maxHeight": "120px", "width": "auto"}, className="mb-3"), 
+            html.H2("FastAutoSol Creator Network", className="text-light fw-bold"),
+            html.P("Empowering brand sponsorships through high-engagement virtual AI models and creators.", className="text-muted lead")
+        ], className="text-center py-4"), 
+        className="mb-4"
     ),
 
-    # ── 2 × 3 info cards ───
+    # ── 3 Column × 4 Row Grid ───
+    # row-cols-md-3 automatically splits 12 items into 4 rows of 3 columns each on desktop view
     dbc.Row([
-        dbc.Col(make_card(CARDS[i]), width=6, className="g-4 mb-4") 
-        for i in range(6)
-    ]),
+        dbc.Col(
+            make_influencer_card(girl), 
+            xs=12, sm=6, md=4, 
+            className="mb-4 d-flex align-items-stretch"
+        ) for girl in AI_GIRLS
+    ], className="g-4"),
 
-], fluid=True, className="py-3")
+    # ── Compliance Footer ───
+    html.Hr(style={"borderTop": "1px solid rgba(255,255,255,0.1)", "marginTop": "5rem"}),
+    dbc.Row([
+        dbc.Col(html.P("© 2026 FastAutoSol Media Group. All rights reserved.", className="text-muted small"), md=6),
+        dbc.Col(
+            html.Div([
+                html.A("Privacy Policy", href="#", className="text-muted small me-3 text-decoration-none"),
+                html.A("Terms of Service", href="#", className="text-muted small me-3 text-decoration-none"),
+                html.A("Contact Us", href="#", className="text-muted small text-decoration-none")
+            ], className="text-md-end"), 
+            md=6
+        )
+    ], className="pb-5")
+
+], fluid=True, className="px-4")
