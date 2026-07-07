@@ -88,6 +88,43 @@ services:
       - n8n-shared-net
 
 
+ media-dash-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dash
+    container_name: media-dash-app
+    restart: unless-stopped
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    expose:
+      - "8000"
+    environment:
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-n8n}
+      DB_USER: ${SERVICE_USER_POSTGRES}
+      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      PYTHONUNBUFFERED: "1"
+      TZ: ${TZ:-Europe/Berlin}
+      UVICORN_WORKERS: 1
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+    mem_limit: 1500m
+    cpus: 1.0
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+
   python-dash-app:
     build:
       context: .
