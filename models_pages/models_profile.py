@@ -4,11 +4,11 @@ from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_
 import dash_bootstrap_components as dbc
 from models_pages.models import MODELS_BY_ID, MODELS_BY_SLUG
 
-dash.register_page(__name__, path_template="/model/<model_id>", name="Model Profile")
+dash.register_page(__name__, path_template="/model/<slug>", name="Model Profile")
 
 def layout(model_id=None, **kwargs):
 
-    model = MODELS_BY_ID.get(model_id)
+    model = MODELS_BY_SLUG.get(model_id)
 
     if model is None:
         return dbc.Container([
