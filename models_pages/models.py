@@ -1,4 +1,4 @@
-```python
+# 2026.07.08  18.00
 from pathlib import Path
 
 PHOTO_EXT = "jpg"
