@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 
-from models import MODELS, MODELS_BY_ID
+from models_pages.models import MODELS, MODELS_BY_ID
 
 # ----- Dash App -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="models_pages", suppress_callback_exceptions=True,
