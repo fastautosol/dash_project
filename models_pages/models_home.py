@@ -61,18 +61,15 @@ layout = dbc.Container([
 
     dbc.Row(
         dbc.Col([
-            html.Img(src="/assets/fastautosol_header.jpg", style={"maxHeight": "120px", "width": "auto"}, className="mb-3"),
             html.H2("FastAutoSol Creator Network", className="text-light fw-bold"),
             html.P("Empowering brand sponsorships through high-engagement virtual AI models and creators.", className="text-muted lead"),
         ], className="text-center py-4"),
-        className="mb-4",
-    ),
+        className="mb-4"),
 
     dbc.Row([
         dbc.Col(
             make_influencer_card(model),
-            xs=12, sm=6, md=4,
-            className="mb-4 d-flex align-items-stretch",
+            xs=12, sm=6, md=3, lg=3, className="mb-4 d-flex align-items-stretch",
         ) for model in MODELS
     ], className="g-4"),
 
