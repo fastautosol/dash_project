@@ -52,7 +52,7 @@ MODELS_BY_ID = {m["id"]: m for m in MODELS}
 app = dash.Dash(
     __name__,
     use_pages=True,
-    pages_folder="home_pages",
+    pages_folder="models_pages",
     suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
     meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}],
