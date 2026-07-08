@@ -1,8 +1,8 @@
-# 2026.07.08  16.00
+# 2026.07.08  18.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
-from models import MODELS_BY_ID
+from models_pages.models import MODELS_BY_ID
 
 dash.register_page(__name__, path_template="/model/<model_id>", name="Model Profile")
 
