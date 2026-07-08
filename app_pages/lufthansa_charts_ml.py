@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from datetime import datetime
 
 # ML module (same directory)
-import pages.lufthansa_ml as lm
+import app_pages.lufthansa_ml as lm
 
 # ----- 1. CONFIGURATION -----
 DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
