@@ -1,3 +1,4 @@
+# 2026.07.08  16.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
@@ -16,23 +17,26 @@ def layout(model_id=None, **kwargs):
             html.Div(dcc.Link("← Back to all models", href="/", className="text-info"), className="text-center mt-3"),
         ], className="py-5")
 
-    thumbnails = [
-        dbc.Col(
-            html.Img(
-                src=photo,
-                id={"type": "model-thumb", "model": model_id, "index": i},
-                n_clicks=0,
-                style={
-                    "width": "100%", "height": "220px", "objectFit": "cover",
-                    "borderRadius": "10px", "cursor": "pointer",
-                    "border": "1px solid rgba(255,255,255,0.1)",
-                },
-            ),
-            xs=6, sm=4, md=3,
-            className="mb-3",
-        )
-        for i, photo in enumerate(model["photos"])
-    ]
+    if model["photos"]:
+        thumbnails = [
+            dbc.Col(
+                html.Img(
+                    src=photo,
+                    id={"type": "model-thumb", "model": model_id, "index": i},
+                    n_clicks=0,
+                    style={
+                        "width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover",
+                        "borderRadius": "10px", "cursor": "pointer",
+                        "border": "1px solid rgba(255,255,255,0.1)",
+                    },
+                ),
+                xs=6, sm=4, md=3,
+                className="mb-3",
+            )
+            for i, photo in enumerate(model["photos"])
+        ]
+    else:
+        thumbnails = [dbc.Col(html.P("No photos uploaded yet.", className="text-muted text-center py-5"), width=12)]
 
     return dbc.Container([
         dcc.Link("← Back to all models", href="/", className="text-muted small"),
@@ -53,7 +57,10 @@ def layout(model_id=None, **kwargs):
             dbc.ModalBody(
                 html.Img(
                     id={"type": "model-modal-img", "model": model_id},
-                    style={"width": "100%", "borderRadius": "10px"},
+                    style={
+                        "width": "100%", "maxHeight": "80vh", "objectFit": "contain",
+                        "borderRadius": "10px", "display": "block", "margin": "0 auto",
+                    },
                 )
             ),
         ], id={"type": "model-modal", "model": model_id}, size="lg", is_open=False, centered=True),
