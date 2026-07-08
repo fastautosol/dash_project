@@ -8,7 +8,7 @@ dash.register_page(__name__, path_template="/model/<slug>", name="Model Profile"
 
 def layout(model_id=None, **kwargs):
 
-    model = MODELS_BY_SLUG.get(model_id)
+    model = MODELS_BY_SLUG.get(slug)
 
     if model is None:
         return dbc.Container([
