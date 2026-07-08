@@ -26,10 +26,7 @@ def _discover_photos(model_id):
 
     files = sorted(model_dir.glob(f"img_*.{PHOTO_EXT}"))
 
-    return [
-        f"/assets/{model_id}/{f.name}"
-        for f in files
-    ]
+    return [f"/assets/{model_id}/{f.name}" for f in files]
 
 
 for model in MODELS:
@@ -39,5 +36,10 @@ for model in MODELS:
 
 MODELS_BY_ID = {
     model["id"]: model
+    for model in MODELS
+}
+
+MODELS_BY_SLUG = {
+    model["slug"]: model
     for model in MODELS
 }
