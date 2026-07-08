@@ -37,11 +37,7 @@ MODELS_BY_ID = {m["id"]: m for m in MODELS}
 # NOTE: MODELS / MODELS_BY_ID above must stay defined before this call —
 # page discovery happens inside dash.Dash(...), and home_pages/*.py
 # import them back via "from home import MODELS_BY_ID".
-app = dash.Dash(
-    __name__,
-    use_pages=True,
-    pages_folder="home_pages",
-    suppress_callback_exceptions=True,
+app = dash.Dash(__name__, use_pages=True, pages_folder="models_pages", suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
     meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}],
 )
