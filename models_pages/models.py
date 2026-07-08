@@ -1,5 +1,6 @@
 # 2026.07.08  18.00
 from pathlib import Path
+import re
 
 PHOTO_EXT = "jpg"
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,6 +18,11 @@ MODELS = [
     {"id": "model9", "name": "Aria Wilde",    "niche": "Alternative Rock & Gaming",   "reach": "240K"},
 ]
 
+def slugify(name):
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+for model in MODELS:
+    model["slug"] = slugify(model["name"])
 
 def _discover_photos(model_id):
     model_dir = ASSETS_DIR / model_id
