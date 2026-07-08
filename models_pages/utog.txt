@@ -1,0 +1,3912 @@
+﻿©2011 BitTorrent, Inc.\r\nAll Rights Reserved.\r\n\r\nThanks for using this FREE program. We hope you like it. If you paid for it, get a refund!\r\n\r\nThanks to ludde, Serge Paquet, zygron, and Firon for all the help.
+©2011 BitTorrent, Inc.\r\nMinden jog fenntartva.\r\n\r\nKöszönjük, hogy ezt az ingyenes programot használod. Reméljük elnyerte a tetszésedet.\r\n\r\nThanks to ludde, Serge Paquet, zygron, and Firon. Fordította: Toldy Zoltán - utorrent.hu és Worlon.
+
+All files (*.*)||*.*||
+Minden fájl (*.*)||*.*||
+
+&Deselect
+Kijelölés törlése
+
+&Deselect All
+Kijelölés törlése
+
+ (disk space: %#Z)
+ (Szabad hely: %#Z)
+
+ (of %#Z)
+ (%#Z-ból)
+
+Name
+Név
+
+There is not enough free disk space to save the files in the folder you selected.\r\nDo you want to continue anyway?
+Nincs elég szabad hely azon a lemezen, amit kiválasztottál.\r\nMindenképp folytassam?
+
+&Select
+Kijelölés
+
+&Select All
+Mindent
+
+Size
+Méret
+
+Unable to find '%s'.
+'%s' nem található.
+
+Error '%s' while downloading URL.
+'%s' Az URL letöltésénél.
+
+Unable to generate temp filename.
+Az ideiglenes fájlok létrehozása sikertelen.
+
+Can't open .torrent file: %s
+Nem nyitható meg ez a .torrent állomány: %s
+
+Failure: %s
+Hiba: %s
+
+Files missing from job. Please recheck.
+Állományok hiányoznak a feladatból. Ellenőrizd.
+
+Peers field is of invalid length
+A peermező hossza érvénytelen
+
+Tracker sending invalid data: %.*S.
+A tracker érvénytelen adatot küldött: %.*S.
+
+Tracker reply in bad format
+Rossz formátumú trackerválasz
+
+Tracker reply has no peers field
+A trackerválaszban nincs peermező
+
+Executing: %s
+Futtatás: %s
+
+working
+aktív
+
+Unknown torrent
+Ismeretlen torrent
+
+Warning: %s
+Figyelem: %s
+
+ by *
+ by *
+
+(auto detect)||16 kB||32 kB||64 kB||128 kB||256 kB||512 kB||1024 kB||2048 kB||4096 kB||
+(automatikus)||16 kB||32 kB||64 kB||128 kB||256 kB||512 kB||1024 kB||2048 kB||4096 kB||
+
+&Cancel
+&Mégse
+
+Unable to save to '%s'.
+Nem lehet ide menteni: '%s'.
+
+&Close
+&Bezár
+
+The size of the selected data is 0 bytes. Please specify another file or directory.
+A választott adat 0 byte méretű. Kérlek, válassz másik fájlt vagy mappát.
+
+The directory you have selected contains more than 1000 files. The resulting .torrent will get very large. A better idea is to put the files into a compressed file and then share that file.\r\n\r\nDo you want to continue anyway?
+A kiválasztott mappa több mint 1000 állományt tartalmaz. Nagy méretű .torrent állomány várható. Jobb lenne az állományokat egybetömöríteni és azt megosztani.\r\n\r\nBiztosan folytatod?
+
+Drag either a single file or a folder to the window.
+Húzz az ablakba egy fájlt vagy egy mappát.
+
+Please enter the name of a file or directory.
+Add meg egy fájl vagy könyvtár nevét.
+
+Please enter a valid tracker URL. Do you want to continue without having any trackers?
+Add meg legalább egy létező tracker URL-címét. Folytassam úgy, hogy egy tracker sincs megadva?
+
+There was an error computing the hash: (%d) %s
+Hiba az ellenőrző összeg kiszámítása közben: (%d) %s
+
+All files (*.*)||*.*||
+Minden fájl (*.*)||*.*||
+
+Torrent files||*.torrent||All files (*.*)||*.*||
+Torrent fájlok||*.torrent||Minden fájl (*.*)||*.*||
+
+The file or directory '%s' cannot be found. Please enter a different filename. Note that you can't share the root of a drive.
+A(z) '%s' fájl vagy mappa nem létezik. Írj be másik nevet. Megjegyzés: Egy meghajtó gyökérkönyvtárát nem oszthatod meg.
+
+Too many pieces in the torrent. Select a larger piece size.
+Túl sok szelet van a torrentben. Válassz nagyobb szeletméretet.
+
+&Reset
+&Reset
+
+Select where to save the .torrent
+Válaszd ki a .torrent mentésének helyét. 
+
+Select a file
+Válassz egy fájlt
+
+Select a folder
+Válassz egy mappát
+
+&Close
+Be&zárás
+
+D: %z/s
+Le: %z/s
+
+ETA: *
+Idő: *
+
+U: %z/s
+Fel: %z/s
+
+About µTorrent
+µTorrent névjegye
+
+Close
+Bezár
+
+Webpage
+Honlap
+
+Create New Torrent
+Új torrent létrehozása
+
+ Select Source *
+ Forrás kiválasztása *
+
+Add file
+Fájl hozzáadása
+
+Add directory
+Teljes mappa
+
+Skip Files:
+Kihagyás:
+
+ Torrent Properties *
+ Torrent tulajdonságok *
+
+Trackers:
+Trackerek:
+
+Comment:
+Megjegy.:
+
+Piece size:
+Szeletméret:
+
+S&tart seeding
+Seedelés indí&tása
+
+&Private torrent
+Magántorrent
+
+Create and &save as...
+Létrehozás és &mentés mint...
+
+Resolution:
+Frissítés:
+
+Show:
+Mutat:
+
+ Read Statistics *
+ Olvasási statisztika *
+
+Cache:
+Átmeneti tár:
+
+From Cache
+Átmeneti tárból
+
+From File
+Állományból
+
+#
+#
+
+Amount
+Mennyiség
+
+Avg Size
+Átl.méret
+
+Rate
+Mérték
+
+ Write Statistics *
+ Írási statisztika *
+
+Cache:
+Átmeneti tár:
+
+#
+#
+
+To Cache
+Átmeneti tárba
+
+Amount
+Mennyiség
+
+To File
+Állományba
+
+Avg Size
+Átl.méret
+
+Rate
+Mérték
+
+Hashing
+Hashelés
+
+&Reset
+&Reset
+
+Add Torrent from URL
+Torrent hozzáadása URL-ből
+
+OK
+OK
+
+Cancel
+Mégse
+
+Please enter the location of the .torrent you want to open:
+Kérem a megnyitni kívánt .torrent helyét:
+
+Add New Torrent
+Új torrent hozzáadása
+
+ Save As *
+ Mentés mint *
+
+S&kip hash check
+Megnyitás seedelésre
+
+&Start torrent
+Torrent indítása
+
+Label:
+Címke:
+
+ Torrent Contents *
+ Torrent tartalma *
+
+Name:
+Név:
+
+Comment:
+Megj.:
+
+Size:
+Méret:
+
+Date:
+Dátum:
+
+S&elect All
+Mindet
+
+Select &None
+Semelyiket
+
+&Advanced...
+H&aladó...
+
+OK
+OK
+
+Cancel
+Mégse
+
+&OK
+&OK
+
+&Cancel
+&Mégse
+
+RSS Downloader
+Hírforrás-letöltő
+
+&Close
+&Bezár
+
+&Help
+Súgó
+
+&Add
+Hozzáadás
+
+&Delete
+Törlés
+
+ Filter Settings *
+ Szűrő beállítások *
+
+Filter:
+Szűrő:
+
+Not:
+Kivétel:
+
+Save in:
+Mentés helye:
+
+...
+...
+
+Feed:
+Feed:
+
+Quality:
+Minőség:
+
+&Episode Number: [ex. 1x12-14]
+Epizód sorszám: [pl. 1x12-14]
+
+&Filter matches original name instead of decoded name
+Vissza&fejtett név helyett eredeti névre szűrés
+
+&Give download highest priority
+Letöltés le&gmagasabb prioritáson
+
+Smart ep. filter
+Okos ep. szűrő
+
+&Minimum interval:
+Minimális távolság:
+
+&Reset
+Reset
+
+Label for new torrents:
+Új torrentek címkéje:
+
+?
+? 
+
+&Delete
+Törlés
+
+Preferences
+Beállítások
+
+OK
+OK
+
+Cancel
+Mégse
+
+&Apply
+&Alkalmaz
+
+&Language:
+Nyelv:
+
+&More...
+Egyéb...
+
+&Check for updates automatically
+Automatikus frissítéskeresés indításkor
+
+C&onfirm when deleting torrents
+Megerősítés kérése torrent törlésekor
+
+S&how confirmation dialog on exit
+Megerősítés kérése kilépéskor
+
+ System Tray *
+ Tálca *
+
+C&lose to tray
+Bezárás tá&lcára
+
+&Minimize to tray
+&Kis méret, ikonként a tálcán
+
+&Always show tray icon
+Mindig jelenjen meg a tálcaikon
+
+&Single click on tray icon to open
+Tálcaikon nyitása egy kattintással
+
+Show &balloon notifications in tray
+Buboréktippek megjelenítése a tálcán
+
+Al&ways activate when clicked
+Kattintásra mindig legyen aktív
+
+ Display Options *
+ Felhasználói felület *
+
+A&lternate list background color
+Sorok elkülönítése eltérő színekkel
+
+Sh&ow speed limits in the status bar
+Seb.korlát mutatása az állapotsoron
+
+Show current speed in the &title bar
+Sebesség megjelenítése a címsorban
+
+ Windows Integration *
+ Windowsba épülés *
+
+C&heck association on startup
+Társítás ellenőrzése indításkor
+
+Sta&rt µTorrent on system startup
+µTorrent indítása a rendszerrel
+
+ Location of Downloaded Files *
+ Letöltött fájlok helye *
+
+&Put new downloads in:
+Új letöltések helye:
+
+...
+...
+
+&Move completed downloads to:
+Kész letöltések áthelyezése ide:
+
+...
+...
+
+&Only move from the default download directory
+Áthelyezés csak az alapértelmezett mappából
+
+ When Adding Torrents *
+ Torrent hozzáadásakor *
+
+&Don't start the download automatically
+Ne induljon el a letöltés automatikusan
+
+A&ctivate the program window
+Program ablakának aktiválása
+
+S&how a window that displays the files inside the torrent
+Ablak megjelenítése a torrentben lévő fájlokról
+
+ Other Settings *
+ További beállítások *
+
+&Append .!ut to incomplete files
+.!ut kiterjesztés a félkész fájloknak
+
+P&re-allocate all files
+Minden fájl előre lefoglalása
+
+Pr&event standby if there are active torrents
+Készenléti mód kikapcsolása, ha van aktív torrent
+
+ Listening Port *
+ Bejövő port *
+
+Port used for incoming connections:
+Port a bejövő kapcsolatokhoz:
+
+Random port
+Véletlenszerű
+
+Enable &UPnP port mapping
+&UPnP port kezelésének engedélyezése
+
+ Proxy Server *
+ Proxy szerver *
+
+T&ype:
+Típus:
+
+&Proxy:
+&Proxy:
+
+P&ort:
+Port:
+
+Authentication
+Hitelesítés
+
+Username:
+Név:
+
+Password:
+Jelszó:
+
+Enable &NAT-PMP port mapping
+NAT-PMP port figyelése
+
+Alternate upload rate when not downloading (kB/s):
+Alternatív feltöltési seb., ha nincs letöltés (KB/mp):
+
+ Number of Connections
+ Kapcsolatok száma
+
+Global maximum number of connections:
+Kapcsolatok maximális száma összesen:
+
+Maximum number of connected peers per torrent:
+Peerkapcsolódások maximális száma torrentenként:
+
+&Enable DHT Network
+DHT hálózat engedélyezése
+
+&Ask tracker for scrape information
+Scrape-inform. kérése a trackertől
+
+&Enable DHT for new torrents
+DHT engedélyezése új torrenteknél
+
+Enable &Peer Exchange
+Peercsere engedélyezése
+
+IP/Hostname to report to tracker:
+IP-cím/Gépnév jelentése a trackernek:
+
+ Protocol Encryption *
+ Protokolltitkosítás *
+
+Outgoing:
+Kimenő:
+
+Allow incoming legacy connections
+Titkosítatlan bejövő kapcs. engedése
+
+Enable &Local Peer Discovery
+Helyi peerkeresés engedélyezése
+
+ Queue Settings *
+ Várólista beállításai *
+
+Maximum number of active torrents (upload or download):
+Aktív torrentek maximális száma (fel- vagy letöltés):
+
+Maximum number of active downloads:
+Aktív letöltések maximális száma:
+
+&Seeding tasks have higher priority than downloading tasks
+Seed feladatoknak magasabb a prioritása a letöltésekkel szemben
+
+kB/s
+KB/mp
+
+&Enable Scheduler
+Üt&emező bekapcsolása
+
+ Scheduler Table *
+ Ütemtábla *
+
+ Scheduler Settings *
+ Ütemező beállításai *
+
+Limited upload rate (kB/s):
+Feltöltési korlát (KB/mp):
+
+Limited download rate (kB/s):
+Letöltési korlát (KB/mp):
+
+&Disable DHT when turning off
+DHT &tiltása kikapcsoláskor
+
+...
+...
+
+Move .torrents for finished jobs to:
+Befejezett torrentek áthelyezése ide:
+
+...
+...
+
+&Automatically load .torrents from:
+Torrentek automatikus betöltése innen:
+
+...
+...
+
+ Other *
+ Egyéb *
+
+&Boss-Key:
+Mester-gomb:
+
+&Clear Private Data
+Magánadatok törlése
+
+ Advanced Options [WARNING: Do not modify!] *
+ Haladó beállítások [FIGYELEM: Csak saját felelősségre módosítsd] *
+
+&Value:
+Érték:
+
+&True
+Igaz
+
+&False
+Hamis
+
+&Set
+Beállít
+
+&Reset
+&Alapért.
+
+The disk cache is used to keep frequently accessed data in memory to reduce the number of reads and writes to the hard drive. µTorrent normally manages the cache automatically, but you may change its behavior by modifying these settings.
+Az átmeneti tár segítségével a gyakran szükséges adatok a memóriába kerülnek, csökkentve a lemezre történő írás/olvasás számát. A µTorrent normál esetben automatikusan kezeli ezt, de manuálisan is lehet állítani a paramétereket.
+
+&Reduce memory usage when the cache is not needed
+Memóriahasználat csökkentése, ha nincs szükség az átmeneti tárolóra
+
+ Advanced Cache Settings *
+ Átmeneti tár haladó beállításai *
+
+Enable caching of disk &writes
+Lemezre írás átmeneti tárazása
+
+Wr&ite out untouched blocks every 2 minutes
+Változatlan blokkok kiírása 2 percenként
+
+Wri&te out finished pieces immediately
+Befejezett szeletek kiírása azonnal
+
+Enable caching of disk &reads
+Lemezről olvasás átmeneti tárazása
+
+Turn off read caching if the upload speed is slow
+Olvasási tár kikapcsolása, ha a feltöltés lassú
+
+Remove old blocks from the cache
+Régi blokkok eltávolítása az átmeneti tárból
+
+Increase automatic cache size when cache thrashing
+Az átmeneti tár automatikus növelése, ha megtelt
+
+ Actions for Double Click *
+ Dupla kattintásra *
+
+For seeding torrents:
+Feltöltésnél:
+
+For downloading torrents:
+Letöltésnél:
+
+ Speed Popup List [Separate multiple values with a comma]
+ Felugró sebességlista [az értékek vesszővel elválasztva]
+
+&Override automatic speed popup list
+Saját sebességkorlátozó lista
+
+Upload speed list:
+Feltöltési lista:
+
+Download speed list:
+Letöltési lista:
+
+ Persistent Labels [Separate multiple labels with a | character]
+ Állandó címkék [több címke elválasztása | karakterrel]
+
+ Authentication *
+ Hitelesítés *
+
+&Username:
+&Felh.név:
+
+&Password:
+&Jelszó:
+
+Enable &Guest account with username:
+Vendég felhasználó engedélyezése ezen a néven:
+
+ Connectivity *
+ Kapcsolatok *
+
+µTorrent Automatic Shutdown
+Automatikus µTorrent gépkikapcs.
+
+&Run speed test at:  www.dslreports.com
+Sebességteszt futtatása a www.dslreports.com oldalon
+
+Connection Type:
+Kapcsolat típusa:
+
+ Affected Settings *
+ Érintett beállítások *
+
+Upload Limit:
+Feltöltés korlát:
+
+Connections (per-torrent):
+Kapcsolatok (torrentenként):
+
+Connections (global):
+Kapcsolatok (globális):
+
+Max active torrents:
+Max. aktív torrent:
+
+Max active downloads:
+Max. aktív letöltés:
+
+&Test if port is forwarded properly
+Portátirányítás tesztelése
+
+&Cancel
+&Mégse
+
+Torrent Properties
+Torrent tulajdonságok
+
+OK
+OK
+
+Cancel
+Mégse
+
+ Run Program *
+ Program futtatása *
+
+Run this program when the download finishes:
+Program futtatása a letöltés befejezésekor:
+
+...
+...
+
+ Trackers (separate tiers with an empty line) *
+ Tracker megadása (több tracker elválasztása üres sorral) *
+
+ Bandwidth Settings *
+ Sávszélesség beállítások *
+
+Maximum upload rate (kB/s): [0: unlimited]
+Maximum feltöltési seb.(KB/mp): [0: korlátlan]
+
+Maximum download rate (kB/s): [0: unlimited]
+Maximum leltöltési sebesség (KB/mp): [0: korlátlan]
+
+&Override default settings
+Alapbeállítások &felülbírálása
+
+&Initial Seeding
+Super-seed
+
+&Enable DHT
+&DHT engedélyezés
+
+&Peer Exchange
+&Peerkicserélés
+
+Done
+Kész
+
+First Piece
+Első szelet
+
+Mode
+Mód
+
+Name
+Név
+
+# Pieces
+Szeletek száma
+
+%
+%
+
+Pieces
+Szeletek
+
+Priority
+Prioritás
+
+Size
+Méret
+
+*
+*
+
+read
+olvasás
+
+write
+írás
+
+skip
+kihagyás
+
+low
+alacsony
+
+normal
+normál
+
+high
+magas
+
+Opening unknown files from strangers can be dangerous. The file can contain viruses and other things that can harm your computer.\r\n\r\nDo you really want to open %s?
+Ismeretlen eredetű fájlok megnyitása veszélyes lehet. Tartalmazhatnak vírusokat és egyéb káros kódot is.\r\n\r\nBiztos, hogy megnyitod ezt: %s?
+
+There was an error opening %s.\r\n\r\nMaybe the file hasn't been fully downloaded yet?
+Hiba történt a(z) %s megnyitásakor.\r\n\r\nLehetséges, hogy az állomány még nincs teljesen letöltődve.
+
+&Copy
+&Másolás
+
+Availability:
+Elérhetőség:
+
+announcing...
+bejelentés...
+
+disabled
+letiltva
+
+inactive
+inaktív
+
+not allowed
+nem engedélyezett
+
+waiting for announce...
+várakozás a bejelentésre...
+
+%z/s
+%z/s
+
+Downloaded:
+Letöltve:
+
+%z/s (avg. %Z/s)
+%z/s (átl. %Z/s)
+
+%z/s
+%z/s
+
+General
+Általános
+
+%#Z (%d hashfails)
+%#Z (%d hash hiba)
+
+*
+*
+
+%d x %#z (have %u)
+%d x %#z (%u van)
+
+scrape not supported
+scrape nem támogatott
+
+scrape ok
+scrape rendben
+
+scraping
+scrape folyamatban
+
+%#Z (%#Z done) (%#Z total)
+%#Z (%#Z kész) (%#Z összesen)
+
+%#Z (%#Z done)
+%#Z (%#Z kész)
+
+Time Elapsed:
+Eltelt idő:
+
+Downloaded:
+Letöltve:
+
+Uploaded:
+Feltöltve:
+
+Seeds:
+Seed:
+
+Remaining:
+Hátralévő idő:
+
+Download Speed:
+Letöltési seb.:
+
+Upload Speed:
+Feltöltési seb.:
+
+Peers:
+Peer:
+
+Share Ratio:
+Megosztási arány:
+
+Down Limit:
+Letöltési korlát:
+
+Up Limit:
+Feltöltési korlát:
+
+Wasted:
+Kárbaveszett:
+
+Save As:
+Mentés helye:
+
+Pieces:
+Szeletek:
+
+Comment:
+Megjegyzés:
+
+Total Size:
+Teljes méret:
+
+Hash:
+Ellenőrző összeg:
+
+Created On:
+Létrehozva:
+
+Web Seeds:
+Web seed:
+
+Tracker
+Tracker
+
+updating...
+frissítés...
+
+%z/s
+%z/s
+
+%z/s (avg. %Z/s)
+%z/s (átl. %Z/s)
+
+%z/s
+%z/s
+
+%d of %d connected (%d in swarm)
+Kapcsolódva: %d összes: %d (%d a bolyban)
+
+Bytes Read - Time
+Olvasott bájt - Idő
+
+Bytes Written - Time
+Írott bájt - Idő
+
+Number of Reads - Time
+Olvasások száma - Idő
+
+Number of Writes - Time
+Írások száma - Idő
+
+%#z of %#z
+%#z - %#z
+
+Grid: 10 seconds
+Rács: 10 mp
+
+Grid: 1 minute
+Rács: 1 perc
+
+Grid: 5 minutes
+Rács: 5 perc
+
+Grid: 1 hour
+Rács: 1 óra
+
+Time (%s step)
+Idő (%s frissül)
+
+1 second
+1 másodpercenként
+
+5 seconds
+5 másodpercenként
+
+30 seconds
+30 másodpercenként
+
+5 minutes
+5 percenként
+
+Bad proxy reply
+Hibás proxy válasz
+
+Bad proxy reply 2
+Hibás proxy válasz 2
+
+Invalid redirect (%S)
+Érvénytelen átirányítás (%S)
+
+invalid http reply
+érvénytelen http válasz
+
+invalid transfer encoding
+érvénytelen átviteli kódolás
+
+invalid URL
+érvénytelen URL
+
+can't open file
+nem megnyitható
+
+can't unzip
+Kibontás sikertelen
+
+unable to write to file
+állomány írása sikertelen
+
+unable to write to file
+állomány írása sikertelen
+
+Proxy connect error %d
+%d proxy kapcsolódási hiba
+
+Too many redirects (%S)
+Túl sok átirányítás (%S)
+
+Loaded ipfilter.dat (%d entries)
+Ipfilter.dat betöltve (%d bejegyzés)
+
+There were errors loading the language file. Please see the file uTorrent.exe.log in the application directory.
+A nyelvi fájl hiányos, ezért hiba történt a betöltése közben. Nézd meg a uTorrent.exe.log fájlt a program mappájában.
+
+Enter logfile
+Napló megadása
+
+Enter the name of the file to log to:
+Add meg a naplófájl nevét:
+
+Clear &Log
+Napló ü&rítése
+
+Dump DHT &Buckets
+DHT &buckets kiírása
+
+Dump DHT &Tracked
+DHT tracked kiírása
+
+&Dump Memory Info
+Memóriainfó ürítése
+
+Log to &file...
+Naplózás fájlba...
+
+Unable to contact µTorrent update server.
+Sikertelen kapcsolódás a µTorrent frissítőszerveréhez.
+
+There was a problem downloading the language file for µTorrent. Please try later.
+Hiba történt a µTorrent-hez tartozó nyelvi fájl letöltésekor. Próbáld később.
+
+There was a problem downloading the update for µTorrent. Please try later or visit http://www.utorrent.com. Sorry about the inconvenience.
+Hiba történt a µTorrent frissítésének letöltése közben. Próbáld újra vagy látogass el a http://www.utorrent.com oldalra és töltsd le a programot.
+
+There was a problem installing the language file for µTorrent.
+Hiba történt a µTorrent-hez való nyelvi fájl telepítésekor.
+
+Unable to load "%s": %s!
+Nem lehet betölteni "%s": %s!
+
+Unable to save the resume file. Some data may be lost.\r\nAnother program might have the file open, or the disk is full. Please correct this and click Retry. If you press Cancel, the resume file will not be saved.
+Hiba a folytató állomány mentése közben. Némi adat elveszhetett.\r\nLehet, hogy másik program használja a állományt vagy a lemez megtelt. Hozza helyre és kattintson az Újra gombra. Ha a Mégse-re kattint, a folytató állomány nem lesz elmentve.
+
+Unable to save the resume file. Another program might have the file open, or the disk is full.
+Nem lehet menteni a folytatási fájlt. Más alkalmazás is megnyithatta vagy nincs több hely.
+
+Unable to save .torrent to '%s'.
+A .torrent nem menthető el ide: '%s'
+
+Unable to start updater process! Please download the newest version manually on http://www.utorrent.com.
+A frissítés sikertelen! A legújabb verziót letöltheted a http://www.utorrent.com oldalról.
+
+Unable to verify the integrity of µTorrent's update server.
+Nem lehet a µTorrent integritását ellenőrizni a frissítő szerveren.
+
+Unable to rename/delete '%s'.
+Nem lehet átnevezni/törölni: '%s'.
+
+The selected location is not valid. Please try again.
+A választott hely érvénytelen. Próbáld újra.
+
+Choose where to download '%s' to:
+'%s' letöltésének helye:
+
+Choose where to save %s
+Válaszd ki a(z) '%s' mentési helyét:
+
+DHT: Disabled
+DHT: Letiltva
+
+ (Login)
+ (Bejelentkezés)
+
+DHT: %d nodes%s
+DHT: %d csomópont%s
+
+ (Updating)
+ (Frissítés)
+
+DHT: Waiting to log in
+DHT: Várakozás a bejelentkezésre
+
+Torrents (*.torrent)||*.torrent||All files (*.*)||*.*||
+Torrentek (*.torrent)||*.torrent||Minden fájl (*.*)||*.*||
+
+%s-files:*.%s:All files (*.*):*.*:
+%s-fájlok:*.%s:Minden fájl(*.*):*.*:
+
+All files||*.*||
+Minden fájl||*.*||
+
+It looks like the file you are about to download already exists in the folder for completed downloads.\r\nDo you want to use the data in that directory instead?
+A letöltésre kijelölt állomány már létezik a kész letöltések mappájában.\r\nSzeretnéd a létező adatokat használni?
+
+Would you like to make µTorrent the default torrent application?
+Szeretnéd, hogy a µTorrent nyissa meg a .torrent fájlokat?
+
+Do you really want to exit µTorrent?
+Biztosan ki akarsz lépni a µTorrent-ből?
+
+Resume file successfully saved.
+Folytatási fájl sikeresen elmentve.
+
+Select a .torrent to open
+Válaszd ki a megnyitni kívánt torrentet
+
+Allocating files
+Fájlok lefoglalása
+
+Disk overloaded %d %%
+Megtelt a %d %% lemez
+
+*
+*
+
+Listen error\r\nYou should change the listen port.
+Hallgató hiba\r\nVáltoztasd meg a hallgató portot.
+
+Network OK\r\nYour network connection is working as it should.
+Hálózat rendben\r\nA hálózati kapcsolatod megfelelően működik.
+
+Not connectable\r\nA firewall/router is limiting your network traffic. You need to open up a port so others can connect to you.
+Nem lehet kapcsolódni\r\nA tűzfal/router korlátozza a hálózati forgalmat. Nyitnod kell egy portot, hogy mások kapcsolódni tudjanak hozzád.
+
+No incoming connections\r\nUnless the icon turns green, it could indicate a problem with your network configuration.
+Nincs bejövő kapcsolat\r\nHa nem vált az ikon zöldre, az hálózati beállítási hibát jelenthet.
+
+Limited by scheduler
+Ütemező által korlátozva
+
+Seeding only
+Csak seedelés
+
+Stopped by scheduler
+Ütemező által leállítva
+
+%s\r\n%d(%d) downloading, %d(%d) seeding\r\n%z/s down, %z/s up
+%s\r\n%d(%d) letöltés, %d(%d) feltöltés\r\n%z/s le, %z/s fel
+
+D:%s U:%s - %s
+L:%s F:%s - %s
+
+The torrent you are trying to add is already in the list of torrents. Do you want to load the trackers from it?
+A hozzáadni kívánt torrent már a listában van. Betöltsem abból a trackert?
+
+Unlimited
+Korlátlan
+
+&About µTorrent
+µTorrent névjegye
+
+&Add Torrent...
+Torrent &hozzáadása...
+
+A&dd Torrent (no default save)...
+Torrent hozzáadása (&nem alapértelmezettbe)...
+
+Add Torrent from &URL...
+Torrent hozzáadása &URL-ből...
+
+&Create New Torrent...
+Torrent &létrehozása...
+
+E&xit
+Kilépés
+
+&File
+&Fájl
+
+&Help
+Súgó
+
+µTorrent &Help
+µTorrent súgója
+
+&Options
+&Beállítások
+
+Prop&erties
+&Tulajdonságok
+
+&RSS Downloader
+RSS letöltő...
+
+Show &Category List
+Kategórialista mutatása
+
+Show &Detailed Info
+&Részletes infók
+
+&Download Bar
+Letöltési sáv
+
+Show &Status Bar
+Állapot&sor mutatása
+
+&Icons on Tabs
+&Ikon a füleken
+
+Show &Toolbar
+&Eszköztár mutatása
+
+&Auto Shutdown
+Automatikus leállítás
+
+Disabled
+Kikapcsolva
+
+Quit when Downloads Complete
+Kilépés, ha a letöltések elkészültek
+
+Shutdown when Everything Completes
+Leállítás, ha minden elkészült
+
+Quit when Everything Completes
+Kilépés, ha minden elkészült
+
+Hibernate when Downloads Complete
+Hibernálás, ha a letöltések elkészültek
+
+Hibernate when Everything Completes
+Hibernálás, ha minden elkészült
+
+Standby when Downloads Complete
+Készenlét, ha a letöltések elkészültek
+
+Standby when Everything Completes
+Készenlét, ha minden elkészült
+
+Reboot when Downloads Complete
+Újraindítás, ha a letöltések elkészültek
+
+Reboot when Everything Completes
+Újraindítás, ha minden elkészült
+
+Shutdown when Downloads Complete
+Leállítás, ha a letöltések elkészültek
+
+&Show Statistics
+Statisztika
+
+&Download Translation
+Fordítás letöltése
+
+&Check for Updates
+Frissítés keresése
+
+&Don't Download
+Kihagyás
+
+&Open
+&Megnyitás
+
+&Advanced
+Haladó
+
+&Bandwidth Allocation
+&Sávszéllesség-kiosztás
+
+&Clear Peer List
+Peerlista törlése
+
+De&lete Data
+a letöltött adatok törlése
+
+&Delete .torrent
+a .torrent fájl &törlése
+
+D&elete .torrent + Data
+a letöltött adatok és .torrent fájl törlése
+
+Force Re-C&heck
+Kényszerített ú&jraellenőrzés
+
+&Force Start
+Kényszerített &indítás
+
+&High
+&Magas
+
+Label
+Címke
+
+&Low
+Alacsony
+
+&Normal
+&Normál
+
+&Open
+Megnyitás
+
+Open &Containing Folder
+Célmappa megnyitása
+
+&Pause
+S&zünet
+
+&Preferences
+&További beállítások
+
+&Remove
+&Feladat eltávolítása
+
+Remove and delete .&torrent
+Eltávolít és .torrent törlése
+
+Remove and delete &Data
+Eltávolít és adatok törlése
+
+Remove and d&elete .torrent + Data
+Eltávolít és .torrent + adatok törlése
+
+Move to &trash if possible
+Mozgatás a Lomtárba, ha lehet
+
+&Remove
+&Feladat eltávolítása
+
+Remove A&nd
+Feladat eltávolítása és
+
+&Reset Bans
+Tiltások feloldása
+
+Set &Download Limit
+Letöltési korlát
+
+S&et Download Location...
+Letöltés helyének megadása...
+
+Set &Upload Limit
+Feltöltési korlát
+
+&Start
+&Indítás
+
+S&top
+&Leállítás
+
+Update Trac&ker
+Tracker &frissítése
+
+Alt+
+Alt+
+
+Ctrl+
+Ctrl+
+
+Shift+
+Shift+
+
+&Add Peer...
+Peer &hozzáadása...
+
+C&opy Selected Hosts
+Kiválasztott gépcímek másolása
+
+&Copy Peer List
+Peerlista másolása
+
+Reload &IPFilter
+IP-szűrő újratöltése
+
+&Resolve IPs
+Gé&pnév megállapítása
+
+&Log Traffic to Logger Tab
+Forgalom mutatása a napló fülön
+
+connection closed by peer
+A peer megszakította a kapcsolatot
+
+hostname not found
+Gépnév nem található
+
+offline (timed out)
+Szétkapcsolt (időtúllépés)
+
+High
+Magas
+
+Low
+Alacsony
+
+Normal
+Normál
+
+Active
+Aktív
+
+Completed
+Kész
+
+Downloading
+Letöltés
+
+Inactive
+Inaktív
+
+No Label
+Nincs címke
+
+Added On
+Hozzáadva
+
+||Avail.||Availability
+||Elérh.||Elérhetőség
+
+||Bw.Alloc||Bandwidth Allocation
+||Sáv.fogl||Sávszélesség foglalás
+
+Completed On
+Elkészült
+
+Debug
+Debug
+
+Done
+Kész
+
+Downloaded
+Letöltve
+
+Down Speed
+Letöltés
+
+ETA
+Hátralévő idő
+
+&Label
+Címke
+
+Down Limit
+Le. korlát
+
+Up Limit
+Fel. korlát
+
+Name
+Név
+
+#
+#
+
+Peers
+Peer
+
+Remaining
+Hátravan
+
+Seeds
+Seed
+
+Ratio
+Megosztási arány
+
+Size
+Méret
+
+Status
+Állapot
+
+Tracker Status
+Trackerállapot
+
+Uploaded
+Feltöltve
+
+Up Speed
+Feltöltés
+
+Checked %:.1d%%
+Ellenőrizve %:.1d%%
+
+Downloading
+Letöltés
+
+Error: %s
+Hiba: %s
+
+Finished
+Kész
+
+[F] Downloading
+[K] Letöltés
+
+[F] Seeding
+[K] Seed
+
+[F] Initial-Seeding
+[K] Super-seed
+
+Paused
+Szünetel
+
+Queued
+Sorban áll
+
+Queued Seed
+Seedhez sorban áll
+
+Seeding
+Seed
+
+Stopped
+Leállítva
+
+Initial-Seeding
+Super-seed
+
+Enter label
+Címke megadás
+
+Enter the new label for the selected torrents:
+Adja meg az új cimkét a kiválasztott torrentekhez:
+
+New Label...
+Új címke...
+
+Remove Label
+Címke törlése
+
+<Search Here>
+<Itt kereshetsz>
+
+Add Torrent
+Torrent hozzáadása
+
+Add Torrent from URL
+Torrent hozzáadása URL-ből
+
+Create New Torrent
+Új torrent létrehozása
+
+Pause
+Szüneteltetés
+
+Preferences
+Beállítások
+
+Remove
+Eltávolítás
+
+Start
+Indítás
+
+Stop
+Leállítás
+
+Client
+Kliens
+
+Debug
+Debug
+
+||Peer dl.||Peer Download Rate
+||Peer le.seb||Peer letöltési sebessége
+
+Downloaded
+Letöltve
+
+Down Speed
+Letöltés
+
+Flags
+Jelzők
+
+Hasherr
+Hasherr
+
+Inactive
+Inaktív
+
+IP
+IP
+
+MaxDown
+MaxLe
+
+MaxUp
+MaxFel
+
+%
+%
+
+Port
+Port
+
+Queued
+Sorban áll
+
+Relevance
+Fontosság
+
+Reqs
+Kérve
+
+Uploaded
+Feltöltve
+
+Up Speed
+Feltöltés
+
+Waited
+Várakozik
+
+Availability
+Elérhetőség
+
+Blocks
+Tömbök
+
+Completed
+Elkészült
+
+Mode
+Mód
+
+# of Blocks
+Tömbök száma
+
+#
+#
+
+fast
+gyors
+
+medium
+közepes
+
+slow
+lassú
+
+ALL
+ÖSSZ
+
+Download Date
+Letöltés dátuma
+
+Episode
+Epizód
+
+Feed
+Hír
+
+Format
+Formátum
+
+Full Name
+Teljes név
+
+Name
+Név
+
+Really delete RSS Feed "%s"?
+Biztos törlöd "%s" hírforrást?
+
+(All)
+(Össz)
+
+(match always)||(match only once)||12 hours||1 day||2 days||3 days||4 days||1 week||2 weeks||3 weeks||1 month||
+(mind egyezik)||(csak egy egyezik)||12 óra||1 nap||2 nap||3 nap||4 nap||1 hét||2 hét||3 hét||1 hónap||
+
+Date of last match: %s\r\nLast episodes matched: %s\r\n\r\nMatching releases:\r\n%s
+Utolsó egyezés: %s\r\nUtolsó epizódok egyezése: %s\r\n\r\nEgyező kiadások:\r\n%s
+
+N/A
+N/A
+
+New Filter
+Új szűrő
+
+None
+Egyik sem
+
+ALL
+ÖSSZ
+
+Really delete RSS Filter "%s"?
+Biztos törlöd "%s" hírszűrőt?
+
+Really delete %d history entries?
+Valóban törlöd %d előzményt?
+
+Too many
+Túl sok
+
+RSS: Unable to load "%S": %s
+Hír: "%S" nem tölthető be: %s
+
+Unable to load "%S": %s
+"%S" nem tölthető be: %s
+
+RSS: Unable to download "%s": %s
+RSS: Nem letölthető "%s": %s
+
+Mon||Tue||Wed||Thu||Fri||Sat||Sun||
+Hét||Ked||Sze||Csü||Pén||Szo||Vas||
+
+Friday
+Péntek
+
+Monday
+Hétfő
+
+Saturday
+Szombat
+
+Sunday
+Vasárnap
+
+Thursday
+Csütörtök
+
+Tuesday
+Kedd
+
+Wednesday
+Szerda
+
+The file '%s' is in use by another process and can't be opened.
+'%s' állományt más folyamat használja, nem lehet megnyitni.
+
+The file '%s' was damaged/missing. It has been recovered.
+'%s' állomány sérült/hiányzik. Visszaállítva.
+
+You have to restart µTorrent for the changes to take effect.
+A beállítások érvénybelépéséhez újra kell indítani a µTorrent-et.
+
+Full speed
+Teljes seb.
+
+Limited
+Korlátozott
+
+Turn off
+Leállítás
+
+Automatic Shutdown will initiate in %d seconds.\r\nPress Cancel to abort.
+Automatikus leállítás %d mp-en belül.\r\nMégse gomb megnyomása a megszakításhoz.
+
+FAILED
+SIKERTELEN
+
+Hibernating computer... %s
+Szám.gép hibernálása... %s
+
+OK
+OK
+
+Quitting program
+Kilépés a programból
+
+Restarting computer... %s
+Számítógép újraindítása... %s
+
+Shutting down computer... %s
+Számítógép leállítása... %s
+
+Stand-by computer... %s
+Szg. készenlétbe... %s
+
+Advanced
+Haladó
+
+Connection
+Kapcsolat
+
+Disk Cache
+Átmeneti tár
+
+Scheduler
+Ütemező
+
+Queueing
+Várósor
+
+BitTorrent
+BitTorrent
+
+Web UI
+Web UI
+
+Show Properties||Start/Stop||Open Folder||Show Download Bar||
+Tulajdonságok||Indítás/Leállítás||Mappa megnyitása||Letöltési csík megjelenítése||
+
+Disabled||Enabled||Forced||
+Letiltva||Engedélyezve||Erőltetve||
+
+(none)||Socks4||Socks5||HTTPS||HTTP||
+(nincs)||Socks4||Socks5||HTTPS||HTTP||
+
+(Never)||
+(Soha)||
+
+Value
+Érték
+
+Please enter a valid IP on the form xxx.xxx.xxx.xxx. Specify an empty string to use the default IP.
+Kérlek érvényes IP-t adj meg xxx.xxx.xxx.xxx formátumban. Hagyd üresen az alapértelmezett IP használatához.
+
+Please enter a valid port number from 0-65535.
+Írj be egy érvényes portszámot: 0-65535.
+
+The specified number is not a valid integer. Please enter a valid integer.
+A megadott szám nem érvényes egész. Érvényes egész számot adj meg.
+
+Select a folder
+Válassz egy mappát
+
+Select a folder where you want to store the active downloads:
+Válassz mappát a folyamatban lévő letöltéseknek:
+
+(Current Settings)
+(Jelenlegi beállítások)
+
+&Enable DHT
+DHT engedése
+
+&Enable Scheduler
+Ütemező engedélyezése
+
+&Download Limit
+Leöltési korlát
+
+E&xit
+Kilépés
+
+&Hide/Show µTorrent
+µTorrent megjelenítése/elrejtése
+
+&Pause all torrents
+Összes torrent szüneteltetése
+
+&Resume all torrents
+Összes torrent folytatása
+
+&Enable Scheduler
+Ütemező engedélyezése
+
+&Upload Limit
+Feltöltési korlát
+
+µTorrent &Webpage
+µTorrent honlapja
+
+General||Advanced||
+Általános||Haladó||
+
+Add Peer
+Peer hozzáadása
+
+Executable files (*.exe)||*.exe||All files (*.*)||*.*||
+Futtatható fájlok (*.exe)||*.exe||Minden fájl (*.*)||*.*||
+
+Select a file
+Válassz egy állományt
+
+Download Complete|%s has finished downloading.
+Letöltés kész|%s befejezte a letöltést.
+
+New Download from RSS|%s has started downloading.
+Új letöltés hírforrásből|%s letöltése elindult.
+
+New version|A new version of µTorrent is now available!
+Új verzió|Újabb µTorrent verzió jelent meg!
+
+!Error|There is not enough disk space to move %s to its final location
+!Hiba|Nincs elég hely a lemezen %s átmozgatásához a végleges helyére
+
+!Torrent Error|File: %s\n%s
+!Torrenthiba|Fájlok: %s\n%s
+
+Announces
+Bejelentések
+
+Completed
+Elkészült
+
+Peers
+Peer
+
+Scrapes
+Scrape-ek
+
+Seeds
+Seed
+
+Status
+Állapot
+
+Are you sure you want to uninstall µTorrent?
+Biztos, hogy eltávolítod a µTorrentet?
+
+Uninstallation failed.
+Sikertelen eltávolítás.
+
+Unable to terminate currently running copies of the application.\r\nTerminating the uninstallation procedure.
+Nem lehetséges az alkalmazás példányainak leállítása.\r\nAz eltávolítás megszakítása.
+
+Invalid folder specified. Please choose another folder.
+Hibás könyvtárat adtál meg. Válassz másik könyvtárat.
+
+Invalid path specified. Please modify and try again.
+Hibás útvonalat adtál meg. Módosítsd és próbáld újra.
+
+RSS: Smart filter has rejected "%S"
+RSS: Smart filter has rejected "%S"
+
+Unable to load "%s": %s!
+Nem lehet betölteni ezt: "%s": %s!
+
+The torrent you are trying to add matches a torrent currently being deleted. Please wait to add it again.
+A hozzáadni kívánt torrent jelenleg törlés alatt áll. Kérlek várj, majd próbáld újra.
+
+µTorrent update failed. Unable to start the new process.
+A µTorrent frissítése sikertelen. Nem sikerült elindítani az új folyamatot.
+
+The µTorrent updater is trying to install the update, but the µTorrent process is still running (It's probably trying to connect to the tracker). Please kill it and click Retry to try again.
+Nem sikerült telepíteni a frissítést, mert a µTorrent jelenleg is fut (lehetséges, hogy éppen egy tracker-hez kapcsolódik). Állítsd le a folyamatot, majd próbáld újra.
+
+Add to top of queue
+Mozgatás a várósor elejére
+
+Maximum upload rate (kB/s): [0: default]
+Maximális feltöltési sebesség (KB/mp): [0: korlátlan]
+
+Maximum download rate (kB/s): [0: default]
+Maximális letöltési sebesség (KB/mp): [0: korlátlan]
+
+Priority
+Prioritás
+
+RSS: Feed already exists "%s"
+RSS: Már létező hírforrás: "%s"
+
+The µTorrent updater failed. The error is: %s
+A µTorrent frissítése megszakadt. A hiba oka: %s
+
+Always perform this check
+Beállítás megjegyzése
+
+Close
+Bezár
+
+µTorrent Visualization
+µTorrent látványelemek
+
+Abort - Don't load this torrent; just skip it.
+Megszakítás - Ne töltse be a torrentet.
+
+Yes - Use the data in the complete folder.
+Igen - Teljes könyvtár használata
+
+No - Download the torrent from scratch.
+Nem - Egész letöltése
+
+&Limit local peer bandwidth
+Helyi peer sávszélességének korlátozása
+
+General||Trackers||Peers||Pieces||Files||Speed||Logger||
+Általános||Trackerek||Peerek||Szeletek||Fájlok||Sebesség||Napló||
+
+Cancel
+Mégse
+
+Move Down Queue
+Mozgatás &le
+
+Move Up Queue
+Mozgatás &fel
+
+Update In
+Frissítésig
+
+Copy &Magnet URI
+Magnet URL másolása
+
+Feed URL:
+Feed URL:
+
+&Custom Alias:
+Azon&osító:
+
+Do &not automatically download all items
+&Ne töltse le automatikusan az elemeket
+
+Subscription
+Feliratkozás
+
+&Automatically download all items published in feed
+&Automatikusan töltse le a hírekben közzétett összes elemet
+
+Enter the IP:port / [IPv6]:port of the peer to add:
+Add meg a hozzáadandó peer IP-címét:portját:
+
+Move &Down Queue
+Mozgatás &le
+
+Move &Up Queue
+Mozgatás &fel
+
+Codec
+Kodek
+
+Elapsed
+Eltelt idő
+
+Last Active
+Utoljára aktív
+
+Source URL
+Forrás URL
+
+Add RSS Feed
+Hírforrás hozzáadása
+
+Use &smart episode filter
+Okos epizód szűrő használata
+
+Add RSS Feed...
+Hírforrás (RSS) hozzáadása...
+
+µTorrent &Forums
+µTorrent &fórumai
+
+A&dd RSS Feed...
+Hírforrás (RSS) hozzáa&dása
+
+Add RSS Feed
+Hírforrás (RSS) hozzáadása
+
+&Add Torrent...
+Torrent hozzá&adása
+
+&Download
+Letöl&tés
+
+Would you like to add "%s" to your search list?
+Szeretnéd hozzáadni a(z) "%s",a keresési litához?
+
+You have selected to share your entire My Documents folder and all its files. It is not advisable to do so unless you are certain you want to share all the contents, including possibly private documents.\n\nAre you sure you want to proceed?
+Az egész dokumentumok mappát kiválasztottad megosztásra. Nem ajánlott, hogy megoszd az egész dokumentumok mappát, mert tartalmazhatja a személyes fájljaidat is.\n\nBiztosan folytatod a folyamatot?
+
+Don't start downloads automatically
+Ne indítsa el a letöltéseket automatikusan
+
+Web Seeds
+Web seed
+
+&Local Peer Discovery
+He&lyi peer keresése
+
+Edit RSS Feed
+RSS hírforrás szerkesztése
+
+&Clear Feed History
+Hírforrások előz&ményeinek törlése
+
+&Delete Feed
+Hírforrás &törlése
+
+&Update Feed
+Hírforrás fri&ssítése
+
+Path
+Elérési út
+
+[DHT]
+[DHT]
+
+working
+működik
+
+RSS
+RSS
+
+Previously Downloaded
+Korábban letöltött
+
+Feed
+Hírforrás
+
+&Add to Favorites
+Hozzá&adás a kedvencekhez
+
+Open URL in &Browser
+URL megnyitása a &böngészőben
+
+Favorites||History||
+Kedvencek||Előzmények||
+
+&RSS Options
+&RSS beállítások
+
+&Torrent Options
+&Torrent beállítások
+
+OK
+OK
+
+Peers6 field is of invalid length
+A Peers6 mező hibás hosszúságú
+
+µTorrent detected '%S' (%S) appears to be installed on your computer. That is known malware, and might cause µTorrent to crash or behave strangely, including but not limited to using up all your RAM and freezing. Please run a virus/malware checker.
+A µTorrent úgy érzékelte, hogy a(z) '%S' (%S) telepítve van a számítógépre. Ez egy ismert malware program, amely a µTorrent hibás működését eredményezheti. Futtass le egy malware/vírus ellenőrző programot.
+
+ [Limited]
+ [Korlátozott]
+
+k\nB\n/\ns
+k\nB\n/\ns
+
+&Error Logging
+&Hibák naplózása
+
+Log blocked connections
+Blokkolt kapcsolatok naplózása
+
+&Peer Traffic Logging
+&Peerforgalom naplózása
+
+Log outgoing have messages
+Kimenő üzenetek naplózása
+
+Log UPnP messages
+UPnP üzenetek naplózása
+
+Log UPnP errors
+UPnP hibák naplózása
+
+&Verbose Logging
+Részletes na&plózás
+
+Log incoming have messages
+Bejövő üzenetek naplózása
+
+Log incoming connections
+Bejövő kapcsolatok naplózása
+
+Log finished metadata
+Befejezett metaadatok naplózása
+
+Log misc errors
+Egyéb hibák naplózása
+
+Log NATPMP messages
+NATPMP üzenetek naplózása
+
+Log NATPMP errors
+NATPMP hibák naplózása
+
+&Log piece info...
+Szeletin&formációk naplózása...
+
+Log aggregated messages
+Csoportos üzenetek naplózása
+
+Log disconnects
+Lecsatlakozások naplózása
+
+Log bad cancels
+Hibás megszakítások naplózása
+
+Log bad haves
+Hibák fogadások naplózása
+
+Log bad piece requests
+Hibás szeletkérések naplózása
+
+Log bad rejections
+Hibás visszautasítások naplózása
+
+Log outgoing connections
+Kimenő kapcsolatok naplózása
+
+&Relocate...
+Áthelye&zés...
+
+File exceeds filesystem size limit
+A fájl meghaladta a fájlrendszer méretkorlátját
+
+&Copy
+Máso&lás
+
+Disable Win&dows caching of disk writes
+Lemezre írások átmeneti tárazásának tiltása
+
+Disable Wind&ows caching of disk reads
+Lemez olvasások átmeneti tárazásának tiltása
+
+ Language *
+ Nyelv *
+
+Associate with .torrent files
+Társítás a .torrent fájlokkal
+
+Associate with .btsearch files
+Társítás a .btsearch fájlokkal
+
+Install IPv6/Teredo
+IPv6/Teredo telepítése
+
+Add Windows &Firewall exception
+Hozzáadás a tűzfal kivételek listájához
+
+ Privacy
+ Személyes adatok védelme
+
+ When Downloading *
+ Letöltésnél *
+
+&Append the torrent's label
+Torrent címkéjének csatolása
+
+ Location of .torrents *
+ .torrent fájlok helye *
+
+Store .torrents in:
+.torrentek tárhelye:
+
+&Delete loaded .torrents
+&Betöltött .torrentek törlése
+
+&Randomize port each start
+Tetszőleges po&rt minden indításnál
+
+ Global Upload Rate Limiting *
+ Globális feltöltési limit *
+
+ Global Download Rate Limiting *
+ Globális letöltési limit *
+
+ Basic BitTorrent Features *
+ Basic BitTorrent Features *
+
+ When µTorrent Reaches the Seeding Goal *
+ Ha a µTorrent elérte a seed célt *
+
+Enable &Web UI
+&WEB UI engedélyezése
+
+Alternative &listening port (default is the connection port):
+A&lternatív port használata (alapért. a bejövő port):
+
+&Restrict access to the following IPs (separate multiple entries with a comma):
+A következő IP-címek kizá&rása (bejegyzések elválasztása vesszővel):
+
+ Search Engines [Format: name|URL] *
+ Keresőmotorok [név|url formában] *
+
+ Basic Cache Settings *
+ Áteneti tár beállításai *
+
+&Override automatic cache size and specify the size manually (MB):
+Aut&omatikus átmeneti tár méretének felülbírálása és kézi megadása (MB):
+
+...
+...
+
+&Edit Feed...
+Hírforrás sz&erkesztése...
+
+Could not download help file. Error: %s
+Nem lehet letölteni a súgófájl. Hiba: %s
+
+Help file not found in settings directory, attempting to download
+A súgófájl nem található a beállítások mappában, ezért le kell tölteni
+
+Cannot launch help file, as it is still downloading
+Nem lehet elindítani a súgófájl, amíg nem töltödött le
+
+Choose a directory to put the application file in:
+Válassz egy mappát a program fájljainak tárolására:
+
+&Remove Tracker
+T&racker eltávolítása
+
+&Update Tracker
+Tr&acker frissítése
+
+Selected Size
+Kiválasztott méret
+
+Seeding only
+Csak seedelés
+
+µTorrent Setup
+µTorrent Beálítása
+
+Welcome to the µTorrent Speed Guide.\r\n\r\nThis guide will help you setup your network settings for the most optimal speed.
+Üdvözöllek a µTorrent sebességkalauzban.\r\n\r\nEz a kalauz segít beállítani a hálózati paramétereket a legoptimálisabb sebesség eléréséhez.
+
+UI Extras
+Kezelőfelület
+
+Bandwidth
+Sávszélesség
+
+Directories
+Mappák
+
+UI Settings
+Kezelőfelület
+
+Choose the upload speed appropriate for your connection from the list below. If you do not know it, click the button to run a speed test to find out, and choose the one nearest to your actual upload speed.
+Válaszd ki a lenti listából a feltöltési sebességedet. Ha nem tudod milyen sebességgel rendelkezel, kattintsd a gombra a sebességteszt futtatásához, majd válaszd ki a jelenlegi sebességedhez legközelebb eső lehetőséget.
+
+A port must be forwarded from your router to µTorrent to get good speeds. This port is used to let other peers connect to you.
+Egy portnak átirányítva kell lennie a µTorrent-hez, hogy elérd a megfelelő sebességet. Ezen a porton keresztül csatlkozik hozzád a többi peer.
+
+Interval
+Intervallum
+
+Min Interval
+Min. intervallum
+
+Could not download WebUI file. Error: %s
+Nem sikerült letölteni a WebUI fájlt. Hiba: %s
+
+WebUI file not found in settings directory, attempting to download
+A WebUI fájl nem található a beállítási mappában, ezért le kell tölteni
+
+Log WebUI requests
+WebUI események naplózása
+
+&Add Tracker...
+Tracker hozzá&adása
+
+Use &DHT
+&DHT használata
+
+Full speed -\nUses normal global\nbandwidth limits
+Teljes sebesség -\n Beállított\nsávszélességek használata
+
+Limited -\nUses scheduler-specified\nbandwidth limits
+Limitált -\nAz ütemezőben beállított\nsávszélességek használata
+
+Seeding only -\nOnly uploads data\n(including incomplete)
+Csak seedelés -\nCsak feltőltés\n(félkész torrenteket is)
+
+Turn off -\nStops all torrents\nthat are not forced
+Kikapcsolás -\nÖsszes torrent\n leállítása, kényszerítetteken kívül
+
+Update to beta versions
+Frissítés béta verziókra is
+
+Confirm when d&eleting trackers
+Meg&erősítés tracker törlésekor
+
+Current Port: [0: auto]
+Használt port:
+
+B&rowse...
+T&allózás...
+
+Create Start menu entry
+Parancsikon létrehozása a Start menüben
+
+Create Quick Launch icon
+Parancsikon létrehozása a  Gyorsindítás eszköztáron
+
+Create Desktop icon
+Parancsikon létrehozása az asztalon
+
+&Cancel
+&Mégse
+
+&Use Selected Settings
+Kiválasztott &beállítások használata
+
+Dis&able Feed
+Hírforrás &letiltása
+
+En&able Feed
+Hírforrás &engedélyezése
+
+Status:
+Állapot:
+
+Choose Install Location
+Válaszd ki a telepítés helyét
+
+Seeds/Peers
+Seed/Peer arány
+
+µTorrent FA&Q
+µTorrent GY&IK
+
+One or more files exceed the filesystem size limit, these files can not be saved properly.\r\nDo you want to continue anyway?
+Egy vagy több fájl túllépi a fájlrendszer méretkorlátait. Ezek a fájlok nem lesznek helyesen letöltve.\r\nSzeretnéd folytatni?
+
+disabled
+letiltva
+
+working
+működik
+
+disabled
+letiltva
+
+working
+működik
+
+Could not download WebUI information. Error: %s
+Nem lehet letölteni a WebUI információit. Hiba: %s
+
+[Local Peer Discovery]
+[Helyi peer felderítés]
+
+inactive
+inaktív
+
+not allowed
+nem engedélyezett
+
+[Peer Exchange]
+[Peerkicserélés]
+
+inactive
+inaktív
+
+not allowed
+nem engedélyezett
+
+Use &Local Peer Discovery
+Helyi peer felderítés használata
+
+Use &Peer Exchange
+Peerkicserélés használata
+
+Speed Guide
+Sebességkalauz
+
+Transfer
+Átvitel
+
+General
+Általános
+
+Unable to copy .torrent from '%s' to '%s': (%d) %s
+Nem lehet másolni a .torrentet innen: '%s', ide: (%d) %s
+
+%dd %dh
+%dnap %dóra
+
+%dh %dm
+%dóra %dperc
+
+%dm %ds
+%dperc %dmp
+
+%ds
+%dmp
+
+%dw %dd
+%dhét %dnap
+
+%dy %dw
+%dév %dhét
+
+Always check for updates to this version
+Mindig keressen frissítéseket ennél a verziónál
+
+Are you sure you want to remove the %d selected torrents and all associated data?
+Biztosan törlöd a kiválasztott %d torrentet és a hozzájuk tartozó összes adatot?
+
+Are you sure you want to remove the selected torrent and all associated data?
+Biztosan törlöd a kiválasztott torrentet és a hozzá tartozó összes adatot?
+
+Are you sure you want to remove the %d selected torrents?
+Biztosan törlöd a kiválasztott %d torrentet?
+
+Are you sure you want to remove the selected torrent?
+Biztosan törlöd a kiválasztott torrentet?
+
+Are you sure you want to remove the %d selected trackers?
+Biztosan törlöd a kiválasztott %d trackert?
+
+Are you sure you want to remove the selected tracker?
+Biztosan törlöd a kiválasztott trackert?
+
+&RSS Downloader
+&RSS letöltő
+
+Clear &all logging flags
+Összes n&apló beállítás törlése
+
+Associate with magnet URIs
+Társítás magnet URL-ekkel
+
+Downloaded
+Letöltve
+
+Open &Containing Folder
+&Tárolómappa megnyitása
+
+Log RSS messages
+RSS üzenetek naplózása
+
+Log RSS errors
+RSS hibák naplózása
+
+Access violation
+Hozzáférési jogsértés 
+
+Array bounds exceeded
+Array bounds exceeded
+
+Breakpoint
+Breakpoint
+
+Datatype misalignment
+Datatype misalignment
+
+Float denormal operand
+Float denormal operand
+
+Float divide by zero
+Float divide by zero
+
+Float inexact result
+Float inexact result
+
+Float invalid operation
+Float invalid operation
+
+Float overflow
+Float overflow
+
+Float stack check
+Float stack check
+
+Float underflow
+Float underflow
+
+Guard page
+Guard page
+
+Illegal instruction
+Illegal instruction
+
+Integer divide by zero
+Integer divide by zero
+
+Integer overflow
+Integer overflow
+
+Invalid disposition
+Invalid disposition
+
+Invalid handle
+Invalid handle
+
+In page error
+In page error
+
+Noncontinuable exception
+Noncontinuable exception
+
+Integer private instruction
+Integer private instruction
+
+Single step
+Single step
+
+
+Stack overflow
+Stack overflow
+
+Send detailed info when checking for updates (always anonymous)
+Névtelen információk küldésének engedélyezése frissítés keresésekor
+
+Alert me when DNA-powered downloads are added to uTorrent
+Értesítsen DNS támogatott letöltés hozzáadásánál
+
+%s\r\n%z/s down, %z/s up
+%s\r\n%z/s le, %z/s fel
+
+DNA
+DNA
+
+New DNA powered download|%s has started downloading.
+Új DNA támogatott feladat|%s letöltése kezdődött meg.
+
+Open URL in Bro&wser
+URL megnyitása a bön&gészőben
+
+URL
+URL
+
+&Delete
+&Törlés
+
+Open URL in &Browser
+URL megnyitása a &böngészőben
+
+Preserve file &order
+Fájlok sorrendjének megőrzése
+
+Program Location
+Program elérési útja
+
+Install µTorrent in:
+Telepítés helye:
+
+&Next >
+&Következő >
+
+Beware of online scams! A number of websites have taken our free µTorrent client and attempt to charge money for it through some sort of "fee" or "subscription" or else they install it for free but infect your computer with malicious code in the process. To protect yourself, be sure to only download our software from http://www.utorrent.com. You should NEVER under any circumstances pay for free µTorrent software.
+Figyelj az online fenyegetésekre! Néhány weboldal pénzért vagy adományért cserébe teszi közzé az µTorrent-et és néha még kártékony kódokat is elhelyeznek a számítógépeden. Saját védelmed érdekében győződj meg róla, hogy a programot biztonságos webhelyről vagy a www.utorrent.com címről töltöd le. Soha ne adj fizetséget az ingyenes µTorrent programért.
+
+From BitTorrent, Inc. - the publishers of µTorrent
+BitTorrent, Inc. - A µTorrent készítőitől
+
+Warning
+Figyelmeztetés
+
+< &Back
+< &Vissza
+
+Additional Settings
+További beállítások
+
+Add an exception for µTorrent in Windows Firewall
+Hozzáadás a tűzfal kivétel listájához
+
+Start µTorrent when Windows starts up
+µTorrent indítása a rendszerrel
+
+The following options automate the configuration of some additional settings in Windows.
+Ezek a beállítások néhány további beállítás automatikus konfigurálását eredményezik.
+
+File Types
+Fájltípusok
+
+.torrent (BitTorrent files)
+.torrent (BitTorrent fájlok)
+
+Magnet URIs
+Magnet URI-k
+
+.btsearch (BitTorrent Search Engine files)
+.btsearch (BitTorrent keresőmotor fájljai)
+
+Select which file types you would like µTorrent to handle by default.
+Válaszd ki a társítani kívánt fájltípusokat.
+
+ Cap Settings *
+ Limit beállításai *
+
+Enable Transfer Cap
+Limit bekapcsolása
+
+Uploads
+Feltöltés:
+
+Downloads
+Letöltés:
+
+Uploads + Downloads
+Feltöltés + letöltés:
+
+Uploaded + Downloaded:
+Feltöltve + letöltve:
+
+Time period:
+Időtartam:
+
+Static
+Statikus
+
+Static
+Statikus
+
+Static
+Statikus
+
+Static
+Statikus
+
+Reset History
+Stat. törlése
+
+Setup Guide
+Telepítő segéd
+
+Run Tests
+Tesztek &futtatása
+
+&Cancel
+&Mégse
+
+Downloaded:
+Letöltve:
+
+Uploaded:
+Feltöltve:
+
+Transfer cap
+Forgalom limit
+
+Transfer Cap
+Forgalom limit
+
+I &Agree
+El&fogadom
+
+Select µTorrent configurations (recommended settings are pre-selected)
+Válaszd ki a µTorrent beállításait (az ajánlott értékek már kiválasztva)
+
+Configuration
+Testreszabás
+
+&Install
+&Telepítés
+
+If you accept the terms of the agreement, click "I Agree" to continue.
+Ha elfogadod a használati feltételeket, akkor kattints az "Elfogadom" gombra.
+
+Scroll down to see the rest of the agreement.
+Görgess lejebb a szerződés megtekintéséhez.
+
+Please review the license terms before installing µTorrent
+Fogadd el a feltételeket folytatás előtt
+
+License Agreement
+Licenc szerződés
+
+This wizard will guide you through the installation of %s.\r\n\r\nVersion: %s (Build %s)\r\n\r\nClick Next to continue.
+Ez a varázsló végigvezet a %s telepítési folyamatán.
+
+Welcome to the µTorrent Setup Wizard
+Üdvözöllek a µTorrent telepítőjében
+
+Last %d days
+Utolsó %d nap
+
+connection closed
+kapcsolat lezárva
+
+%s: ERROR MSG: %s\n
+%s: Hibaüzenet: %s\n
+
+%s: ERROR: received message type %d (expected %d)\n
+%s: ERROR: received message type %d (expected %d)\n
+
+Lookup
+Lookup
+
+Stopped by transfer cap
+Leállítva a Forgalom limit miatt
+
+Click to access the transfer cap settings
+kattins ide a forgalom limit beállításaihoz
+
+Click to access the scheduler settings
+Kattints ide az ütemező beállításaihoz
+
+Stopped by speed test
+Leállítva a sebességteszt által
+
+Setup &Guide
+Sebesség&kalauz
+
+Port Forward test complete. %s
+A portátirányítás teszt befejezve. %s
+
+To get the most accurate readings, please choose the Server nearest you.
+Az optimális értékek felismeréséhez válaszd a hozzád legközelebb eső szervert.
+
+Please Select a server
+Válassz egy szervert
+
+&Run tests
+Tesztek &futtatása
+
+Connection
+Kapcsolat
+
+1||2||5||7||10||14||15||20||21||28||30||31||
+1||2||5||7||10||14||15||20||21||28||30||31||
+
+MB||GB||
+MB-ot||GB-ot||
+
+Do you really want to reset your bandwidth usage history?\n\nThis operation cannot be undone.
+Biztosan törlöd a forgalmi előzményeket?\n\nEzt a müveletet nem lehet visszavonni.
+
+%s has requested access to µTorrent.\nDo you want to allow access?\nIf you did not initiate this request, press NO
+%s hozzá akar férni a µTorrent-hez.\nEngedélyezed a hozzáférést?\nHa nem, akkor kattints a NEM gombra
+
+Always deny pairing requests
+Mindig elutasítom ezt a kérést
+
+Uploaded this run: %#Z\r\nDownloaded this run: %#Z\r\nUploaded Today: %#Z\r\nDownloaded Today: %#Z\r\nTransferred last %d days: %#Z\r\nTotal Uploaded: %#Z\r\nTotal Downloaded: %#Z\r\nTotal Ratio: %:.3d\r\nTotal Running Time: %d:%.2d:%.2d\r\nNumber of torrents added: %d\r\nProgram launched: %d times\r\n\r\nLast launched: %s\r\n# incoming conns since start: %d\r\n# outgoing conns since start: %d\r\n# handshake: %d\r\n# connections: %d\r\n# uTP connecting: %d\r\n# TCP connecting: %d\r\n# half-open: %d (%d queued)\r\n
+Feltöltve indítás óta: %#Z\r\nLetöltve indítás óta: %#Z\r\nFeltöltve ma: %:.3d\r\nLetöltve ma: %d:%.2d:%.2d\r\nForgalom az utóbbi %d napban: %#Z\r\nÖsszes feltöltés: %#Z\r\nÖsszes letöltés: %#Z\r\nÖsszes megosztási arány: %:.3d\r\nÖsszes futtatási idő: %d:%.2d:%.2d\r\nHozzáadott torrent: %d\r\nProgram elindítva: %d alkalommal\r\n\r\nUtolsó futtatás: %s\r\n# bejövő kapcsolat indítás óta: %d\r\n# kimenő kapcsolat indítás óta: %d\r\n# kézfogás: %d\r\n# kapcsolatok: %d\r\n# uTP kapcsolat: %d\r\n# TCP kapcsolat: %d\r\n# félig nyitott: %d (%d várakozik)\r\n
+
+Data read
+Adat olvasás
+
+Data send
+Adat küldés
+
+Neither NAT-PMP nor UPnP is enabled. Please check your preferences.
+Nincs engedélyezve sem a NAT-PMP sem az UPnP. Ellenőrizd a beállításokat.
+
+Checking auto portmap configuration ...
+Automatikus portfelderítés beállítások ellenőrzése...
+
+Checking queue ... we are #%d.
+Várósor ellenőrzése... #%d van.
+
+Connecting ...
+Csatlakozás...
+
+Invalid queue indicator
+Hibás várósor jelző
+
+You appear to be running version %02d.%02d of the NVIDIA Network Access Management tool.\n\nThis version has known issues which may create problems with µTorrent.\n\nPlease upgrade your NVIDIA software to at least version %02d.%02d.
+Úgy tűnik, hogy az NVIDIA Network Access Management eszköz %02d.%02d verzióját használod.\n\nEz a verzió gyakran okoz hibát a µTorrent működésében.\n\Kérlek, frissíts a szoftvert a %02d.%02d vagy újabb verzióra.
+
+Bad port number
+Hibás port
+
+Failed bind
+Failed bind
+
+Checking for forwarded port
+Átírányított port ellenőrzése
+
+Checking intermediate networks ...
+Hálózatok ellenőrzése...
+
+Server does not support this client
+A szerver nem támogatja ezt a klienst.
+
+Download
+Letöltés
+
+Protocol error in download test
+Protokol hiba a letöltési teszt közben
+
+Problem reading download speed from server.
+Hiba történt a letöltési sebesség ellenőrzése közben.
+
+Download test: wrong message type
+Letöltési teszt: hibás üzenettípus
+
+Unexpected empty message body
+Ismeretlen üres üzenettörzs
+
+Failure reading message body
+Nem lehet olvasni az üzenettörzset
+
+Invalid test ID
+Hibás teszt azonosító
+
+Error logging in: Couldn't receive test order
+Hiba a bejelentkezéskor: Nem elérhető a tesztek sorrendje
+
+Error logging in: version check
+Hiba a bejelentkezéskor: verzió ellenőrzés
+
+Message too large
+Túl hosszú üzenet
+
+Middlebox
+Middlebox
+
+Wrong message at end of test
+Hibás üzenet a teszt végén
+
+Problem logging into server
+Hiba a szerverre való bejelentkezéskor
+
+Protocol error - message type out of range
+Protokol hiba - az üzenettípus túl hosszú
+
+Problem reading midbox download speed.
+Problem reading midbox download speed.
+
+Problem reading upload speed.
+Hiba a feltöltési sebesség ellenőrzésekor.
+
+Server Busy: Too many clients waiting in queue, please try again later
+A szerver foglalt: Túl sok kliens várakozik. Kérlek, próbáld később
+
+Server Busy: Please wait 60 seconds for the current test to finish
+A szerver foglalt: Kérlek, várj 60 másodpercet, hogy a teszt befejeződjön
+
+Server version is too old.
+A szerver verziója túl régi.
+
+Simple firewall
+Egyszerű tűzfal
+
+Running Download test ...
+Letöltési teszt futtatása...
+
+Download: TEST_START
+Letöltés: TEST_START
+
+Running Upload test ...
+Feltöltési teszt futtatása...
+
+Read failure
+Olvasási hiba
+
+Error reading TEST_PREPARE message
+TEST_PREPARE üzenet olvasási hiba
+
+Upload
+Feltöltés
+
+Upload: TEST_START
+Feltöltés: TEST_START
+
+Problem reading web100 variables.
+web100 változók olvasási hiba.
+
+The transfer cap must be greater than zero.
+A forgalom limitnek nagyobbnak kell lennie nullánál.
+
+&Cancel
+&Mégse
+
+&Save && Close
+&Mentés és bezárás
+
+ Network
+ Hálózat
+
+Settings
+Beállítások
+
+Current Port: (0:random)
+Használt port: (0: auto)
+
+Automatic Port Mapping (Recommended)
+Automatikus portfelderítés (Ajánlott)
+
+Data socket dropped connection
+Adat socket eldobta a kapcsolatot
+
+PostMessage failed h:%d i:%d t:%d e:%d
+Postüzenet hiba h:%d i:%d t:%d e:%d
+
+ Port mapping will speed downloads and enable seeding. More info in FAQ and at portforward.com
+ A portfigyelés felgyorsítja a letöltést és engedélyezi a seedelést. További info. a GyIK-ben vagy a portforward.com oldalon.
+
+*
+*
+
+This test will verify your router settings and highlight any configuration issues.
+A teszt ellenőrzi a router beállításait és figyelmeztet az esetleges hibákra.
+
+If no location is near, you can test at <a href="http://dslreports.com/speedtest/">dslreports</a> and input your upload speed.
+Ha nincs közeli szerver, akkor tesztelj a <a href="http://dslreports.com/speedtest/">dslreports</a> oldalon és add meg a sebességed.
+
+Stop Tests
+Tesztek leállítása
+
+µTorrent Setup Guide
+µTorrent sebességkalauz
+
+µTorrent will test your network and configure itself for best performance.
+A µTorrent teszteli a hálózatot és beállítja azt a legjobb teljesítményhez.
+
+Choose the closest test location ...
+Válaszd ki a hozzád legközelebb eső helyet...
+
+Read bad message
+Rossz üzenetek olvasása
+
+ Bandwidth
+ Sávszélesség
+
+Static
+Állandó
+
+Static
+Állandó
+
+Static
+Állandó
+
+Static
+Állandó
+
+Static
+Állandó
+
+Static
+Állandó
+
+Upload Limit:
+Feltöltési limit:
+
+Connections (per-torrent):
+Kapcsolat (torrentenként):
+
+Connections (global):
+Kapcsolat (összesen):
+
+Max active torrents:
+Aktív torrent összesen:
+
+Max active downloads:
+Aktív letöltés összesen:
+
+More info is in the <a href="http://www.utorrent.com/faq">FAQ</a> and at <a href="http://portforward.com/">portforward.com</a>
+További info. a <a href="http://www.utorrent.com/faq">GyIK-ben</a> és a <a href="http://portforward.com/">portforward.com</a> címen
+
+µTorrent Bandwidth Configuration
+µTorrent sávszélesség beállításai
+
+Downloading Server List ...
+Szerver lista letöltése ...
+
+(Alternate speed test at <a href="http://dslreports.com/speedtest/">dslreports</a>)
+(Alternatív sebességteszt a <a href="http://dslreports.com/speedtest/">dslreports</a> oldalon)
+
+Failure closing socket
+Nem sikerült zárni a csatornát
+
+Connection failed
+Kapcsolati hiba
+
+Server Connection:
+Szerver kapcsolat:
+
+Connect failure
+Csatlakozási hiba
+
+Your Upload Speed:
+Feltöltési sebesség:
+
+Bad Port number received
+Rossz a fogadott portszám
+
+System Call failed: CreateEvent
+Rendszer hívási hiba: CreateEvent
+
+System Call failed: CreateThread
+Rendszer hívási hiba: CreateThread
+
+Internal Error
+Belső hiba
+
+Invalid message argument
+Hibás üzenet argumentum
+
+Error sending message body
+Hiba az üzenettörzs küldésekor
+
+Error sending message header
+Hiba az üzenetfejléc küldésekor
+
+Results: Upload: *
+Eredmény: Feltöltés: *
+
+)     Download: *
+)     Letöltés: *
+
+Failure while decoding test order
+Hiba a tesztsorrend dekódolásakor
+
+Results: Port is not open (you are still able to download).
+Eredmény: A port nincs nyitva (csak letölteni tudsz).
+
+Results: Port is open. Your network is properly configured.
+Eredmény: A port nyitva. A hálózat jól van beállítva.
+
+Please enter a valid port number from 0-65535.
+Adj meg egy érvényes portszámot 0-65535 között.
+
+Test queued...
+Teszt várakozik...
+
+Some software installed on your computer prevents %s\nfrom working properly. This is possibly caused by the following DLLs '%S %S'
+Néhány telepített szoftver a %s\n hibás működését eredményezheti. Ez a következő DLL fájlok miatt lehetséges: '%S %S'
+
+A local networking problem closed the connection.
+Egy helyi hálózati hiba bontotta a kapcsolatot.
+
+The server is down.
+A szerver nem elérhető.
+
+Server closed the connection.
+A szerver bontotta a kapcsolatot
+
+%s error: %s (%d)
+%s hiba: %s (%d)
+
+Timed out waiting for message from server.
+Időtúllépés, várakozás a szerver válaszára.
+
+Please check your networking configuration.
+Ellenőrizd a hálózati beállításokat.
+
+Results: Speed test aborted by user.
+Eredmény: A felhasználó megszakította a tesztet.
+
+Results: Speed test failed.
+Eredmény: Sebességteszt hiba.
+
+Current Settings (
+Jelenlegi értékek (
+
+Test Result (
+Teszt eredmény (
+
+Unlimited
+Korlátlan
+
+This is a likely service port. Please choose another.\n(You can change this setting in bt.no_connect_to_services_list)
+Ez egy gyakran használt szolgáltatás port. Válassz másikat.\n(Kikapcsolhatod a figyelmeztetést a bt.no_connect_to_services_list értékének beállításával.)
+
+This test will use <a href="http://www.utorrent.com/faq#mlabs">Measurement Lab</a> tools to check and set your bandwidth limits.
+Ez a teszt a <a href="http://www.utorrent.com/faq#mlabs">Measurement Lab</a> eszközét használja a sávszélesség elemzésére.
+
+Transfer Cap is not Set
+Nincs beállítva forgalom limit
+
+Grid: %d days
+Rács: %d nap
+
+%d days
+%d nap
+
+1 day
+1 nap
+
+Results: Port not open.
+Eredmény A port nincs nyitva.
+
+Results: Proxy detected. Results inconclusive.
+Eredmény: Proxy felismerve. Eredmény érvénytelen.
+
+upload rate limit
+feltöltési arány korlát
+
+download rate limit
+letöltési arány korlát
+
+file reading
+fájl olvasás
+
+cache writing
+cache írás
+
+file writing
+fájl írás
+
+upload + download
+feltöltés + letöltés
+
+upload rate (payload)
+feltöltési arány (payload)
+
+download rate (payload)
+letöltési arány (payload)
+
+upload rate (local peers)
+feltöltési arány (helyi peerek)
+
+download rate (local peers)
+letöltési arány (helyi peerek)
+
+upload rate (incl. overhead)
+feltöltési arány (többlettel)
+
+download rate (incl. overhead)
+letöltési arány (többletettel)
+
+send rate to player
+arány küldése a lejátszónak
+
+cache reading
+cache olvasás
+
+Placeholder for DNA settings
+DNA beállítások helye
+
+&Enable DNA-powered downloads
+DNA támogatott letöltések engedélyezése
+
+Could not find application to open %s.
+Nem található program, amellyel meglehetne nyitni ezt: %s.
+
+&Show Download Bar
+Letöltési csík megjelenítése
+
+B
+Bit
+
+EB
+EB
+
+GB
+GB
+
+kB
+kB
+
+MB
+MB
+
+PB
+PB
+
+TB
+TB
+
+Timed out.
+Időtúllépés.
+
+There was an error opening %s.\r\n\r\nThis file may not be streamable.
+Hiba a(z) %s megnyitása közben.\r\n\r\nA fájl nem streamelhető.
+
+About %S\n\nPublisher: %S\nRelease Date: %S\nVersion: %S\nDescription: %S\nUpdate URL: %S\n
+%S névjegye\n\nKészítő: %S\nKiadás dátuma: %S\nVerzió: %S\nLeírás: %S\nFrissítési URL: %S\n
+
+%S application %S failed to copy to %s
+%S program %S másolása nem sikerült ide: %s
+
+\nThis app was downloaded from %S
+\nA program letöltésre kerül innen: %S
+
+Installing %S
+%S telepítése
+
+Configuring %S
+%S konfigurálása
+
+Antivirus installed
+Antivirus telepítve
+
+Antivirus app not installed
+Nincs telepítve antivirus
+
+Retry Install
+Új próba
+
+X
+X
+
+Cancel
+Mégse
+
+Cancel
+Mégse
+
+Dialog
+Párbeszédablak
+
+Cancel
+Mégse
+
+Downloading %S ...
+%S letöltése ...
+
+Problem
+Probléma
+
+Not Scanned
+Nincs ellenőrizve
+
+Scanning
+Ellenőrzés
+
+Updating definitions
+Definíciók frissítése
+
+Scanned
+Ellenőrizve
+
+Do you want to launch %s?
+Elindítod ezt: %s?
+
+Installing %S ...
+%S telepítése ...
+
+The install of %s failed.\nThe archive may be incorrectly signed or corrupted.
+%s telepítése sikertelen.\nAz archívum hibás tanusítvánnyal rendelkezik vagy sérült.
+
+Send &Beta Feedback
+Béta &visszajelzés küldése
+
+Scan for &viruses
+Vírus&ellenőrzés
+
+&About App
+Program &névjegye
+
+Scan for &viruses
+Vírus&ellenőrzés
+
+&Uninstall App
+Program el&távolítása
+
+Torrents
+Torrentek
+
+Apps
+Programok
+
+Feeds
+Hírfolyamok
+
+Labels
+Címkék
+
+Scanned
+Ellenőrizve
+
+Source
+Forrás
+
+Not scanned
+Nincs ellenőrizve
+
+Problems Found
+Talált probléma
+
+Problem Found
+Talált probléma
+
+Scanning
+Ellenőrzés
+
+Updating definitions
+Definíciók frissítése
+
+Queued
+Várakozik
+
+Virus Scan
+Vírusellenőrzés
+
+Queued
+Várakozik
+
+Retry Install
+Új próba
+
+OK
+OK
+
+DNA
+DNA
+
+Uninstalling %S ...
+%S eltávolítása ...
+
+Are you sure you'd like to uninstall %S?\n\nThis will remove the %S app only. None of your in-\nprogress and completed downloads will be removed
+Biztosan elvátolítod ezt: %S?\n\nEzzel csak a(z) %S program kerül eltávolításra. A folyamatban lévő és befejezett letöltések nem lesznek törölve.
+
+Remove settings
+Beállítások törlése
+
+Take uninstall survey
+Eltávolítás felülvizsgálata
+
+The app '%S' is requesting access to:\n%S%S\n\nWould you like to grant this app access?
+A(z) '%S' program hozzáférést kér ehhez:\n%S%S\n\nEngedélyezed a hozzáférést? 
+
+Play
+Lejátszás
+
+Don't show this dialog
+Ne mutassa újra
+
+Yes
+Igen
+
+No
+Nem
+
+Apply rate limit to transport overhead
+Limit alkalmazása a túlforgalmazási arányhoz
+
+Apply rate limit to uTP connections
+Limit alkalmazása uTP kapcsolatokra
+
+Enable bandwidth management [uTP]
+Sávszélesség szabályzó engedése [uTP]
+
+Enable UDP tracker support
+UDP tracker támogatás engedése
+
+Static
+Statikus
+
+Static
+Statikus
+
+ Select your preferred player for playback
+ Válaszd ki a használni kívánt lejátszót
+
+%1 stands for the command which is the chosen playable file. You could add extra parameters for the player you selected.
+%1 stands for the command which is the chosen playable file. You could add extra parameters for the player you selected.
+
+Use default player
+Alapértelmezett lejátszó használata
+
+Static
+Statikus
+
+Static
+Statikus
+
+Static
+Statikus
+
+Static
+Statikus
+
+Static
+Statikus
+
+Static
+Statikus
+
+1
+1
+
+2
+2
+
+3
+3
+
+Search the web for content
+Tartalom keresése Interneten
+
+A web page showing results will launch
+Az eredményeket tartalmazó weboldal meg fog jelenni
+
+... There is no step three!
+... Nincs harmadik lépés
+
+Manage Search Providers...
+Keresőmotorok kezelése...
+
+Think content titles, how-to descriptions, etc.
+Think content titles, how-to descriptions, etc.
+
+You will see links to Torrent files,\nclick on what you want.
+Itt láthatók a linkek torrent fájlokhoz,\nkattints arra amelyik érdekel.
+
+But you can alternately copy and paste Torrent URLs into µTorrent.
+Vagy kimásolhatod az torrent URL-t, amit megadhatsz a µTorrent-ben.
+
+Play
+Lejátszás
+
+There was an error finding the associated media player.
+Hiba a társított lejátszó keresése közben.
+
+Upload & Download||Download||Upload||Disk Statistics||Transfer Cap||Transfer History||Network Overhead||uTP delay||
+Feltöltés & Letöltés||Letöltés||Feltöltés||Lemez statisztika||Forgalom limit||Forgalom előzményei|| Hálózati túlforgalmazás||uTP késleltetés||
+
+Show &Apps Pane
+Program panel megjelenítése
+
+Compact Category &List
+Kompakt kategória &lista
+
+Show &Find Pane
+&Keresés panel megjelenítése
+
+&Narrow Toolbar
+Kesk&eny eszköztár
+
+Add Feed
+Hírforrás hozzáadása
+
+Add Url
+URL hozzáadása
+
+Find Content
+Tartalom keresése
+
+Create
+Létrehozás
+
+Load
+Betöltés
+
+Down
+Le
+
+Up
+Fel
+
+Prefs
+Tulajdonságok
+
+Download
+Letöltés
+
+Pause
+Szünet
+
+Remove
+Eltávolítás
+
+Stop
+Leállítás
+
+Virus Scan
+Vírusellenőrzés
+
+Select your preferred player
+Válaszd ki a kedvenc lejátszódat
+
+Executable (*.exe)||*.exe||All files (*.*)||*.*||
+Futtatható (*.exe)||*.exe||Minden fájl (*.*)||*.*||
+
+TCP upload rate
+TCP feltöltési arány
+
+TCP download rate
+TCP letöltési arány
+
+downloaded
+letöltve
+
+uploaded
+feltöltve
+
+ack upload
+ack feltöltés
+
+ack download
+ack letöltés
+
+header upload
+header feltöltés
+
+header download
+header letöltés
+
+connect upload
+kapcsolat feltöltés
+
+connect download
+kapcsolat letöltés
+
+close upload
+bezár feltöltés
+
+close download
+bezár letöltés
+
+retransmission upload
+retransmission upload
+
+retransmission download
+retransmission download
+
+TCP upload rate limit
+TCp feltöltési limit
+
+TCP download rate limit
+TCP letöltési limit
+
+Playback
+Lejátszás
+
+Browse...
+Tallózás...
+
+files scanned
+fájlok ellenőrizve
+
+file scanned
+fájl ellenőrizve
+
+Loading Anti-virus engine
+Anti-vírus motor betöltése
+
+Scan Result
+Ellenőrzés eredménye
+
+(100%) Update Complete
+(100%) Frissítés kész
+
+(%d%%) Updating definitions
+(%d%%) Leírófájl frissítése
+
+This %s app was downloaded from a website.\nOnly install it if it came from a trusted source.\nWould you like to install?\n\nTitle: %S\nPublisher: %S\nUpdate URL: %S
+A(z) %s program egy ismeretlen helyről lett beszerezve.\nCsak akkor telepítse, ha megbízható forrásból származik.\nSzeretné telepíteni?\n\nCím: %S\nKiadó: %S\nFrissítési URL: %S
+
+Enter Password
+Írd be a jelszót
+
+Enter Password
+Írd be a jelszót
+
+Use Boss-Key password
+Mester jelszó használata
+
+Use fine grained file priorities
+Részletes fájl prioritási lista használata
+
+Use proxy for hostname lookups
+Proxy használata a hostnevek feloldásához
+
+Use proxy for peer-to-peer connections
+Proxy használata a peer-to-peer kapcsolatokhoz
+
+ Proxy Privacy
+ Proxy Titoktartás
+
+Disable all local DNS lookups
+A helyi DNS-ek feloldásának letiltása
+
+Disable features that leak identifying information
+Funkciók letiltása, amik az azonosító információk kiszivárgásához vezethetnek
+
+Disable connections unsupported by the proxy
+Proxy által nem támogatott kapcsolatok letiltása
+
+ Global Rate Limit Options
+ Teljes arány korlát beállítások
+
+Stop transfers on user interaction
+Átvitel leállítása felhasználói beavatkozáskor
+
+Bandwidth Cap:
+Sávszélesség tető:
+
+Time Period (days):
+Periódus idő (nap):
+
+Limit Type:
+Limit típus:
+
+ Usage history for selected period:
+ Forgalom előzményei a kiválasztott időszakra:
+
+ Seeding Goal (Default Values)
+ Seed cél (Alapérték)
+
+Minimum ratio (%):
+Minimális arány (%):
+
+Minimum seeding time (minutes):
+Minimális seed idö (perc):
+
+Limit the upload rate to (kB/s): [0 = stop]
+Feltöltési sebesség korlát (kB/s): [0 = leáll]
+
+Enable playback
+Lejátszás engedélyezése
+
+ Run Program
+ Program futtatása
+
+Run this program when a torrent finishes:
+Futtasd ezt a programot, ha a torrent elkészült:
+
+Run this program when a torrent changes state:
+Futtasd ezt a programot, ha a torrent állapotot vált:
+
+ Seeding Goal
+ Seed cél
+
+Minimum ratio (%):
+Minimális arány (%):
+
+Minimum seeding time (minutes):
+Minimális seed idő (perc):
+
+You can use these commands:\r\n%F - Name of downloaded file (for single file torrents)\r\n%D - Directory where files are saved\r\n%N - Title of torrent\r\n%S - State of torrent\r\n%L - Label\r\n%T - Tracker
+Ezeket a parancsokat használhatod: \r\n%F - Letöltött állomány neve (egy állományos torrenteknél)\r\n%D - Mappa, ahová a fájlokat mented\r\n%N - Torrent neve\r\n%S - Torrent állapota\r\n%L - Címke\r\n%T - Tracker
+
+You can use these commands:\r\n%F - Name of downloaded file (for single file torrents)\r\n%D - Directory where files are saved\r\n%N - Title of torrent\r\n%S - State of torrent\r\n%L - Label\r\n%T - Tracker
+Ezeket a parancsokat használhatod: \r\n%F - Letöltött állomány neve (egy állományos torrenteknél)\r\n%D - Mappa, ahová a fájlokat mented\r\n%N - Torrent neve\r\n%S - Torrent állapota\r\n%L - Címke\r\n%T - Tracker
+
+%M - Status message string (same as status column)\r\n%I - hex encoded info-hash\r\n\r\nState is a combination of:\r\nstarted = 1, checking = 2, start-after-check = 4,\r\nchecked = 8, error = 16, paused = 32, auto = 64, loaded = 128
+%M - Állapot üzenet string (megegyezik a státusz mezővel)\r\n%I - hex kódolt info-hash\r\n\r\nAz állapot a következők kombinációja: elkezdve =1, ellenőrzés = 2, ellenőrzés után indít = 4, ellenőrzött = 8, hiba = 16, szüneteltetve = 32, auto = 64, betöltve = 128
+
+%M - Status message string (same as status column)\r\n%I - hex encoded info-hash\r\n\r\nState is a combination of:\r\nstarted = 1, checking = 2, start-after-check = 4,\r\nchecked = 8, error = 16, paused = 32, auto = 64, loaded = 128
+%M - Állapot üzenet string (megegyezik a státusz mezővel)\r\n%I - hex kódolt info-hash\r\n\r\nAz állapot a következők kombinációja: elkezdve =1, ellenőrzés = 2, ellenőrzés után indít = 4, ellenőrzött = 8, hiba = 16, szüneteltetve = 32, auto = 64, betöltve = 128
+
+OK
+Rendben
+
+Cancel
+Mégse
+
+%s (%d installed)
+%s (%d installálva)
+
+Log holepunch
+Lyukasztások naplózása
+
+Log piece picker
+Szelet hordozók naplózása
+
+Log unchoke errors
+Adat küldési ígéret hibák naplózása
+
+D: %s%z/s
+Le: %s%z/s
+
+ L: %z/s
+ (letöltve: %z/s)
+
+ O: %z/s
+ O: %z/s
+
+ T: %Z
+ (összesen: %Z)
+
+U: %s%z/s
+Fel: %s%z/s
+
+Stopped by user activity
+Felhasználói beavatkozás maitt leállítva
+
+Click to access the bandwidth settings
+Klikelj, hogy hozzáférj a sávszélesség beállításokok
+
+&Priority
+&Prioritás
+
+Prioritize by File &Order
+Prioritás a fájl &sorrend szerint
+
+&High
+&Magas
+
+&Low
+&Alacsony
+
+&Normal
+&Normál
+
+%s (%d new)
+%s (%d új)
+
+(%d of %d) %s
+(%d ból/ből %d) %s
+
+Problems Found
+Problémák észlelve
+
+Problem Found
+Probléma észlelve
+
+OK
+Rendben
+
+Run Program
+Program futtatása
+
+Password did not match.
+A jelszó nem egyezik.
+
+Missing app name
+Hiányzó program név
+
+Missing update url
+Hiányzó frissítési url
+
+Missing index.html
+Hiányzó index.html
+
+App load failed (%s)
+Program betöltése sikertelen (%s)
+
+New %s!
+Új %s!
+
+App is not compatible with client
+A program nem kompatibilis ezzel a kliensel
+
+We couldn't connect to the App Studio.
+Nem lehet kapcsolódni a Program Stúdióhoz
+
+Please check your Internet connection and then try visiting the app studio again.
+Ellenőrizd az internet kapcsolatot, majd próbáld meg újra meglátogatni a program stúdiót.
+
+Number of upload slots per torrent:
+Feltöltési szál torrentenként:
+
+Use additional upload slots if upload speed < 90%
+További feltöltési szál indítása, ha a feltöltési sebesség < 90%
+
+Upload Slots:
+Feltöltési szál:
+
+Static
+Statikus
+
+Upload Slots:
+Feltöltési szál:
+
+Number of upload slots: [0: default]
+Feltötlési szál: [0: alapértelmezett]
+
+Exclusively for you - free
+Csak Neked - ingyen
+
+Check out our next Spotlight Release
+Tekintsd meg a következő Spotlight megjelenést
+
+Drive %c is missing.  Please reconnect it.
+A(z) %c meghajtó hiányzik.  Csatlakoztasd újra.
+
+Queue
+Várakozik
+
+m\ns
+m\ns
+
+disabled
+letiltva
+
+Please enter a valid disk cache size 0-1800.
+Adj meg egy érvényes átmeneti tár méretet 0-1800 között.
+
+Yes, I'd love to check out this free download.
+Igen, szeretném megtekinteni ezt az ingyenes letöltést.
+
+File move target %s already exists.  Overwrite?
+A fájl áthelyezési cél %s már létezik. Felülírod?
+
+The Tunnel\r\n\r\nGet the made-for-torrent thriller\r\nthat's fast becoming the viral\r\nmovie hit of the year.
+Az alagút\r\n\r\nASzerezd be a kimondottan torrentre szánt thriller-t.
+
+Log PEX
+Log PEX
+
+Volume unmounted
+Volume unmounted
+
+peak send delay
+peak send delay
+
+average send delay
+average send delay
+
+min send delay
+min send delay
+
+peak receive delay
+peak receive delay
+
+average receive delay
+average receive delay
+
+min receive delay
+min receive delay
+
+OpenCandy Offer
+OpenCandy ajánlata
