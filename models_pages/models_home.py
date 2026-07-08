@@ -1,4 +1,4 @@
-# 2026.07.08
+# 2026.07.08  18.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -32,10 +32,7 @@ def make_influencer_card(model):
                 "display": "flex", "alignItems": "center", "justifyContent": "center"})
 
     return dbc.Card([
-        dcc.Link(
-            cover_el,
-            href=f"/model/{model['id']}",
-        ),
+        dcc.Link(cover_el, href=f"/model/{model['id']}"),
 
         dbc.CardBody([
             dcc.Link(
@@ -46,21 +43,12 @@ def make_influencer_card(model):
 
             html.Div([
                 html.Span(
-                    [
-                        html.I(
-                            className="fa-solid fa-users me-1"
-                        ),
-                        f"{model['reach']} Reach",
-                    ],
-                    className="badge bg-secondary text-light",
-                )
-            ],
-            className="d-flex justify-content-between align-items-center mt-auto"),
+                    [html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light")
+            ], className="d-flex justify-content-between align-items-center mt-auto"),
         ],
         className="px-2 pt-3 pb-1"),
     ],
     style=CARD_STYLE)
-
 
 layout = dbc.Container([
 
@@ -76,6 +64,4 @@ layout = dbc.Container([
             for model in MODELS
         ], className="g-4"),
 
-],
-fluid=True,
-className="px-4")
+], fluid=True, className="px-4")
