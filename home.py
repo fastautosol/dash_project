@@ -1,17 +1,20 @@
-# 2026.07.08  15.00
+# 2026.07.08  16.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
+from pathlib import Path
 
 # ----- 0. Model dataset -----
-# Photo convention: for each model "modelN", upload 10 photos to
-#   /assets/modelN/img_01.jpg ... /assets/modelN/img_10.jpg
+# Photo convention: for each model "modelN", upload photos to
+#   /assets/modelN/img_01.jpg, img_02.jpg, ...
+# Photo count is discovered automatically from whatever files exist —
+# models don't need to have the same number of photos.
 # (jpg assumed — change PHOTO_EXT below if you're using png/webp instead.)
-PHOTO_COUNT = 10
 PHOTO_EXT = "jpg"
+ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 
 MODELS = [
     {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling",   "reach": "145K"},
@@ -25,9 +28,18 @@ MODELS = [
     {"id": "model9", "name": "Aria Wilde",    "niche": "Alternative Rock & Gaming",   "reach": "240K"},
 ]
 
+
+def _discover_photos(model_id):
+    model_dir = ASSETS_DIR / model_id
+    if not model_dir.is_dir():
+        return []
+    files = sorted(model_dir.glob(f"img_*.{PHOTO_EXT}"))
+    return [f"/assets/{model_id}/{f.name}" for f in files]
+
+
 for _m in MODELS:
-    _m["photos"] = [f"/assets/{_m['id']}/img_{i:02d}.{PHOTO_EXT}" for i in range(1, PHOTO_COUNT + 1)]
-    _m["cover"] = _m["photos"][0]
+    _m["photos"] = _discover_photos(_m["id"])
+    _m["cover"] = _m["photos"][0] if _m["photos"] else None
 
 MODELS_BY_ID = {m["id"]: m for m in MODELS}
 
@@ -37,7 +49,11 @@ MODELS_BY_ID = {m["id"]: m for m in MODELS}
 # NOTE: MODELS / MODELS_BY_ID above must stay defined before this call —
 # page discovery happens inside dash.Dash(...), and home_pages/*.py
 # import them back via "from home import MODELS_BY_ID".
-app = dash.Dash(__name__, use_pages=True, pages_folder="models_pages", suppress_callback_exceptions=True,
+app = dash.Dash(
+    __name__,
+    use_pages=True,
+    pages_folder="home_pages",
+    suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
     meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}],
 )
