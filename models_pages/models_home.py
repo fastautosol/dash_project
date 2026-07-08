@@ -55,18 +55,10 @@ def make_influencer_card(model):
 
         dbc.CardBody([
             dcc.Link(
-                html.H5(
-                    model["name"],
-                    className="fw-bold text-light mb-1",
-                ),
-                href=f"/model/{model['id']}",
-                className="text-decoration-none",
-            ),
+                html.H5(model["name"], className="fw-bold text-light mb-1"),
+                href=f"/model/{model['id']}", className="text-decoration-none"),
 
-            html.P(
-                model["niche"],
-                className="text-info small mb-3",
-            ),
+            html.P(model["niche"], className="text-info small mb-3"),
 
             html.Div([
                 html.Span(
@@ -90,42 +82,15 @@ layout = dbc.Container([
 
     dbc.Row(
         dbc.Col([
-            html.Img(
-                src="/assets/fastautosol_header.jpg",
-                style={
-                    "maxHeight": "120px",
-                    "width": "auto",
-                },
-                className="mb-3",
-            ),
-
-            html.H2(
-                "FastAutoSol Creator Network",
-                className="text-light fw-bold",
-            ),
-
-            html.P(
-                "Empowering brand sponsorships through high-engagement virtual AI models and creators.",
-                className="text-muted lead",
-            ),
-        ],
-        className="text-center py-4"),
-        className="mb-4",
-    ),
+            html.H2("FastAutoSol Creator Network", className="text-light fw-bold"),
+            html.P("Empowering brand sponsorships through high-engagement virtual AI models and creators", className="text-muted lead"),
+        ], className="text-center py-4"), className="mb-4"),
 
     dbc.Row(
         [
-            dbc.Col(
-                make_influencer_card(model),
-                xs=12,
-                sm=6,
-                lg=3,
-                className="mb-4 d-flex align-items-stretch",
-            )
+            dbc.Col(make_influencer_card(model), xs=12, sm=6, lg=3, className="mb-4 d-flex align-items-stretch")
             for model in MODELS
-        ],
-        className="g-4",
-    ),
+        ], className="g-4"),
 
 ],
 fluid=True,
