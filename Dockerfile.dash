@@ -12,7 +12,7 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-dash.
 COPY apis/ apis/
 COPY assets ./assets
 COPY app_pages/ app_pages/
-COPY model_pages/ model_pages/
+COPY models_pages/ models_pages/
 COPY app.py .
 COPY home.py .
 
