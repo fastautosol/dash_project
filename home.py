@@ -1,4 +1,5 @@
 # 2026.07.08  12.00
+# 2026.07.08
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -8,7 +9,7 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 
 # ----- 0. Model dataset -----
 # Photo convention: for each model "modelN", upload 10 photos to
-#   /assets/modelN/1.jpg ... /assets/modelN/10.jpg
+#   /assets/modelN/img_01.jpg ... /assets/modelN/img_10.jpg
 # (jpg assumed — change PHOTO_EXT below if you're using png/webp instead.)
 PHOTO_COUNT = 10
 PHOTO_EXT = "jpg"
@@ -26,7 +27,7 @@ MODELS = [
 ]
 
 for _m in MODELS:
-    _m["photos"] = [f"/assets/{_m['id']}/{i}.{PHOTO_EXT}" for i in range(1, PHOTO_COUNT + 1)]
+    _m["photos"] = [f"/assets/{_m['id']}/img_{i:02d}.{PHOTO_EXT}" for i in range(1, PHOTO_COUNT + 1)]
     _m["cover"] = _m["photos"][0]
 
 MODELS_BY_ID = {m["id"]: m for m in MODELS}
@@ -37,7 +38,11 @@ MODELS_BY_ID = {m["id"]: m for m in MODELS}
 # NOTE: MODELS / MODELS_BY_ID above must stay defined before this call —
 # page discovery happens inside dash.Dash(...), and home_pages/*.py
 # import them back via "from home import MODELS_BY_ID".
-app = dash.Dash(__name__,  use_pages=True, pages_folder="models_pages", suppress_callback_exceptions=True,
+app = dash.Dash(
+    __name__,
+    use_pages=True,
+    pages_folder="home_pages",
+    suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
     meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}],
 )
