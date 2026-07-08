@@ -2,7 +2,7 @@
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
-from models_pages.models import MODELS_BY_ID
+from models_pages.models import MODELS_BY_ID, MODELS_BY_SLUG
 
 dash.register_page(__name__, path_template="/model/<model_id>", name="Model Profile")
 
