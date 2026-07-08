@@ -2,7 +2,6 @@
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-
 from home import MODELS
 
 dash.register_page(__name__, path="/", name="Home")
@@ -21,14 +20,26 @@ CARD_STYLE = {
 
 
 def make_influencer_card(model):
+    if model["cover"]:
+        cover_el = html.Img(
+            src=model["cover"],
+            style={
+                "width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover",
+                "borderRadius": "10px 10px 0 0",
+            },
+        )
+    else:
+        cover_el = html.Div(
+            html.I(className="fa-solid fa-image fa-2x text-muted"),
+            style={
+                "width": "100%", "aspectRatio": "3 / 4", "borderRadius": "10px 10px 0 0",
+                "background": "rgba(255,255,255,0.05)",
+                "display": "flex", "alignItems": "center", "justifyContent": "center",
+            },
+        )
+
     return dbc.Card([
-        dcc.Link(
-            html.Img(
-                src=model["cover"],
-                style={"width": "100%", "height": "280px", "objectFit": "cover", "borderRadius": "10px 10px 0 0"},
-            ),
-            href=f"/model/{model['id']}",
-        ),
+        dcc.Link(cover_el, href=f"/model/{model['id']}"),
         dbc.CardBody([
             dcc.Link(
                 html.H5(model["name"], className="fw-bold text-light mb-1"),
