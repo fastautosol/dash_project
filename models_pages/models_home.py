@@ -24,28 +24,12 @@ def make_influencer_card(model):
     if model["cover"]:
         cover_el = html.Img(
             src=model["cover"],
-            style={
-                "width": "100%",
-                "aspectRatio": "3 / 4",
-                "objectFit": "cover",
-                "borderRadius": "10px 10px 0 0",
-            },
-        )
+            style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "borderRadius": "10px 10px 0 0"})
     else:
         cover_el = html.Div(
-            html.I(
-                className="fa-solid fa-image fa-2x text-muted"
-            ),
-            style={
-                "width": "100%",
-                "aspectRatio": "3 / 4",
-                "borderRadius": "10px 10px 0 0",
-                "background": "rgba(255,255,255,0.05)",
-                "display": "flex",
-                "alignItems": "center",
-                "justifyContent": "center",
-            },
-        )
+            html.I(className="fa-solid fa-image fa-2x text-muted"),
+            style={"width": "100%", "aspectRatio": "3 / 4", "borderRadius": "10px 10px 0 0", "background": "rgba(255,255,255,0.05)",
+                "display": "flex", "alignItems": "center", "justifyContent": "center"})
 
     return dbc.Card([
         dcc.Link(
