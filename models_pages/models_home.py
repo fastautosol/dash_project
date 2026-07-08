@@ -37,7 +37,7 @@ def make_influencer_card(model):
         dbc.CardBody([
             dcc.Link(
                 html.H5(model["name"], className="fw-bold text-light mb-1"),
-                href=f"/model/{model['id']}", className="text-decoration-none"),
+                href=f"/model/{model['slug']}", className="text-decoration-none"),
 
             html.P(model["niche"], className="text-info small mb-3"),
 
