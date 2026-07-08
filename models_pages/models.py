@@ -2,7 +2,8 @@
 from pathlib import Path
 
 PHOTO_EXT = "jpg"
-ASSETS_DIR = Path(__file__).resolve().parent / "assets"
+BASE_DIR = Path(__file__).resolve().parent.parent
+ASSETS_DIR = BASE_DIR / "assets"
 
 MODELS = [
     {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling",   "reach": "145K"},
