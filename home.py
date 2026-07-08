@@ -44,19 +44,9 @@ for _m in MODELS:
 MODELS_BY_ID = {m["id"]: m for m in MODELS}
 
 # ----- 1. Initialize Dash (multipage) -----
-# Uses its own pages_folder ("home_pages") so it doesn't collide with
-# app.py's use_pages=True, which reads from the default "pages" folder.
-# NOTE: MODELS / MODELS_BY_ID above must stay defined before this call —
-# page discovery happens inside dash.Dash(...), and home_pages/*.py
-# import them back via "from home import MODELS_BY_ID".
-app = dash.Dash(
-    __name__,
-    use_pages=True,
-    pages_folder="models_pages",
-    suppress_callback_exceptions=True,
+app = dash.Dash(__name__, use_pages=True, pages_folder="models_pages", suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
-    meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}],
-)
+    meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}])
 
 # ----- 2. Global footer (shown on every page: home, model profiles, legal pages) -----
 FOOTER = html.Footer([
@@ -65,22 +55,20 @@ FOOTER = html.Footer([
         dbc.Col(html.P("© 2026 FastAutoSol Media Group. All rights reserved.", className="text-muted small"), md=6),
         dbc.Col(
             html.Div([
-                dcc.Link("Privacy Policy", href="/privacy-policy", className="text-muted small me-3 text-decoration-none"),
-                dcc.Link("Terms of Service", href="/terms-of-service", className="text-muted small me-3 text-decoration-none"),
-                dcc.Link("Contact Us", href="/contact-us", className="text-muted small text-decoration-none"),
+                html.A("Privacy Policy", href="/privacy-policy", target="_blank", rel="noopener noreferrer", className="text-muted small me-3 text-decoration-none"),
+                html.A("Terms of Service", href="/terms-of-service", target="_blank", rel="noopener noreferrer", className="text-muted small me-3 text-decoration-none"),
+                html.A("Contact Us", href="/contact-us", target="_blank", rel="noopener noreferrer", className="text-muted small text-decoration-none"),
             ], className="text-md-end"),
             md=6,
         ),
     ], className="pb-5 px-4"),
 ])
+# dcc.Link("Privacy Policy", href="/privacy-policy", className="text-muted small me-3 text-decoration-none"),
+# dcc.Link("Terms of Service", href="/terms-of-service", className="text-muted small me-3 text-decoration-none"),
+# dcc.Link("Contact Us", href="/contact-us", className="text-muted small text-decoration-none"),
 
-app.layout = html.Div([
-    dash.page_container,
-    FOOTER,
-], style={
-    "background": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
-    "minHeight": "100vh",
-})
+app.layout = html.Div([dash.page_container, FOOTER], 
+    style={"background": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)", "minHeight": "100vh"})
 
 # ----- 3. FastAPI app (ASGI wrapper — required by gunicorn's UvicornWorker) -----
 server = FastAPI(title="Dash Home App")
