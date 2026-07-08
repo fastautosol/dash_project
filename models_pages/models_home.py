@@ -2,7 +2,7 @@
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from models import MODELS
+from models_pages.models import MODELS
 
 dash.register_page(__name__, path="/", name="Home")
 
