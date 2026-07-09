@@ -32,7 +32,7 @@ def make_influencer_card(model):
                 "display": "flex", "alignItems": "center", "justifyContent": "center"})
 
     return dbc.Card([
-        dcc.Link(cover_el, href=f"/model/{model['id']}"),
+        dcc.Link(cover_el, href=f"/model/{model['slug']}"),
 
         dbc.CardBody([
             dcc.Link(
