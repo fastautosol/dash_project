@@ -1,4 +1,4 @@
-# 2026.07.08  18.00
+# 2026.07.09  12.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
@@ -6,7 +6,7 @@ from models_pages.models import MODELS_BY_ID, MODELS_BY_SLUG
 
 dash.register_page(__name__, path_template="/model/<slug>", name="Model Profile")
 
-def layout(model_id=None, **kwargs):
+def layout(slug=None, **kwargs):
 
     model = MODELS_BY_SLUG.get(slug)
 
