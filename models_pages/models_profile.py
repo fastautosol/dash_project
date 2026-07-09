@@ -2,13 +2,13 @@
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
-from models_pages.models import MODELS_BY_ID, MODELS_BY_NAME
+from models_pages.models import MODELS_BY_ID, MODELS_BY_SLUG
 
-dash.register_page(__name__, path_template="/model/<model_name>", name="Model Profile")
+dash.register_page(__name__, path_template="/model/<model_slug>", name="Model Profile")
 
-def layout(model_name=None, **kwargs):
+def layout(model_SLUG=None, **kwargs):
 
-    model = MODELS_BY_NAME.get(model_name)
+    model = MODELS_BY_SLUG.get(model_slug)
 
     if model is None:
         return dbc.Container([
@@ -36,7 +36,7 @@ def layout(model_name=None, **kwargs):
                     src=photo,
                     id={
                         "type": "model-thumb",
-                        "model": model_name,
+                        "model": model_slug,
                         "index": i,
                     },
                     n_clicks=0,
@@ -115,7 +115,7 @@ def layout(model_name=None, **kwargs):
                 html.Img(
                     id={
                         "type": "model-modal-img",
-                        "model": model_name,
+                        "model": model_slug,
                     },
                     style={
                         "width": "100%",
@@ -130,7 +130,7 @@ def layout(model_name=None, **kwargs):
         ],
         id={
             "type": "model-modal",
-            "model": model_name,
+            "model": model_slug,
         },
         size="lg",
         is_open=False,
@@ -167,10 +167,10 @@ def open_photo_modal(n_clicks_list, thumb_ids):
     if not triggered or not any(n_clicks_list):
         return no_update, no_update
 
-    model_name = triggered["model"]
+    model_slug = triggered["model"]
     index = triggered["index"]
 
-    photo = MODELS_BY_ID[model_name]["photos"][index]
+    photo = MODELS_BY_SLUG[model_slug]["photos"][index]
 
     return True, photo
 
