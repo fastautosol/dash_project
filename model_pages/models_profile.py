@@ -45,8 +45,6 @@ def layout(model_slug=None, **kwargs):
 
             dbc.Row(thumbnails, className="g-3"),
 
-            dbc.Row(thumbnails, className="g-3"),
-
 dbc.Modal(
     [
         dbc.ModalHeader(
