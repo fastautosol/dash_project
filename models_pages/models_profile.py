@@ -250,7 +250,7 @@ def open_photo_modal(n_clicks_list, thumb_ids):
     model_slug = triggered["model"]
     index = triggered["index"]
 
-    model = MODELS_BY_NAME[model_slug]
+    model = MODELS_BY_SLUG[model_slug]
     photo = model["photos"][index]
     caption = model.get("caption", "Enjoying another beautiful day and creating unforgettable memories.")
 
