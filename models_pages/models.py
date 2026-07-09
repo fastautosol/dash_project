@@ -30,7 +30,7 @@ def _discover_photos(model_id):
 
 
 for model in MODELS:
-    model["model_name"] = slugify(model["name"])
+    model["model_slug"] = slugify(model["name"])
     model["photos"] = _discover_photos(model["id"])
     model["cover"] = model["photos"][0] if model["photos"] else None
 
@@ -39,7 +39,7 @@ MODELS_BY_ID = {
     for model in MODELS
 }
 
-MODELS_BY_NAME = {
-    model["model_name"]: model
+MODELS_BY_SLUG = {
+    model["model_slug"]: model
     for model in MODELS
 }
