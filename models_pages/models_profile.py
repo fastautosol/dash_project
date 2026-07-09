@@ -6,7 +6,7 @@ from models_pages.models import MODELS_BY_ID, MODELS_BY_SLUG
 
 dash.register_page(__name__, path_template="/model/<model_slug>", name="Model Profile")
 
-def layout(model_SLUG=None, **kwargs):
+def layout(model_slug=None, **kwargs):
 
     model = MODELS_BY_SLUG.get(model_slug)
 
