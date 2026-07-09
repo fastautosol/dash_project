@@ -1,7 +1,7 @@
 # 2026.07.09  18.00
 
 import dash
-from dash import  html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update,
+from dash import  html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
 from model_pages.models import MODELS_BY_SLUG
 
