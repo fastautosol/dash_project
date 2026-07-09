@@ -41,24 +41,11 @@ def layout(model_slug=None, **kwargs):
                 [
                     html.H2(model["name"], className="text-light fw-bold mb-1"),
                     html.P( model["niche"], className="text-info mb-1"),
-
-                    html.Span(
-                        [
-                            html.I(
-                                className="fa-solid fa-users me-1"
-                            ),
-                            f"{model['reach']} Reach",
-                        ],
-                        className="badge bg-secondary text-light",
-                    ),
-                ],
-                className="text-center py-4",
+                    html.Span([html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light"),
+                ], className="text-center py-4",
             ),
 
-            dbc.Row(
-                thumbnails,
-                className="g-3",
-            ),
+            dbc.Row(thumbnails, className="g-3"),
 
             dbc.Modal(
                 [
@@ -71,16 +58,8 @@ def layout(model_slug=None, **kwargs):
                         [
 
                             html.Img(
-                                id={
-                                    "type": "model-modal-img",
-                                    "model": model_slug,
-                                },
-                                style={
-                                    "width": "100%",
-                                    "maxHeight": "70vh",
-                                    "objectFit": "contain",
-                                    "borderRadius": "10px",
-                                },
+                                id={ "type": "model-modal-img","model": model_slug},
+                                style={"width": "100%", "maxHeight": "100vh", "objectFit": "contain", "borderRadius": "10px"},
                             ),
 
                             html.Hr(),
