@@ -30,9 +30,7 @@ def layout(model_slug=None, **kwargs):
 
     else:
 
-        thumbnails = [
-            dbc.Col(html.P("No photos uploaded yet", className="text-muted text-center py-5"), width=12)
-        ]
+        thumbnails = [dbc.Col(html.P("No photos uploaded yet", className="text-muted text-center py-5"), width=12)]
 
     return dbc.Container(
         [
