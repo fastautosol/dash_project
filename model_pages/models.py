@@ -4,7 +4,7 @@ import re
 
 PHOTO_EXT = "jpg"
 BASE_DIR = Path(__file__).resolve().parent.parent
-ASSETS_DIR = BASE_DIR / "assets"
+ASSETS_DIR = BASE_DIR / "model_assets"
 
 MODELS = [
     {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling", 
