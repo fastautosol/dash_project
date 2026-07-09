@@ -251,18 +251,7 @@ def open_photo_modal(n_clicks_list, thumb_ids):
     index = triggered["index"]
 
     model = MODELS_BY_NAME[model_slug]
-
     photo = model["photos"][index]
+    caption = model.get("caption", "Enjoying another beautiful day and creating unforgettable memories.")
 
-    captions = model.get("captions", [])
-
-    if index < len(captions):
-        caption = captions[index]
-    else:
-        caption = "Enjoying another beautiful day and creating unforgettable memories."
-
-    return (
-        True,
-        photo,
-        caption,
-    )
+    return (True, photo, caption)
