@@ -1,29 +1,11 @@
-# 2026.07.09  16.00
+# 2026.07.09  18.00
 
 import dash
-from dash import (
-    html,
-    dcc,
-    callback,
-    Input,
-    Output,
-    State,
-    MATCH,
-    ALL,
-    ctx,
-    no_update,
-)
-
+from dash import  html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update,
 import dash_bootstrap_components as dbc
+from model_pages.models import MODELS_BY_SLUG
 
-from models_pages.models import MODELS_BY_SLUG
-
-dash.register_page(
-    __name__,
-    path_template="/model/<model_slug>",
-    name="Model Profile",
-)
-
+dash.register_page(__name__, path_template="/model/<model_slug>", name="Model Profile")
 
 def layout(model_slug=None, **kwargs):
 
@@ -32,21 +14,10 @@ def layout(model_slug=None, **kwargs):
     if model is None:
         return dbc.Container(
             [
-                html.H3(
-                    "Model not found",
-                    className="text-light text-center mt-5",
-                ),
-                html.Div(
-                    dcc.Link(
-                        "← Back to all models",
-                        href="/",
-                        className="text-info",
-                    ),
-                    className="text-center mt-3",
-                ),
+                html.H3("Model not found", className="text-light text-center mt-5"),
+                html.Div(dcc.Link("<-- Back to all models", href="/", className="text-info"), className="text-center mt-3"),
             ],
-            className="py-5",
-        )
+            className="py-5")
 
     if model["photos"]:
 
