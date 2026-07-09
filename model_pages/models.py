@@ -33,7 +33,7 @@ def _discover_photos(model_id):
     if not model_dir.is_dir():
         return []
     files = sorted(model_dir.glob(f"img_*.{PHOTO_EXT}"))
-    return [f"/assets/{model_id}/{f.name}" for f in files]
+    return [f"/model_assets/{model_id}/{f.name}" for f in files]
 
 for model in MODELS:
     model["model_slug"] = slugify(model["name"])
