@@ -22,15 +22,15 @@ def slugify(name):
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 def _discover_photos(model_id):
-    model_dir = ASSETS_DIR / model_id
+    model_dir = ASSETS_DIR / model_name
     if not model_dir.is_dir():
         return []
     files = sorted(model_dir.glob(f"img_*.{PHOTO_EXT}"))
-    return [f"/assets/{model_id}/{f.name}" for f in files]
+    return [f"/assets/{model_name}/{f.name}" for f in files]
 
 
 for model in MODELS:
-    model["slug"] = slugify(model["name"])
+    model["model_name"] = slugify(model["name"])
     model["photos"] = _discover_photos(model["id"])
     model["cover"] = model["photos"][0] if model["photos"] else None
 
@@ -39,7 +39,7 @@ MODELS_BY_ID = {
     for model in MODELS
 }
 
-MODELS_BY_SLUG = {
-    model["slug"]: model
+MODELS_BY_NAME = {
+    model["model_name"]: model
     for model in MODELS
 }
