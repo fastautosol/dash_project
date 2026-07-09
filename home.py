@@ -6,10 +6,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 
-from models_pages.models import MODELS, MODELS_BY_ID
+from model_pages.models import MODELS, MODELS_BY_ID
 
 # ----- Dash App -----
-app = dash.Dash(__name__, use_pages=True, pages_folder="models_pages", suppress_callback_exceptions=True,
+app = dash.Dash(__name__, use_pages=True, pages_folder="model_pages", suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
     meta_tags=[{"name": "impact-site-verification", "content": "d73bf68a-2290-414c-858c-fa9dadcd2fd9"}])
 
@@ -77,6 +77,6 @@ server = FastAPI(title="Dash Home App")
 def health():
     return {"status": "ok"}
 
-server.mount("/assets", StaticFiles(directory="assets"), name="assets")
+server.mount("/model_assets", StaticFiles(directory="assets"), name="model_assets")
 
 server.mount("/", WSGIMiddleware(app.server))
