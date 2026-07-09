@@ -16,8 +16,7 @@ def layout(model_slug=None, **kwargs):
             [
                 html.H3("Model not found", className="text-light text-center mt-5"),
                 html.Div(dcc.Link("<-- Back to all models", href="/", className="text-info"), className="text-center mt-3"),
-            ],
-            className="py-5")
+            ], className="py-5")
 
     if model["photos"]:
 
@@ -26,7 +25,8 @@ def layout(model_slug=None, **kwargs):
                 html.Img(
                     src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
                     style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "borderRadius": "10px", "cursor": "pointer"},
-                ), xs=6, sm=4, md=3, className="mb-3") for i, photo in enumerate(model["photos"])]
+                ), xs=6, sm=4, md=3, className="mb-3") for i, photo in enumerate(model["photos"])
+        ]
 
     else:
 
@@ -49,84 +49,19 @@ def layout(model_slug=None, **kwargs):
 
             dbc.Modal(
                 [
-                    dbc.ModalHeader(
-                        dbc.ModalTitle(model["name"]),
-                        close_button=True,
-                    ),
+                    dbc.ModalHeader( dbc.ModalTitle(model["name"]), close_button=True),
 
                     dbc.ModalBody(
                         [
-
-                            html.Img(
-                                id={ "type": "model-modal-img","model": model_slug},
-                                style={"width": "100%", "maxHeight": "100vh", "objectFit": "contain", "borderRadius": "10px"},
-                            ),
-
+                            html.Img(id={ "type": "model-modal-img","model": model_slug}, style={"width": "100%", "maxHeight": "100vh", "objectFit": "contain", "borderRadius": "10px"}),
                             html.Hr(),
-
-                            html.Div(
-                                [
-                                    html.I(
-                                        className="fa-solid fa-heart text-danger me-2"
-                                    ),
-                                    html.Span(
-                                        "12.5K Likes",
-                                        className="fw-bold",
-                                    ),
-                                ],
-                                className="mb-3",
-                            ),
-
-                            html.Div(
-                                [
-                                    html.Strong(
-                                        model["name"],
-                                        className="text-info me-2",
-                                    ),
-
-                                    html.Span(
-                                        id={
-                                            "type": "model-modal-caption",
-                                            "model": model_slug,
-                                        }
-                                    ),
-                                ],
-                                className="mb-3",
-                            ),
-
-                            html.Div(
-                                [
-                                    dbc.Badge(
-                                        "#travel",
-                                        color="info",
-                                        className="me-1",
-                                    ),
-                                    dbc.Badge(
-                                        "#aiinfluencer",
-                                        color="secondary",
-                                        className="me-1",
-                                    ),
-                                    dbc.Badge(
-                                        "#lifestyle",
-                                        color="primary",
-                                    ),
-                                ]
-                            ),
+                            html.Div([html.I(className="fa-solid fa-heart text-danger me-2"), html.Span("12.5K Likes", className="fw-bold")], className="mb-3"),
+                            html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
+                            html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")]),
                         ]
                     ),
-                ],
-                id={
-                    "type": "model-modal",
-                    "model": model_slug,
-                },
-                size="xl",
-                is_open=False,
-                centered=True,
-            ),
-        ],
-        fluid=True,
-        className="px-4 py-4",
-    )
+                ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
+        ], fluid=True, className="px-4 py-4")
 
 
 @callback(
