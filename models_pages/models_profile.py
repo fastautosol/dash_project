@@ -167,7 +167,7 @@ def open_photo_modal(n_clicks_list, thumb_ids):
     if not triggered or not any(n_clicks_list):
         return no_update, no_update
 
-    model_id = triggered["model"]
+    model_name = triggered["model"]
     index = triggered["index"]
 
     photo = MODELS_BY_ID[model_name]["photos"][index]
