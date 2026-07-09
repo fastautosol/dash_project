@@ -54,7 +54,7 @@ def layout(model_slug=None, **kwargs):
             html.Img(
                 id={
                     "type": "model-modal-img",
-                    "model": model_name,
+                    "model": model_slug,
                 },
                 style={
                     "width": "100%",
