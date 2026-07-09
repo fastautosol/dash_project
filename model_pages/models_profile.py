@@ -65,18 +65,9 @@ def layout(model_slug=None, **kwargs):
 
 
 @callback(
-    Output(
-        {"type": "model-modal", "model": MATCH},
-        "is_open",
-    ),
-    Output(
-        {"type": "model-modal-img", "model": MATCH},
-        "src",
-    ),
-    Output(
-        {"type": "model-modal-caption", "model": MATCH},
-        "children",
-    ),
+    Output({"type": "model-modal", "model": MATCH}, "is_open"),
+    Output({"type": "model-modal-img", "model": MATCH}, "src"),
+    Output({"type": "model-modal-caption", "model": MATCH}, "children"),
     Input(
         {"type": "model-thumb", "model": MATCH, "index": ALL},
         "n_clicks",
