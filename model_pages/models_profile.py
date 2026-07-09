@@ -1,5 +1,4 @@
 # 2026.07.09  18.00
-
 import dash
 from dash import  html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
@@ -22,8 +21,7 @@ def layout(model_slug=None, **kwargs):
 
         thumbnails = [
             dbc.Col(
-                html.Img(
-                    src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
+                html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
                     style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "borderRadius": "10px", "cursor": "pointer"},
                 ), xs=6, sm=4, md=3, className="mb-3") for i, photo in enumerate(model["photos"])
         ]
@@ -45,118 +43,20 @@ def layout(model_slug=None, **kwargs):
 
             dbc.Row(thumbnails, className="g-3"),
 
-dbc.Modal(
-    [
-        dbc.ModalHeader(
-            dbc.ModalTitle(model["name"]),
-            close_button=True,
-        ),
-
-        dbc.ModalBody(
-            [
-                dbc.Row(
-
-                    [
-
-                        # LEFT SIDE - PHOTO
-                        dbc.Col(
-                            html.Img(
-                                id={
-                                    "type": "model-modal-img",
-                                    "model": model_slug,
-                                },
-                                style={
-                                    "width": "100%",
-                                    "maxHeight": "75vh",
-                                    "objectFit": "contain",
-                                    "borderRadius": "10px",
-                                },
-                            ),
-                            md=7,
-                            className="mb-3 mb-md-0",
-                        ),
-
-                        # RIGHT SIDE - STORY
-                        dbc.Col(
-                            html.Div(
-                                [
-
-                                    html.H4(
-                                        model["name"],
-                                        className="fw-bold text-info mb-3",
-                                    ),
-
-                                    html.Div(
-                                        id={
-                                            "type": "model-modal-caption",
-                                            "model": model_slug,
-                                        },
-                                        className="text-light mb-4",
-                                        style={
-                                            "lineHeight": "1.8",
-                                            "fontSize": "1.05rem",
-                                        },
-                                    ),
-
-                                    html.Hr(),
-
-                                    html.Div(
-                                        [
-                                            html.I(
-                                                className="fa-solid fa-heart text-danger me-2"
-                                            ),
-                                            html.Span(
-                                                "12.5K Likes",
-                                                className="fw-bold",
-                                            ),
-                                        ],
-                                        className="mb-3",
-                                    ),
-
-                                    html.Div(
-                                        [
-                                            dbc.Badge(
-                                                "#travel",
-                                                color="info",
-                                                className="me-1",
-                                            ),
-                                            dbc.Badge(
-                                                "#greece",
-                                                color="secondary",
-                                                className="me-1",
-                                            ),
-                                            dbc.Badge(
-                                                "#summer",
-                                                color="primary",
-                                            ),
-                                        ]
-                                    ),
-
-                                ],
-                                style={
-                                    "background": "rgba(255,255,255,0.05)",
-                                    "padding": "20px",
-                                    "borderRadius": "12px",
-                                    "height": "100%",
-                                },
-                            ),
-                            md=5,
-                        ),
-
-                    ]
-                )
-            ]
-        ),
-    ],
-    id={
-        "type": "model-modal",
-        "model": model_slug,
-    },
-    size="xl",
-    is_open=False,
-    centered=True,
-)
-
+            dbc.Modal(
+                [
+                    dbc.ModalHeader( dbc.ModalTitle(model["name"]), close_button=True),
+                    dbc.ModalBody(
+                        [
+                            html.Img(id={ "type": "model-modal-img","model": model_slug}, style={"width": "100%", "maxHeight": "100vh", "objectFit": "contain", "borderRadius": "10px"}),
+                            html.Hr(),
+                            html.Div([html.I(className="fa-solid fa-heart text-danger me-2"), html.Span("12.5K Likes", className="fw-bold")], className="mb-3"),
+                            html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
+                            html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")]),
+                        ]
+                    ),
+                ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
+        ], fluid=True, className="px-4 py-4")
 
 @callback(
     Output({"type": "model-modal", "model": MATCH}, "is_open"),
@@ -169,13 +69,11 @@ dbc.Modal(
 def open_photo_modal(n_clicks_list, thumb_ids):
 
     triggered = ctx.triggered_id
-
     if not triggered or not any(n_clicks_list):
         return no_update, no_update, no_update
 
     model_slug = triggered["model"]
     index = triggered["index"]
-
     model = MODELS_BY_SLUG[model_slug]
     photo = model["photos"][index]
     caption = model.get("caption", "Enjoying another beautiful day and creating unforgettable memories.")
