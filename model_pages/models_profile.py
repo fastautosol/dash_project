@@ -45,20 +45,84 @@ def layout(model_slug=None, **kwargs):
 
             dbc.Row(thumbnails, className="g-3"),
 
-            dbc.Modal(
-                [
-                    dbc.ModalHeader( dbc.ModalTitle(model["name"]), close_button=True),
+            dbc.ModalBody([
 
-                    dbc.ModalBody(
-                        [
-                            html.Img(id={ "type": "model-modal-img","model": model_slug}, style={"width": "100%", "maxHeight": "100vh", "objectFit": "contain", "borderRadius": "10px"}),
-                            html.Hr(),
-                            html.Div([html.I(className="fa-solid fa-heart text-danger me-2"), html.Span("12.5K Likes", className="fw-bold")], className="mb-3"),
-                            html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
-                            html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")]),
-                        ]
-                    ),
-                ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
+            dbc.Row([
+
+            # LEFT SIDE - PHOTO
+            dbc.Col(
+            html.Img(
+                id={
+                    "type": "model-modal-img",
+                    "model": model_name,
+                },
+                style={
+                    "width": "100%",
+                    "maxHeight": "75vh",
+                    "objectFit": "contain",
+                    "borderRadius": "10px",
+                },
+            ),
+            md=7,
+            className="mb-3 mb-md-0",
+        ),
+
+        # RIGHT SIDE - STORY
+        dbc.Col([
+
+            html.H4(
+                model["name"],
+                className="fw-bold text-info mb-3",
+            ),
+
+            html.Div(
+                id={
+                    "type": "model-modal-caption",
+                    "model": model_slug,
+                },
+                className="text-light mb-4",
+                style={
+                    "lineHeight": "1.8",
+                    "fontSize": "1.05rem",
+                },
+            ),
+
+            html.Hr(),
+
+            html.Div([
+                html.I(
+                    className="fa-solid fa-heart text-danger me-2"
+                ),
+                html.Span(
+                    "12.5K Likes",
+                    className="fw-bold",
+                ),
+            ], className="mb-3"),
+
+            html.Div([
+                dbc.Badge(
+                    "#travel",
+                    color="info",
+                    className="me-1",
+                ),
+                dbc.Badge(
+                    "#greece",
+                    color="secondary",
+                    className="me-1",
+                ),
+                dbc.Badge(
+                    "#summer",
+                    color="primary",
+                ),
+            ]),
+
+        ], md=5),
+
+    ]),
+
+])
+
+            
         ], fluid=True, className="px-4 py-4")
 
 
