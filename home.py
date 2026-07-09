@@ -77,6 +77,6 @@ server = FastAPI(title="Dash Home App")
 def health():
     return {"status": "ok"}
 
-server.mount("/model_assets", StaticFiles(directory="assets"), name="model_assets")
+server.mount("/model_assets", StaticFiles(directory="model_assets"), name="model_assets")
 
 server.mount("/", WSGIMiddleware(app.server))
