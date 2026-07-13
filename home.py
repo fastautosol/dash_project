@@ -1,4 +1,4 @@
-# 2026.07.13  11.00
+# 2026.07.13  18.00
 import dash
 from dash import html
 import dash_bootstrap_components as dbc
@@ -69,7 +69,7 @@ FOOTER = html.Footer([
 app.layout = html.Div(
     [
         html.Div(html.Img(src="/model_assets/fastautosol_logo_small.jpg", style={"width": "120px"}),
-        style={"position": "fixed", "top": "10px", "left": "10px", "padding": "5px", "borderRadius": "5px",
+        style={"position": "fixed", "top": "10px", "right": "10px", "padding": "5px", "borderRadius": "5px",
         "background": "rgba(255,255,255,0.05)", "backdropFilter": "blur(12px)", "boxShadow": "0 8px 32px rgba(0,0,0,0.3)", "zIndex": "9999"}),
         dash.page_container, FOOTER
     ],
