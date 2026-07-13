@@ -15,51 +15,19 @@ app = dash.Dash(__name__, use_pages=True, pages_folder="model_pages", suppress_c
 
 # ----- Footer -----
 FOOTER = html.Footer([
-    html.Hr(
-        style={
-            "borderTop": "1px solid rgba(255,255,255,0.1)",
-            "marginTop": "3rem",
-        }
-    ),
+    html.Hr(style={"borderTop": "1px solid rgba(255,255,255,0.1)", "marginTop": "3rem"}),
 
     dbc.Row([
         dbc.Col(
-            html.P(
-                "© 2026 FastAutoSol Media Group. All rights reserved.",
-                className="text-muted small",
-            ),
-            md=6,
-        ),
+            html.P("© 2026 FastAutoSol Media Group. All rights reserved", className="text-muted small"), md=6),
 
         dbc.Col(
             html.Div([
-                html.A(
-                    "Privacy Policy",
-                    href="/privacy-policy",
-                    target="_blank",
-                    rel="noopener noreferrer",
-                    className="text-muted small me-3 text-decoration-none",
-                ),
-
-                html.A(
-                    "Terms of Service",
-                    href="/terms-of-service",
-                    target="_blank",
-                    rel="noopener noreferrer",
-                    className="text-muted small me-3 text-decoration-none",
-                ),
-
-                html.A(
-                    "Contact Us",
-                    href="/contact-us",
-                    target="_blank",
-                    rel="noopener noreferrer",
-                    className="text-muted small text-decoration-none",
-                ),
+                html.A("Privacy Policy", href="/privacy-policy", target="_blank", rel="noopener noreferrer", className="text-muted small me-3"),
+                html.A("Terms of Service", href="/terms-of-service", target="_blank", rel="noopener noreferrer", className="text-muted small me-3"),
+                html.A("Contact Us", href="/contact-us", target="_blank", rel="noopener noreferrer", className="text-muted small"),
             ],
-            className="text-md-end"),
-            md=6,
-        ),
+            className="text-md-end"), md=6),
     ],
     className="pb-5 px-4"),
 ])
