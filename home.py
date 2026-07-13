@@ -70,7 +70,7 @@ app.layout = html.Div(
     [
         html.Div(html.Img(src="/model_assets/fastautosol_logo_small.jpg", style={"width": "170px"}),
         style={"position": "fixed", "top": "20px", "left": "200px", "padding": "10px", "borderRadius": "16px",
-        "background": "rgba(255,255,255,0.05)", "backdropFilter": "blur(12px)", "boxShadow": "0 8px 32px rgba(0,0,0,0.3)", "zIndex": "9999"})
+        "background": "rgba(255,255,255,0.05)", "backdropFilter": "blur(12px)", "boxShadow": "0 8px 32px rgba(0,0,0,0.3)", "zIndex": "9999"}),
         dash.page_container, FOOTER
     ],
     style={"background": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)", "minHeight": "100vh"})
