@@ -9,8 +9,8 @@ ASSETS_DIR = BASE_DIR / "model_assets"
 MODELS = [
     {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling", 
      "caption": "Enjoying a peaceful sunset by the Greek1 coastline.", "reach": "145K"},
-    {"id": "model2", "name": "Chloe Thorne",  "niche": "Cyberpunk Lifestyle & Tech",  
-     "caption": "Enjoying a peaceful sunset by the Greek2 coastline.", "reach": "320K"},
+    {"id": "model2", "name": "Sofia Vega",  "niche": "Spanish Lifestyle & Fashion",  
+     "caption": "Enjoying a peaceful sunset by the Spanish coastline.", "reach": "320K"}, 
     {"id": "model3", "name": "Sienna Brooks",   "niche": "Streetwear & City Culture",
      "caption": "Enjoying a peaceful sunset by the Greek3 coastline.", "reach": "95K"},
     {"id": "model4", "name": "Yuki Tanaka", "niche": "Eco-Travel & Digital Nomad",
@@ -23,6 +23,9 @@ MODELS = [
      "caption": "Enjoying a peaceful sunset by the Greek7 coastline.", "reach": "125K"},
     {"id": "model8", "name": "Maya Lin",    "niche": "Afrofuturism & Music Vibe",
      "caption": "Enjoying a peaceful sunset by the Greek8 coastline.", "reach": "300K"},
+    {"id": "model9", "name": "Chloe Thorne",  "niche": "Modern Lifestyle & Tech",  
+     "caption": "Enjoying a peaceful sunset by the Greek2 coastline.", "reach": "320K"},
+    
 ]
 
 def slugify(name):
