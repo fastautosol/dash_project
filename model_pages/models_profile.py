@@ -1,4 +1,4 @@
-# 2026.07.09  18.00
+# 2026.07.23  12.00
 import dash
 from dash import  html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
@@ -35,9 +35,10 @@ def layout(model_slug=None, **kwargs):
             dcc.Link("<-- Back to all models", href="/", className="text-muted small"),
             html.Div(
                 [
-                    html.H2(model["name"], className="text-light fw-bold mb-1"),
-                    html.P( model["niche"], className="text-info mb-1"),
-                    html.Span([html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light"),
+                html.H2(model["name"], className="text-light fw-bold mb-1"),
+                html.P(model["niche"], className="text-info mb-1"),
+                html.A(f"Fanvue photoset: {model['fanvue']}", href=model["fanvue"], target="_blank", rel="noopener noreferrer", className="text-info mb-1 d-block")                               
+                html.Span([html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light"),
                 ], className="text-center py-4",
             ),
 
