@@ -1,45 +1,53 @@
-# 2026.07.23  12.00
+# 2026.07.23  18.00
 import dash
-from dash import  html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
+from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update, clientside_callback
 import dash_bootstrap_components as dbc
 from model_pages.models import MODELS_BY_SLUG
 
 dash.register_page(__name__, path_template="/model/<model_slug>", name="Model Profile")
 
 def layout(model_slug=None, **kwargs):
-
     model = MODELS_BY_SLUG.get(model_slug)
 
     if model is None:
-        return dbc.Container(
-            [
-                html.H3("Model not found", className="text-light text-center mt-5"),
-                html.Div(dcc.Link("<-- Back to all models", href="/", className="text-info"), className="text-center mt-3"),
-            ], className="py-5")
+        return dbc.Container([
+            html.H3("Model not found", className="text-light text-center mt-5"),
+            html.Div(dcc.Link("<-- Back to all models", href="/", className="text-info"), className="text-center mt-3"),
+        ], className="py-5")
 
     if model["photos"]:
-
         thumbnails = [
             dbc.Col(
                 html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
                     style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "borderRadius": "10px", "cursor": "pointer"},
                 ), xs=6, sm=4, md=3, className="mb-3") for i, photo in enumerate(model["photos"])
         ]
-
     else:
-
         thumbnails = [dbc.Col(html.P("No photos uploaded yet", className="text-muted text-center py-5"), width=12)]
 
     return dbc.Container(
         [
+            # Két rejtett komponens az adatok átadásához a JavaScriptnek
+            html.Div(id="trigger-page-view", style={"display": "none"}),
+            dcc.Store(id="current-model-slug", data=model_slug),
+
             dcc.Link("<-- Back to all models", href="/", className="text-muted small"),
             html.Div(
                 [
                 html.H2(model["name"], className="text-light fw-bold mb-1"),
                 html.P(model["niche"], className="text-info mb-1"),
                 html.Div(    
-                html.A(f"{model['name']} exclusive bikini photoset on Fanvue", href=model["fanvue"], target="_blank", rel="noopener noreferrer", 
-                       className="btn btn-info btn-lg fw-bold", style={"width": "30%"}), className="text-center"),                                     
+                    html.A(
+                        f"{model['name']} exclusive bikini photoset on Fanvue", 
+                        href=model["fanvue"], 
+                        id="fanvue-link-btn", # ID hozzáadva a követéshez
+                        target="_blank", 
+                        rel="noopener noreferrer", 
+                        className="btn btn-info btn-lg fw-bold", 
+                        style={"width": "30%"}
+                    ), 
+                    className="text-center"
+                ),                                     
                 html.Span([html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light"),
                 ], className="text-center py-4",
             ),
@@ -61,6 +69,41 @@ def layout(model_slug=None, **kwargs):
                 ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
         ], fluid=True, className="px-4 py-4")
 
+
+# --- PIXEL KLIENSOLDALI CALLBACKEK ---
+
+# 1. PageView mérése automatikusan az oldal betöltődésekor
+clientside_callback(
+    """
+    function(slug) {
+        if (slug && window.trackModelPage) {
+            window.trackModelPage(slug);
+        }
+        return "";
+    }
+    """,
+    Output("trigger-page-view", "children"),
+    Input("current-model-slug", "data")
+)
+
+# 2. Fanvue gombkattintás mérése
+clientside_callback(
+    """
+    function(n_clicks, slug) {
+        if (n_clicks && window.trackFanvueClick) {
+            window.trackFanvueClick(slug);
+        }
+        return no_update;
+    }
+    """,
+    Output("fanvue-link-btn", "id"), # Technikai kimenet, nem változtat semmit
+    Input("fanvue-link-btn", "n_clicks"),
+    State("current-model-slug", "data"),
+    prevent_initial_call=True
+)
+
+
+# --- EREDETI FOTÓ MODAL CALLBACK ---
 @callback(
     Output({"type": "model-modal", "model": MATCH}, "is_open"),
     Output({"type": "model-modal-img", "model": MATCH}, "src"),
@@ -70,7 +113,6 @@ def layout(model_slug=None, **kwargs):
     prevent_initial_call=True,
 )
 def open_photo_modal(n_clicks_list, thumb_ids):
-
     triggered = ctx.triggered_id
     if not triggered or not any(n_clicks_list):
         return no_update, no_update, no_update
