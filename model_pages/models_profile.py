@@ -39,7 +39,7 @@ def layout(model_slug=None, **kwargs):
                 html.P(model["niche"], className="text-info mb-1"),
                 html.Div(    
                 html.A(f"{model['name']} exclusive bikini photoset on Fanvue", href=model["fanvue"], target="_blank", rel="noopener noreferrer", 
-                       className="btn btn-info btn-lg fw-bold w-100", style={"width": "30%"}), className="text-center"),                                     
+                       className="btn btn-info btn-lg fw-bold", style={"width": "30%"}), className="text-center"),                                     
                 html.Span([html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light"),
                 ], className="text-center py-4",
             ),
