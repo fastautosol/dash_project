@@ -1,4 +1,4 @@
-# 2026.07.16  18.00
+# 2026.07.23  12.00
 from pathlib import Path
 import re
 
@@ -7,27 +7,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = BASE_DIR / "model_assets"
 
 MODELS = [
-    {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling", 
+    {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/media/fvml-5",
      "caption": "Enjoying a peaceful sunset by the Greek1 coastline.", "reach": "145K"},
-    {"id": "model2", "name": "Sofia Vega",  "niche": "Spanish Lifestyle & Fashion",  
+    {"id": "model2", "name": "Sofia Vega",  "niche": "Spanish Lifestyle & Fashion", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/media/fvml-5",
      "caption": "Enjoying a peaceful sunset by the Spanish coastline.", "reach": "320K"}, 
-    {"id": "model3", "name": "Sienna Brooks",   "niche": "Streetwear & City Culture",
+    {"id": "model3", "name": "Sienna Brooks",   "niche": "Streetwear & City Culture", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/media/fvml-5",
      "caption": "Enjoying a peaceful sunset by the Greek3 coastline.", "reach": "95K"},
-    {"id": "model4", "name": "Zoe Wilder", "niche": "Eco-Travel & Digital Nomad",
+    {"id": "model4", "name": "Zoe Wilder", "niche": "Eco-Travel & Digital Nomad", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/media/fvml-5",
      "caption": "Enjoying a peaceful sunset by the Greek4 coastline.", "reach": "210K"},
-    {"id": "model5", "name": "Ruby Valentine",   "niche": "Streetwear & City Culture",
+    {"id": "model5", "name": "Ruby Valentine",   "niche": "Streetwear & City Culture", "fanvue": "Private Photoset Soon",
      "caption": "Enjoying a peaceful sunset by the Greek3 coastline.", "reach": "95K"},
-    {"id": "model6", "name": "Yuki Tanaka", "niche": "Eco-Travel & Digital Nomad",
+    {"id": "model6", "name": "Yuki Tanaka", "niche": "Eco-Travel & Digital Nomad", "fanvue": "Private Photoset Soon",
      "caption": "Enjoying a peaceful sunset by the Greek4 coastline.", "reach": "210K"},
-    {"id": "model7", "name": "Nova Sterling", "niche": "Futuristic Fitness & Health",
+    {"id": "model7", "name": "Nova Sterling", "niche": "Futuristic Fitness & Health", "fanvue": "Private Photoset Soon",
      "caption": "Enjoying a peaceful sunset by the Greek5 coastline.", "reach": "185K"},
-    {"id": "model8", "name": "Elena Rostova", "niche": "High-End Luxury & Runway",
+    {"id": "model8", "name": "Elena Rostova", "niche": "High-End Luxury & Runway", "fanvue": "Private Photoset Soon",
      "caption": "Enjoying a peaceful sunset by the Greek6 coastline.", "reach": "410K"},
-    {"id": "model9", "name": "Zuri Jones",      "niche": "Minimalist Design & Art",
+    {"id": "model9", "name": "Zuri Jones",      "niche": "Minimalist Design & Art", "fanvue": "Private Photoset Soon",
      "caption": "Enjoying a peaceful sunset by the Greek7 coastline.", "reach": "125K"},
-    {"id": "model10", "name": "Maya Lin",    "niche": "Afrofuturism & Music Vibe",
+    {"id": "model10", "name": "Maya Lin",    "niche": "Afrofuturism & Music Vibe", "fanvue": "Private Photoset Soon",
      "caption": "Enjoying a peaceful sunset by the Greek8 coastline.", "reach": "300K"},
-    {"id": "model11", "name": "Chloe Thorne",  "niche": "Modern Lifestyle & Tech",  
+    {"id": "model11", "name": "Chloe Thorne",  "niche": "Modern Lifestyle & Tech", "fanvue": "Private Photoset Soon",
      "caption": "Enjoying a peaceful sunset by the Greek2 coastline.", "reach": "320K"},
     
 ]
