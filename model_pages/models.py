@@ -1,4 +1,4 @@
-# 2026.07.24  12.00
+# 2026.08.10  18.00
 from pathlib import Path
 import re
 
@@ -7,21 +7,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = BASE_DIR / "model_assets"
 
 MODELS = [
-    {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/",
+    {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-1",
      "caption": "Enjoying a peaceful sunset by the Greek1 coastline.", "reach": "145K"},
-    {"id": "model2", "name": "Sofia Vega",  "niche": "Spanish Lifestyle & Fashion", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/",
+    {"id": "model2", "name": "Sofia Vega",  "niche": "Spanish Lifestyle & Fashion", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-3",
      "caption": "Enjoying a peaceful sunset by the Spanish coastline.", "reach": "320K"}, 
-    {"id": "model3", "name": "Sienna Brooks", "niche": "Streetwear & City Culture", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/",
+    {"id": "model3", "name": "Sienna Brooks", "niche": "Streetwear & City Culture", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-5",
      "caption": "Enjoying a peaceful sunset by the Greek3 coastline.", "reach": "95K"},
-    {"id": "model4", "name": "Zoe Wilder", "niche": "Eco-Travel & Digital Nomad", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/",
+    {"id": "model4", "name": "Zoe Wilder", "niche": "Eco-Travel & Digital Nomad", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-4",
      "caption": "Enjoying a peaceful sunset by the Greek4 coastline.", "reach": "210K"},
-    {"id": "model5", "name": "Ruby Valentine", "niche": "Streetwear & City Culture", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/",
+    {"id": "model5", "name": "Ruby Valentine", "niche": "Streetwear & City Culture", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-8",
      "caption": "Enjoying a peaceful sunset by the Greek3 coastline.", "reach": "95K"},  
-    {"id": "model6", "name": "Maya Lin", "niche": "Afrofuturism & Music Vibe", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/",
+    {"id": "model6", "name": "Maya Lin", "niche": "Afrofuturism & Music Vibe", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-2",
      "caption": "Enjoying a peaceful sunset by the Greek8 coastline.", "reach": "300K"},
-    {"id": "model7", "name": "Chloe Thorne", "niche": "Modern Lifestyle & Tech", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/",
+    {"id": "model7", "name": "Chloe Thorne", "niche": "Modern Lifestyle & Tech", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-6",
      "caption": "Enjoying a peaceful sunset by the Greek2 coastline.", "reach": "320K"},
-    {"id": "model8", "name": "Aria Luna",  "niche": "Minimalist Design & Art", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/",
+    {"id": "model8", "name": "Aria Luna",  "niche": "Minimalist Design & Art", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-7",
      "caption": "Enjoying a peaceful sunset by the Greek7 coastline.", "reach": "125K"},
     
 ]
