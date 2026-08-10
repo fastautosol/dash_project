@@ -37,8 +37,8 @@ def layout(model_slug=None, **kwargs):
                 html.H2(model["name"], className="text-light fw-bold mb-1"),
                 html.P(model["niche"], className="text-info mb-1"),
                 html.Div(    
-                    html.A(f"{model['name']}'s Private Club & DMs on Fanvue",  href=model["fanvue"], id="fanvue-link-btn",
-                        target="_blank", rel="noopener noreferrer", className="btn btn-info btn-lg fw-bold", style={"width": "35%"}), 
+                    html.A(f"{model['name']}'s Private Club & DMs",  href=model["fanvue"], id="fanvue-link-btn",
+                        target="_blank", rel="noopener noreferrer", className="btn btn-info btn-lg fw-bold", style={"width": "30%"}), 
                     className="text-center"),                                     
                 html.Span([html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light"),
                 ], className="text-center py-4",
