@@ -1,4 +1,4 @@
-# 2026.08.19  12.00
+# 2026.08.19  18.00
 import asyncio
 import aiohttp
 import time
@@ -1231,7 +1231,6 @@ async def main():
                     state.last_cleanup_time = now
 
             except Exception as e:
-
                 print("=" * 70)
                 print("[MAIN LOOP ERROR]")
                 print(repr(e))
@@ -1241,15 +1240,8 @@ async def main():
             # STATUS
             # ==============================================
 
-            print(
-                f"[STATUS] "
-                f"watchlist={len(state.watchlist)} "
-                f"| next cycle in {POLL_INTERVAL}s"
-            )
-
-            await asyncio.sleep(
-                POLL_INTERVAL
-            )
+            print(f"[STATUS] watchlist={len(state.watchlist)} | next cycle in {POLL_INTERVAL}s")
+            await asyncio.sleep(POLL_INTERVAL)
 
 
 # ============================================================
@@ -1257,25 +1249,10 @@ async def main():
 # ============================================================
 
 if __name__ == "__main__":
-
     try:
-
-        asyncio.run(
-            main()
-        )
-
+        asyncio.run(main())
     except KeyboardInterrupt:
-
-        print(
-            "\n[MAIN] Stopped by user."
-        )
-
+        print( "\n[MAIN] Stopped by user.")
     except Exception as e:
-
-        print(
-            "[MAIN] FATAL ERROR:"
-        )
-
-        print(
-            repr(e)
-        )
+        print("[MAIN] FATAL ERROR:")
+        print(repr(e))
