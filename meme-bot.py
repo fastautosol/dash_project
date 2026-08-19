@@ -121,13 +121,6 @@ async def rugcheck_token(session, token_address):
     return data
 
 def token_passes_rugcheck(rug_data):
-    """
-    Basic security filter.
-
-    This is intentionally conservative.
-    RugCheck is a screening layer, NOT a guarantee that
-    a token is safe.
-    """
 
     if not rug_data:
         return False
@@ -142,15 +135,11 @@ def token_passes_rugcheck(rug_data):
     freeze_authority = rug_data.get("freezeAuthority")
 
     if mint_authority:
-        print(
-            "[RUGCHECK] Reject: mint authority still enabled"
-        )
+        print( "[RUGCHECK] Reject: mint authority still enabled")
         return False
 
     if freeze_authority:
-        print(
-            "[RUGCHECK] Reject: freeze authority still enabled"
-        )
+        print("[RUGCHECK] Reject: freeze authority still enabled")
         return False
 
     # ------------------------------------------------------------
@@ -169,24 +158,11 @@ def token_passes_rugcheck(rug_data):
 
     for risk in risks:
 
-        risk_name = str(
-            risk.get("name", "")
-        ).lower()
+        risk_name = str(risk.get("name", "")).lower()
+        risk_level = str(risk.get("level", "")).lower()
 
-        risk_level = str(
-            risk.get("level", "")
-        ).lower()
-
-        if any(
-            keyword in risk_name
-            for keyword in dangerous_keywords
-        ):
-
-            print(
-                f"[RUGCHECK] Reject risk: "
-                f"{risk.get('name')}"
-            )
-
+        if any(keyword in risk_name for keyword in dangerous_keywords):
+            print(f"[RUGCHECK] Reject risk: {risk.get('name')}")
             return False
 
         # Reject explicit danger-level risks
