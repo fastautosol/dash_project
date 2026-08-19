@@ -777,42 +777,11 @@ async def analyze_watchlist(
         # BREAKOUT TRIGGER
         # ====================================================
 
-        if (
-            10.0
-            <= price_change_pct
-            <= 50.0
-            and volume_growth_factor >= 2.0
-        ):
-
-            print(
-                f"[BREAKOUT] {symbol} "
-                f"{addr} "
-                f"price_change={price_change_pct:.2f}% "
-                f"volume_factor={volume_growth_factor:.2f}"
-            )
-
-            # Remove from watchlist so it doesn't
-            # repeatedly trigger every minute.
-            state.watchlist.pop(
-                addr,
-                None,
-            )
-
-            payload = {
-                **record,
-                "signal": "MEME_PUMP_BREAKOUT",
-
-                # IMPORTANT:
-                # This is kept as your original custom
-                # placeholder URL. Verify the actual OKX
-                # Web3 URL format before using it for trading.
-                "okx_swap_url": (
-                    f"https://okx.com_{addr}"
-                ),
-
-                "timestamp": timestamp.isoformat(),
-            }
-
+        if (10.0 <= price_change_pct <= 50.0 and volume_growth_factor >= 2.0):
+            print(f"[BREAKOUT] {symbol} {addr} price_change={price_change_pct:.2f}% volume_factor={volume_growth_factor:.2f}")
+            
+            state.watchlist.pop(addr, None)
+            payload = {**record, "signal": "MEME_PUMP_BREAKOUT", "okx_swap_url": (f"https://okx.com_{addr}"), "timestamp": timestamp.isoformat()}
             alerts_to_send.append(payload)
 
     # ========================================================
