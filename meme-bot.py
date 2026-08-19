@@ -11,7 +11,7 @@ import dlt
 # =========================
 N8N_WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/meme-alert"
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-POLL_INTERVAL = 60          # Mémeknél a 75 mp sok, 45 mp-enként frissítünk (DexScreener engedi)
+POLL_INTERVAL = 60          # Mémeknél 60 mp-enként frissítünk (DexScreener engedi)
 WATCHLIST_EXPIRY_MINS = 30  # Ha 30 percig nem indul meg a mém, eldobjuk, mert "halott"
 CLEANUP_HOURS = 12          # A mém-adatok gyorsan avulnak, 12 óra elég
 
@@ -35,7 +35,7 @@ async def discover_and_filter_tokens(session):
             if resp.status != 200: return
             profiles = await resp.json()
             
-        for p in profiles[:20]: # Csak a legfrissebb 15-öt nézzük meg gyorsan
+        for p in profiles[:25]:
             token_address = p.get("tokenAddress")
             chain_id = p.get("chainId")
             
@@ -131,12 +131,10 @@ async def analyze_watchlist(session, pipeline):
             }
             records_to_db.append(record)
 
-            # 🎯 KITÖRÉSI TRIGGER FELTÉTELEK:
-            # 1. Az ár 20% és 60% között emelkedett (megindult, de nem lőtt ki túl magasra)
-            # 2. A 5 perces volumen legalább a duplájára nőtt (vol_growth_factor >= 2.0)
-            if 20.0 <= price_change_pcnt <= 60.0 and vol_growth_factor >= 2.0:
+            # KITÖRÉSI TRIGGER FELTÉTELEK:
+            if 10.0 <= price_change_pcnt <= 50.0 and vol_growth_factor >= 2.0:
                 
-                # Azonnal kivesszük a watchlistből, hogy ne triggereljen újra 45 mp múlva
+                # Azonnal kivesszük a watchlistből, hogy ne triggereljen újra 60 mp múlva
                 del state.watchlist[addr] 
                 
                 # Payload az N8N-nek + közvetlen OKX Web3 tárcás swap link generálása a kényelemért!
@@ -150,15 +148,15 @@ async def analyze_watchlist(session, pipeline):
         # ----- Webhook riasztások kiküldése az N8N-nek -----
         for alert in alerts_to_send:
             await session.post(N8N_WEBHOOK_URL, json=alert)
-            print(f"[{datetime.now(UTC).isoformat(timespec='seconds')}] 🚨 ALERT {alert['symbol']} TRIGGERED! Küldve az N8N-nek.")
+            print(f"[{datetime.now(UTC).isoformat(timespec='seconds')}] ALERT {alert['symbol']} TRIGGERED! Küldve az N8N-nek.")
 
         # ----- SQL DB mentés DLT-vel -----
         if records_to_db:
             await asyncio.to_thread(
                 pipeline.run, 
                 records_to_db, 
-                table_name="meme_watchlist_history", 
-                write_disposition="append" # Mémeknél jó látni a历史 ármozgást a Dash-en
+                table_name="meme_watchlist", 
+                write_disposition="append"
             )
 
     except Exception as e:
@@ -183,14 +181,14 @@ async def main():
                     await discover_and_filter_tokens(session)
                     state.last_new_tokens_fetch = now
 
-                # 2. Várólista elemzése és Kitörés csekkolás (45 másodpercenként)
+                # 2. Várólista elemzése és Kitörés csekkolás (60 másodpercenként)
                 await analyze_watchlist(session, pipeline)
 
                 # 3. Adatbázis takarítás (Óránként, a CLEANUP_HOURS-nál régebbi adatok törlése)
                 if (now - state.last_cleanup_time) > 3600:
                     try:
                         with pipeline.sql_client() as client:    
-                            table_name = client.make_qualified_table_name("meme_watchlist_history")                        
+                            table_name = client.make_qualified_table_name("meme_watchlist")                        
                             threshold = datetime.now(UTC) - timedelta(hours=CLEANUP_HOURS)
                             client.execute_sql(f"DELETE FROM {table_name} WHERE timestamp < %s", threshold)
                         state.last_cleanup_time = now
