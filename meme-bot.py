@@ -11,8 +11,8 @@ POLL_INTERVAL = 90                # main loop cadence (s)
 DISCOVERY_INTERVAL = 300          # discover new tokens every 5 min
 WATCHLIST_EXPIRY_MINS = 30        # max time a token stays on watchlist
 CLEANUP_HOURS = 12                # delete DB rows older than this
-MAX_DISCOVERY_TOKENS = 25         # tokens processed per discovery cycle
-MAX_TOKENS_PER_REQUEST = 25       # DexScreener multi-token limit
+MAX_DISCOVERY_TOKENS = 20         # tokens processed per discovery cycle
+MAX_TOKENS_PER_REQUEST = 30       # DexScreener multi-token limit
 
 HTTP_TIMEOUT = aiohttp.ClientTimeout(total=20, connect=10, sock_read=15)
 USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -122,7 +122,7 @@ async def discover_and_filter_tokens(session):
 
         discovered += 1
         print(f"[DISCOVERY] Checking {token_address}")
-        await asyncio.sleep(0.25)  # be gentle with RugCheck
+        await asyncio.sleep(0.5)  # be gentle with RugCheck
 
         rug_data = await rugcheck_token(session, token_address)
         if rug_data is None:
