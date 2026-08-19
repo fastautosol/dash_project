@@ -166,6 +166,31 @@ services:
       - n8n-shared-net
 
 
+  meme-alert-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: meme-alert-bot
+    restart: unless-stopped
+    depends_on:
+      n8n:
+        condition: service_healthy
+    environment:
+      N8N_WEBHOOK_URL: https://${SERVICE_FQDN_N8N}/webhook/meme-alert
+      PYTHONUNBUFFERED: "1"
+      TZ: ${TZ:-Europe/Berlin}
+    command: ["python", "meme-bot.py"]
+    mem_limit: 500m
+    cpus: 0.5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+
   crypto-alert-bot:
     build:
       context: .
