@@ -17,19 +17,14 @@ CLEANUP_HOURS = 12
 MAX_DISCOVERY_TOKENS = 25
 MAX_TOKENS_PER_REQUEST = 30
 
-HTTP_TIMEOUT = aiohttp.ClientTimeout(
-    total=20,
-    connect=10,
-    sock_read=15,
-)
+HTTP_TIMEOUT = aiohttp.ClientTimeout(total=20, connect=10, sock_read=15)
 
 USER_AGENT = (
     "Mozilla/5.0 "
     "(Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 "
     "(KHTML, like Gecko) "
-    "Chrome/151.0 Safari/537.36"
-)
+    "Chrome/151.0 Safari/537.36")
 
 
 # ============================================================
@@ -46,22 +41,11 @@ RUGCHECK_SUMMARY_URL = ("https://api.rugcheck.xyz/v1/tokens/{token_address}/repo
 class MemeState:
 
     def __init__(self):
-        # {
-        #   token_address: {
-        #       "base_price": float | None,
-        #       "base_volume": float | None,
-        #       "added_at": float,
-        #       "symbol": str
-        #   }
-        # }
         self.watchlist = {}
-
         self.last_cleanup_time = 0
         self.last_new_tokens_fetch = 0
 
-
 state = MemeState()
-
 
 # ============================================================
 # HTTP HELPERS
@@ -70,56 +54,30 @@ state = MemeState()
 async def get_json(session, url, *, retries=2):
     """
     GET JSON with retry handling.
-    Returns:
-        parsed JSON
-        None on failure
     """
 
     for attempt in range(1, retries + 2):
-
         try:
+            async with session.get(url, timeout=HTTP_TIMEOUT, headers={"User-Agent": USER_AGENT, "Accept": "application/json"}) as resp:
 
-            async with session.get(
-                url,
-                timeout=HTTP_TIMEOUT,
-                headers={
-                    "User-Agent": USER_AGENT,
-                    "Accept": "application/json",
-                },
-            ) as resp:
-
-                # ------------------------------------------------
                 # Rate limit
-                # ------------------------------------------------
                 if resp.status == 429:
-
                     retry_after = resp.headers.get("Retry-After")
-
                     try:
                         sleep_seconds = float(retry_after)
                     except (TypeError, ValueError):
                         sleep_seconds = 3.0
 
-                    print(
-                        f"[HTTP] 429 rate limit: {url} "
-                        f"sleeping {sleep_seconds:.1f}s"
-                    )
-
+                    print(f"[HTTP] 429 rate limit: {url} sleeping {sleep_seconds:.1f}s")
                     await asyncio.sleep(sleep_seconds)
-
                     continue
 
                 # ------------------------------------------------
                 # Other HTTP error
                 # ------------------------------------------------
                 if resp.status != 200:
-
                     body = await resp.text()
-
-                    print(
-                        f"[HTTP] ERROR {resp.status}: {url}\n"
-                        f"        {body[:300]}"
-                    )
+                    print(f"[HTTP] ERROR {resp.status}: {url} | {body[:300]}")
 
                     if attempt <= retries:
                         await asyncio.sleep(1.5 * attempt)
@@ -133,31 +91,17 @@ async def get_json(session, url, *, retries=2):
                 return await resp.json()
 
         except asyncio.TimeoutError:
-
-            print(
-                f"[HTTP] Timeout attempt {attempt}: {url}"
-            )
-
+            print(f"[HTTP] Timeout attempt {attempt}: {url}")
             if attempt <= retries:
                 await asyncio.sleep(1.5 * attempt)
 
         except aiohttp.ClientError as e:
-
-            print(
-                f"[HTTP] Client error attempt {attempt}: "
-                f"{url} -> {e}"
-            )
-
+            print(f"[HTTP] Client error attempt {attempt}: {url} -> {e}")
             if attempt <= retries:
                 await asyncio.sleep(1.5 * attempt)
 
         except Exception as e:
-
-            print(
-                f"[HTTP] Unexpected error attempt {attempt}: "
-                f"{url} -> {repr(e)}"
-            )
-
+            print(f"[HTTP] Unexpected error attempt {attempt}: {url} -> {repr(e)}")
             if attempt <= retries:
                 await asyncio.sleep(1.5 * attempt)
 
@@ -169,28 +113,12 @@ async def get_json(session, url, *, retries=2):
 # ============================================================
 
 async def rugcheck_token(session, token_address):
-    """
-    Get RugCheck security summary.
 
-    Returns:
-        dict | None
-    """
-
-    url = RUGCHECK_SUMMARY_URL.format(
-        token_address=token_address
-    )
-
-    data = await get_json(
-        session,
-        url,
-        retries=1,
-    )
-
+    url = RUGCHECK_SUMMARY_URL.format(token_address=token_address)
+    data = await get_json(session, url, retries=1)
     if not data:
         return None
-
     return data
-
 
 def token_passes_rugcheck(rug_data):
     """
