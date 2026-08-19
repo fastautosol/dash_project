@@ -6,3 +6,4 @@ COPY requirements-bot.txt .
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-bot.txt
 COPY crypto-bot.py .
 COPY candles-bot.py .
+COPY meme-bot.py .
