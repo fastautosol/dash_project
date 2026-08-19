@@ -10,12 +10,12 @@ import dlt
 # ============================================================
 N8N_WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/meme-alert"
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-POLL_INTERVAL = 60
-DISCOVERY_INTERVAL = 180
-WATCHLIST_EXPIRY_MINS = 30
+POLL_INTERVAL = 90
+DISCOVERY_INTERVAL = 300
+WATCHLIST_EXPIRY_MINS = 60
 CLEANUP_HOURS = 12
 MAX_DISCOVERY_TOKENS = 25
-MAX_TOKENS_PER_REQUEST = 30
+MAX_TOKENS_PER_REQUEST = 25
 
 HTTP_TIMEOUT = aiohttp.ClientTimeout(total=20, connect=10, sock_read=15)
 
