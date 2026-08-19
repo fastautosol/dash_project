@@ -1,5 +1,4 @@
-# 2026.08.19  18.00
-
+# 2026.08.19  19.00
 import asyncio, aiohttp, time
 from datetime import datetime, UTC, timedelta
 import dlt
@@ -7,16 +6,15 @@ import dlt
 # ---------------- CONFIG ----------------
 N8N_WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/meme-alert"
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-POLL_INTERVAL = 90                # main loop cadence (s)
-DISCOVERY_INTERVAL = 300          # discover new tokens every 5 min
-WATCHLIST_EXPIRY_MINS = 30        # max time a token stays on watchlist
-CLEANUP_HOURS = 12                # delete DB rows older than this
-MAX_DISCOVERY_TOKENS = 20         # tokens processed per discovery cycle
-MAX_TOKENS_PER_REQUEST = 30       # DexScreener multi-token limit
+POLL_INTERVAL = 90                 # main loop cadence (s)
+DISCOVERY_INTERVAL = 300           # discover new tokens every 3 min
+WATCHLIST_EXPIRY_MINS = 30         # max time a token stays on watchlist
+CLEANUP_HOURS = 12                 # delete DB rows older than this
+MAX_DISCOVERY_TOKENS = 20          # tokens processed per discovery cycle
+MAX_TOKENS_PER_REQUEST = 30        # DexScreener multi-token limit
 
 HTTP_TIMEOUT = aiohttp.ClientTimeout(total=20, connect=10, sock_read=15)
-USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-              "(KHTML, like Gecko) Chrome/151.0 Safari/537.36")
+USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"  "(KHTML, like Gecko) Chrome/151.0 Safari/537.36")
 
 DEXSCREENER_PROFILES_URL = "https://api.dexscreener.com/token-profiles/latest/v1"
 DEXSCREENER_TOKENS_URL = "https://api.dexscreener.com/tokens/v1/solana/{addresses}"
@@ -55,7 +53,6 @@ async def get_json(session, url, *, retries=2):
                         continue
                     return None
                 return await resp.json()
-                
         except asyncio.TimeoutError:
             print(f"[HTTP] Timeout attempt {attempt}: {url}")
             if attempt <= retries:
@@ -103,7 +100,6 @@ def token_passes_rugcheck(rug_data):
 # ---------------- TOKEN DISCOVERY ----------------
 async def discover_and_filter_tokens(session):
     """Fetch latest Solana token profiles, RugCheck each, add approved ones to watchlist."""
-    print("[DISCOVERY] Fetching latest token profiles...")
     profiles = await get_json(session, DEXSCREENER_PROFILES_URL, retries=2)
 
     if not profiles or not isinstance(profiles, list):
@@ -121,8 +117,7 @@ async def discover_and_filter_tokens(session):
             continue
 
         discovered += 1
-        print(f"[DISCOVERY] Checking {token_address}")
-        await asyncio.sleep(0.5)  # be gentle with RugCheck
+        await asyncio.sleep(0.5)  # be gentle with RugCheck — bump to 1.0 if 429s show up in logs
 
         rug_data = await rugcheck_token(session, token_address)
         if rug_data is None:
@@ -133,8 +128,7 @@ async def discover_and_filter_tokens(session):
             continue
 
         # Symbol isn't guaranteed in the token-profile endpoint; fill in later.
-        state.watchlist[token_address] = {"base_price": None, "base_volume": None,
-                                           "added_at": time.time(), "symbol": "MEME"}
+        state.watchlist[token_address] = {"base_price": None, "base_volume": None, "added_at": time.time(), "symbol": "MEME"}
         approved += 1
         print(f"[DISCOVERY] APPROVED: {token_address}")
 
@@ -178,11 +172,9 @@ def ensure_dlt_table(pipeline):
 def save_records_with_dlt(pipeline, records):
     """Synchronous DLT load, run via asyncio.to_thread()."""
     if not records:
-        print("[DLT] No records to load")
         return None
-    print(f"[DLT] Loading {len(records)} records...")
     load_info = pipeline.run(records, table_name="meme_watchlist", write_disposition="append")
-    print(f"[DLT] Load finished\n[DLT] {load_info}")
+    print("[DLT] Load finished")
     return load_info
 
 
@@ -224,7 +216,6 @@ async def analyze_watchlist(session, pipeline):
         return
 
     addresses = list(state.watchlist.keys())
-    print(f"[MARKET] Querying {len(addresses)} watchlist tokens...")
     pairs = await fetch_token_market_data(session, addresses)
     if not pairs:
         print("[MARKET] No pair data received")
@@ -271,9 +262,6 @@ async def analyze_watchlist(session, pipeline):
                   "vol_growth_factor": round(volume_growth_factor, 2), "liquidity_usd": round(liquidity_usd, 2)}
         records_to_db.append(record)
 
-        print(f"[MARKET] {symbol} | price={current_price:.10f} | change={price_change_pct:.2f}% | "
-              f"vol5m={current_vol_5m:.2f} | vol_factor={volume_growth_factor:.2f} | liq=${liquidity_usd:,.2f}")
-
         # Breakout trigger
         if 10.0 <= price_change_pct <= 50.0 and volume_growth_factor >= 2.0:
             print(f"[BREAKOUT] {symbol} {addr} price_change={price_change_pct:.2f}% volume_factor={volume_growth_factor:.2f}")
@@ -298,13 +286,10 @@ async def analyze_watchlist(session, pipeline):
 
     # Persist to Postgres via DLT
     if records_to_db:
-        print(f"[DLT] records_to_db={len(records_to_db)}")
         try:
             await asyncio.to_thread(save_records_with_dlt, pipeline, records_to_db)
         except Exception as e:
             print(f"[DLT] LOAD ERROR\n{repr(e)}")
-    else:
-        print("[DLT] records_to_db=0")
 
 
 # ---------------- DATABASE MAINTENANCE ----------------
@@ -351,8 +336,7 @@ async def main():
         print(f"[DLT] Could not resolve table: {repr(e)}")
 
     connector = aiohttp.TCPConnector(limit=20, limit_per_host=10, ttl_dns_cache=300)
-    async with aiohttp.ClientSession(connector=connector, timeout=HTTP_TIMEOUT,
-                                      headers={"User-Agent": USER_AGENT, "Accept": "application/json"}) as session:
+    async with aiohttp.ClientSession(connector=connector, timeout=HTTP_TIMEOUT, headers={"User-Agent": USER_AGENT, "Accept": "application/json"}) as session:
         print("[MAIN] HTTP session started")
 
         while True:
