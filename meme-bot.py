@@ -1097,41 +1097,22 @@ async def main():
                 # 1. TOKEN DISCOVERY
                 # ==============================================
 
-                if (
-                    now
-                    - state.last_new_tokens_fetch
-                    >= DISCOVERY_INTERVAL
-                ):
-
-                    await discover_and_filter_tokens(
-                        session
-                    )
-
+                if (now - state.last_new_tokens_fetch >= DISCOVERY_INTERVAL):
+                    await discover_and_filter_tokens(session)
                     state.last_new_tokens_fetch = now
 
                 # ==============================================
                 # 2. WATCHLIST ANALYSIS
                 # ==============================================
 
-                await analyze_watchlist(
-                    session,
-                    pipeline,
-                )
+                await analyze_watchlist(session, pipeline)
 
                 # ==============================================
                 # 3. DATABASE CLEANUP
                 # ==============================================
 
-                if (
-                    now
-                    - state.last_cleanup_time
-                    >= 3600
-                ):
-
-                    cleanup_database(
-                        pipeline
-                    )
-
+                if (now- state.last_cleanup_timen>= 3600):
+                    cleanup_database(pipeline)
                     state.last_cleanup_time = now
 
             except Exception as e:
