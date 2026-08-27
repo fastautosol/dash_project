@@ -1,5 +1,5 @@
 
-# 2026.06.15  18.00 Lightweight-Charts
+# 2026.08.27  14.00 Lightweight-Charts
 import pandas as pd
 import pandas_ta_classic as ta
 from sqlalchemy import create_engine, text
@@ -10,8 +10,7 @@ import dash_bootstrap_components as dbc
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 engine = create_engine(DB_URL)
 
-SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", "COMP/USDT", "LINK/USDT",
-           "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT",
+SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", "COMP/USDT", "LINK/USDT", "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT",
           "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
 
 CARD_STYLE = {
