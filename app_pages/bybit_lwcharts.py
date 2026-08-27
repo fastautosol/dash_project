@@ -129,12 +129,8 @@ def load_all_charts(_, n, indicators):
 clientside_callback(
     """
     function(data, indicators) {
-    if (!data) return "";
-    if (typeof window.LWCharts !== "function") {
-        console.warn("LWCharts not ready yet, will retry on next trigger");
-        return window.dash_clientside.no_update;
-    }
-    return window.LWCharts(data, indicators);
+        if (!data) return "";
+        return window.LWCharts(data, indicators);
     }
     """,
     Output("lwc-render-trigger", "children"),
