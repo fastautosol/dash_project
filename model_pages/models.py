@@ -1,4 +1,4 @@
-# 2026.08.28  16.00
+# 2026.08.28  17.00
 from pathlib import Path
 import re
 
@@ -8,22 +8,21 @@ ASSETS_DIR = BASE_DIR / "model_assets"
 
 MODELS = [
     {"id": "model1", "name": "Amara Vance",   "niche": "Virtual Fashion & Styling", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-1",
-     "caption": "Enjoying a peaceful sunset by the Greek1 coastline.", "reach": "145K"},
+     "caption": "Enjoying a peaceful sunset by the Greek1 coastline."},
     {"id": "model2", "name": "Sofia Vega",  "niche": "Spanish Lifestyle & Fashion", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-3",
-     "caption": "Enjoying a peaceful sunset by the Spanish coastline.", "reach": "320K"}, 
+     "caption": "Enjoying a peaceful sunset by the Spanish coastline."}, 
     {"id": "model3", "name": "Sienna Brooks", "niche": "Streetwear & City Culture", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-5",
-     "caption": "Enjoying a peaceful sunset by the Greek3 coastline.", "reach": "95K"},
+     "caption": "Enjoying a peaceful sunset by the Greek3 coastline."},
     {"id": "model4", "name": "Zoe Wilder", "niche": "Eco-Travel & Digital Nomad", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-4",
-     "caption": "Enjoying a peaceful sunset by the Greek4 coastline.", "reach": "210K"},
+     "caption": "Enjoying a peaceful sunset by the Greek4 coastline."},
     {"id": "model5", "name": "Ruby Valentine", "niche": "Streetwear & City Culture", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-8",
-     "caption": "Enjoying a peaceful sunset by the Greek3 coastline.", "reach": "95K"},  
+     "caption": "Enjoying a peaceful sunset by the Greek3 coastline."},  
     {"id": "model6", "name": "Maya Lin", "niche": "Afrofuturism & Music Vibe", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-2",
-     "caption": "Enjoying a peaceful sunset by the Greek8 coastline.", "reach": "300K"},
+     "caption": "Enjoying a peaceful sunset by the Greek8 coastline."},
     {"id": "model7", "name": "Chloe Thorne", "niche": "Modern Lifestyle & Tech", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-6",
-     "caption": "Enjoying a peaceful sunset by the Greek2 coastline.", "reach": "320K"},
+     "caption": "Enjoying a peaceful sunset by the Greek2 coastline."},
     {"id": "model8", "name": "Aria Luna",  "niche": "Minimalist Design & Art", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-7",
-     "caption": "Enjoying a peaceful sunset by the Greek7 coastline.", "reach": "125K"},
-    
+     "caption": "Enjoying a peaceful sunset by the Greek7 coastline."},
 ]
 
 def slugify(name):
@@ -37,7 +36,7 @@ def _discover_photos(model_id):
     return [f"/model_assets/{model_id}/{f.name}" for f in files]
 
 def _discover_videos(model_id, limit=5):
-    """Video PREVIEW THUMBNAILS (still images), named vid_*.jpg — the row links out to Fanvue, it doesn't play video in-app."""
+    """Video PREVIEW THUMBNAILS, named vid_*.jpg — the row links to Fanvue"""
     model_dir = ASSETS_DIR / model_id
     if not model_dir.is_dir():
         return []
