@@ -20,7 +20,7 @@ def layout(model_slug=None, **kwargs):
             dbc.Col(
                 html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
                     style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "borderRadius": "10px", "cursor": "pointer"},
-                ), xs=6, sm=4, md=3, className="mb-3") for i, photo in enumerate(model["photos"])
+                ), xs=6, sm=4, md=2, className="mb-3") for i, photo in enumerate(model["photos"])
         ]
     else:
         thumbnails = [dbc.Col(html.P("No photos uploaded yet", className="text-muted text-center py-5"), width=12)]
