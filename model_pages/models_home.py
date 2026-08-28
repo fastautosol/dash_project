@@ -1,4 +1,4 @@
-# 2026.08.10  17.00
+# 2026.08.28  17.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -36,17 +36,9 @@ def make_influencer_card(model):
 
         dbc.CardBody([
             dcc.Link(
-                html.H5(model["name"], className="fw-bold text-light mb-1"),
-                href=f"/model/{model['model_slug']}", className="text-decoration-none"),
-
+                html.H5(model["name"], className="fw-bold text-light mb-1"), href=f"/model/{model['model_slug']}", className="text-decoration-none"),
             html.P(model["niche"], className="text-info small mb-3"),
-
-            html.Div([
-                html.Span(
-                    [html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light")
-            ], className="d-flex justify-content-between align-items-center mt-auto"),
-        ],
-        className="px-2 pt-3 pb-1"),
+        ], className="px-2 pt-3 pb-1"),
     ],
     style=CARD_STYLE)
 
