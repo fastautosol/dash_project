@@ -20,7 +20,6 @@ FOOTER = html.Footer([
     dbc.Row([
         dbc.Col(
             html.P("© 2026 FastAutoSol Media Group. All rights reserved", className="text-muted small"), md=6),
-
         dbc.Col(
             html.Div([
                 html.A("Privacy Policy", href="/privacy-policy", target="_blank", rel="noopener noreferrer", className="text-muted small me-3"),
@@ -29,7 +28,7 @@ FOOTER = html.Footer([
             ],
             className="text-md-end"), md=6),
     ],
-    className="pb-4 px-3"),
+    className="pb-5 px-4"),
 ])
 
 # ----- Global Layout -----
