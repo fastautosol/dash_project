@@ -1,4 +1,4 @@
-# 2026.08.10  18.00
+# 2026.08.28  16.00
 from pathlib import Path
 import re
 
@@ -36,10 +36,19 @@ def _discover_photos(model_id):
     files = sorted(model_dir.glob(f"img_*.{PHOTO_EXT}"))
     return [f"/model_assets/{model_id}/{f.name}" for f in files]
 
+def _discover_videos(model_id, limit=5):
+    """Video PREVIEW THUMBNAILS (still images), named vid_*.jpg — the row links out to Fanvue, it doesn't play video in-app."""
+    model_dir = ASSETS_DIR / model_id
+    if not model_dir.is_dir():
+        return []
+    files = sorted(model_dir.glob(f"vid_*.{PHOTO_EXT}"))
+    return [f"/model_assets/{model_id}/{f.name}" for f in files[:limit]]
+
 for model in MODELS:
     model["model_slug"] = slugify(model["name"])
     model["photos"] = _discover_photos(model["id"])
     model["cover"] = model["photos"][0] if model["photos"] else None
+    model["video_thumbs"] = _discover_videos(model["id"])
 
 MODELS_BY_ID = {
     model["id"]: model
