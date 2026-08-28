@@ -54,8 +54,8 @@ layout = dbc.Container([
 
     dbc.Row(
         [
-            dbc.Col(make_influencer_card(model), xs=12, sm=6, lg=3, className="mb-4 d-flex align-items-stretch")
+            dbc.Col(make_influencer_card(model), xs=12, sm=6, lg=3, className="mb-5 d-flex align-items-stretch")
             for model in MODELS
-        ], className="g-4"),
+        ], className="g-5"),
 
 ], fluid=True, className="px-4")
