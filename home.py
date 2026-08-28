@@ -6,8 +6,6 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 
-#from model_pages.models import MODELS, MODELS_BY_ID
-
 # ----- Dash App -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="model_pages", suppress_callback_exceptions=True,
     external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
