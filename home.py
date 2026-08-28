@@ -28,8 +28,8 @@ FOOTER = html.Footer([
             ],
             className="text-md-end"), md=6),
     ],
-    className="pb-3 px-2"),
-])
+    className="pb-2 px-1"),
+], fluid=True)
 
 # ----- Global Layout -----
 
