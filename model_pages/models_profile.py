@@ -45,7 +45,7 @@ def layout(model_slug=None, **kwargs):
             # --- VIDEO PREVIEW STRIP (5 clips, link out to Fanvue) ---
             html.Div(
                 [html.A(
-                        [html.Img(src=vid, style={"width": "150px", "height": "80px", "objectFit": "cover", "borderRadius": "8px", "display": "block"}),
+                        [html.Img(src=vid, style={"width": "250px", "height": "120px", "objectFit": "cover", "borderRadius": "15px", "display": "block"}),
                         html.I(className="fa-solid fa-play", style={
                             "position": "absolute", "top": "50%", "left": "50%", "transform": "translate(-50%, -50%)",
                             "color": "white", "fontSize": "20px", "textShadow": "0 0 6px rgba(0,0,0,0.8)", "pointerEvents": "none"}),
