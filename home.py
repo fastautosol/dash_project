@@ -29,7 +29,6 @@ dbc.Container([
 ])
 
 # ----- Global Layout -----
-
 app.layout = html.Div(
     [
         html.Div(html.Img(src="/model_assets/fastautosol_logo_small.jpg", style={"width": "120px"}),
