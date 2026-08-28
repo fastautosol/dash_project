@@ -1,4 +1,4 @@
-# 2026.08.10  17.00
+# 2026.08.28  16.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update, clientside_callback
 import dash_bootstrap_components as dbc
@@ -43,6 +43,38 @@ def layout(model_slug=None, **kwargs):
                 html.Span([html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light"),
                 ], className="text-center py-4",
             ),
+
+            # --- VIDEO PREVIEW STRIP (5 clips, link out to Fanvue) ---
+            html.Div(
+                [
+                    html.A(
+                        [
+                            html.Img(
+                                src=vid,
+                                style={
+                                    "width": "150px", "height": "80px",
+                                    "objectFit": "cover", "borderRadius": "8px",
+                                    "display": "block",
+                                },
+                            ),
+                            html.I(
+                                className="fa-solid fa-play",
+                                style={
+                                    "position": "absolute", "top": "50%", "left": "50%",
+                                    "transform": "translate(-50%, -50%)",
+                                    "color": "white", "fontSize": "20px",
+                                    "textShadow": "0 0 6px rgba(0,0,0,0.8)",
+                                    "pointerEvents": "none",
+                                },
+                            ),
+                        ],
+                        href=model["fanvue"], target="_blank", rel="noopener noreferrer",
+                        style={"position": "relative", "display": "inline-block", "cursor": "pointer"},
+                    )
+                    for vid in model["video_thumbs"]
+                ],
+                className="d-flex justify-content-center gap-2 flex-wrap mb-4",
+            ) if model["video_thumbs"] else None,
 
             dbc.Row(thumbnails, className="g-3"),
 
