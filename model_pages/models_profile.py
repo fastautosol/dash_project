@@ -53,7 +53,7 @@ def layout(model_slug=None, **kwargs):
                     )
                     for vid in model["video_thumbs"]
                 ],
-                className="d-flex justify-content-center gap-3 flex-wrap mb-4",
+                className="d-flex justify-content-center gap-3 flex-wrap mb-5",
             ) if model["video_thumbs"] else None,
 
             dbc.Row(thumbnails, className="g-3"),
