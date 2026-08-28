@@ -56,7 +56,7 @@ def layout(model_slug=None, **kwargs):
                 className="d-flex justify-content-center gap-3 flex-wrap mb-5",
             ) if model["video_thumbs"] else None,
 
-            dbc.Row(thumbnails, className="g-3"),
+            dbc.Row(thumbnails, className="g-5"),
 
             dbc.Modal(
                 [dbc.ModalHeader( dbc.ModalTitle(model["name"]), close_button=True),
