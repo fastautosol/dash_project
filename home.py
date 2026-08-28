@@ -1,4 +1,4 @@
-# 2026.07.13  18.00
+# 2026.08.28  18.00
 import dash
 from dash import html
 import dash_bootstrap_components as dbc
@@ -49,5 +49,4 @@ def health():
     return {"status": "ok"}
 
 server.mount("/model_assets", StaticFiles(directory="model_assets"), name="model_assets")
-
 server.mount("/", WSGIMiddleware(app.server))
