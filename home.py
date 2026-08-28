@@ -29,7 +29,7 @@ FOOTER = html.Footer([
             ],
             className="text-md-end"), md=6),
     ],
-    className="pb-5 px-4"),
+    className="pb-4 px-3"),
 ])
 
 # ----- Global Layout -----
