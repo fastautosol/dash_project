@@ -1,4 +1,4 @@
-# 2026.08.28  16.00
+# 2026.08.28  17.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update, clientside_callback
 import dash_bootstrap_components as dbc
@@ -44,12 +44,11 @@ def layout(model_slug=None, **kwargs):
 
             # --- VIDEO PREVIEW STRIP (5 clips, link out to Fanvue) ---
             html.Div(
-                [
-                    html.A(
+                [html.A(
                         [html.Img(src=vid, style={"width": "150px", "height": "80px", "objectFit": "cover", "borderRadius": "8px", "display": "block"}),
-                            html.I(className="fa-solid fa-play", style={
-                                "position": "absolute", "top": "50%", "left": "50%", "transform": "translate(-50%, -50%)",
-                                "color": "white", "fontSize": "20px", "textShadow": "0 0 6px rgba(0,0,0,0.8)", "pointerEvents": "none"}),
+                        html.I(className="fa-solid fa-play", style={
+                            "position": "absolute", "top": "50%", "left": "50%", "transform": "translate(-50%, -50%)",
+                            "color": "white", "fontSize": "20px", "textShadow": "0 0 6px rgba(0,0,0,0.8)", "pointerEvents": "none"}),
                         ], href=model["fanvue"], target="_blank", rel="noopener noreferrer", style={"position": "relative", "display": "inline-block", "cursor": "pointer"},
                     )
                     for vid in model["video_thumbs"]
@@ -60,23 +59,18 @@ def layout(model_slug=None, **kwargs):
             dbc.Row(thumbnails, className="g-3"),
 
             dbc.Modal(
-                [
-                    dbc.ModalHeader( dbc.ModalTitle(model["name"]), close_button=True),
-                    dbc.ModalBody(
-                        [
-                            html.Img(id={ "type": "model-modal-img","model": model_slug}, style={"width": "100%", "maxHeight": "100vh", "objectFit": "contain", "borderRadius": "10px"}),
-                            html.Hr(),
-                            html.Div([html.I(className="fa-solid fa-heart text-danger me-2"), html.Span("12.5K Likes", className="fw-bold")], className="mb-3"),
-                            html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
-                            html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")]),
-                        ]
-                    ),
+                [dbc.ModalHeader( dbc.ModalTitle(model["name"]), close_button=True),
+                dbc.ModalBody(
+                    [html.Img(id={ "type": "model-modal-img","model": model_slug}, style={"width": "100%", "maxHeight": "100vh", "objectFit": "contain", "borderRadius": "10px"}),
+                    html.Hr(),
+                    html.Div([html.I(className="fa-solid fa-heart text-danger me-2"), html.Span("12.5K Likes", className="fw-bold")], className="mb-3"),
+                    html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
+                    html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")])]),
                 ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
         ], fluid=True, className="px-4 py-4")
 
 
 # --- PIXEL KLIENSOLDALI CALLBACKEK ---
-
 # 1. PageView mérése automatikusan az oldal betöltődésekor
 clientside_callback(
     """
