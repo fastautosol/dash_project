@@ -15,8 +15,8 @@ app = dash.Dash(__name__, use_pages=True, pages_folder="model_pages", suppress_c
 
 # ----- Footer -----
 FOOTER = html.Footer([
+dbc.Container([
     html.Hr(style={"borderTop": "1px solid rgba(255,255,255,0.1)", "marginTop": "3rem"}),
-
     dbc.Row([
         dbc.Col(
             html.P("© 2026 FastAutoSol Media Group. All rights reserved", className="text-muted small"), md=6),
@@ -25,11 +25,10 @@ FOOTER = html.Footer([
                 html.A("Privacy Policy", href="/privacy-policy", target="_blank", rel="noopener noreferrer", className="text-muted small me-3"),
                 html.A("Terms of Service", href="/terms-of-service", target="_blank", rel="noopener noreferrer", className="text-muted small me-3"),
                 html.A("Contact Us", href="/contact-us", target="_blank", rel="noopener noreferrer", className="text-muted small"),
-            ],
-            className="text-md-end"), md=6),
-    ],
-    className="pb-2 px-1"),
+            ], className="text-md-end"), md=6),
+    ], className="pb-2 px-1"),
 ], fluid=True)
+])
 
 # ----- Global Layout -----
 
