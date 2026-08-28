@@ -38,9 +38,7 @@ def layout(model_slug=None, **kwargs):
                 html.P(model["niche"], className="text-info mb-1"),
                 html.Div(    
                     html.A(f"{model['name']}'s Private Club & DMs",  href=model["fanvue"], id="fanvue-link-btn",
-                        target="_blank", rel="noopener noreferrer", className="btn btn-info btn-lg fw-bold", style={"width": "30%"}), 
-                    className="text-center"),                                     
-                html.Span([html.I(className="fa-solid fa-users me-1"), f"{model['reach']} Reach"], className="badge bg-secondary text-light"),
+                        target="_blank", rel="noopener noreferrer", className="btn btn-info btn-lg fw-bold", style={"width": "30%"}), className="text-center"),                                     
                 ], className="text-center py-4",
             ),
 
@@ -48,28 +46,11 @@ def layout(model_slug=None, **kwargs):
             html.Div(
                 [
                     html.A(
-                        [
-                            html.Img(
-                                src=vid,
-                                style={
-                                    "width": "150px", "height": "80px",
-                                    "objectFit": "cover", "borderRadius": "8px",
-                                    "display": "block",
-                                },
-                            ),
-                            html.I(
-                                className="fa-solid fa-play",
-                                style={
-                                    "position": "absolute", "top": "50%", "left": "50%",
-                                    "transform": "translate(-50%, -50%)",
-                                    "color": "white", "fontSize": "20px",
-                                    "textShadow": "0 0 6px rgba(0,0,0,0.8)",
-                                    "pointerEvents": "none",
-                                },
-                            ),
-                        ],
-                        href=model["fanvue"], target="_blank", rel="noopener noreferrer",
-                        style={"position": "relative", "display": "inline-block", "cursor": "pointer"},
+                        [html.Img(src=vid, style={"width": "150px", "height": "80px", "objectFit": "cover", "borderRadius": "8px", "display": "block"}),
+                            html.I(className="fa-solid fa-play", style={
+                                "position": "absolute", "top": "50%", "left": "50%", "transform": "translate(-50%, -50%)",
+                                "color": "white", "fontSize": "20px", "textShadow": "0 0 6px rgba(0,0,0,0.8)", "pointerEvents": "none"}),
+                        ], href=model["fanvue"], target="_blank", rel="noopener noreferrer", style={"position": "relative", "display": "inline-block", "cursor": "pointer"},
                     )
                     for vid in model["video_thumbs"]
                 ],
