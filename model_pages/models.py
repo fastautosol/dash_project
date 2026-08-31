@@ -19,7 +19,7 @@ MODELS = [
      "caption": "Enjoying a peaceful sunset by the Greek3 coastline."},  
     {"id": "model6", "name": "Maya Lin", "niche": "Afrofuturism & Music Vibe", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-2",
      "caption": "Enjoying a peaceful sunset by the Greek8 coastline."},
-    {"id": "model7", "name": "Chloe Thorne", "niche": "Modern Lifestyle & Tech", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-6",
+    {"id": "model7", "name": "Chloe Throne", "niche": "Modern Lifestyle & Tech", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-6",
      "caption": "Enjoying a peaceful sunset by the Greek2 coastline."},
     {"id": "model8", "name": "Aria Luna",  "niche": "Minimalist Design & Art", "fanvue": "https://www.fanvue.com/fastmedia.aimodels/fv-7",
      "caption": "Enjoying a peaceful sunset by the Greek7 coastline."},
