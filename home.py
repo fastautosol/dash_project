@@ -24,7 +24,7 @@ dbc.Container([
                 html.A("Terms of Service", href="/terms-of-service", target="_blank", rel="noopener noreferrer", className="text-muted small me-3"),
                 html.A("Contact Us", href="/contact-us", target="_blank", rel="noopener noreferrer", className="text-muted small"),
             ], className="text-md-end"), md=6),
-    ], className="pb-2 px-1"),
+    ], className="pb-2 px-3"),
 ], fluid=True)
 ])
 
