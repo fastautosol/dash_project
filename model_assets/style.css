@@ -37,8 +37,8 @@
     
     /* VILÁGÍTÓ PERFORÁCIÓ: fehér kis lyukak, amik azonnal kitűnnek a sötétben */
     background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.15) 60%, transparent 60%),
-        linear-gradient(to right, rgba(255, 255, 255, 0.15) 60%, transparent 60%);
+        linear-gradient(to right, rgba(255, 255, 255, 0.5) 60%, transparent 60%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.5) 60%, transparent 60%);
     background-position: top 8px center, bottom 8px center; /* Kicsit beljebb hozzuk az élektől */
     background-size: 20px 8px; /* 20px-enként ismétlődő 8px magas fehér lyukak */
     background-repeat: repeat-x;
@@ -46,8 +46,8 @@
 
 /* A belső videó elemek elhelyezkedése a szalagon belül */
 .filmstrip-item {
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin-top: 7px;
+    margin-bottom: 7px;
     transition: all 0.2s ease-in-out;
 }
 
