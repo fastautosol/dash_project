@@ -1,0 +1,29 @@
+/* Filmszalag konténer effektus */
+.filmstrip-effect {
+    background-color: #111111; /* Klasszikus fekete filmalap */
+    padding: 20px 10px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    position: relative;
+    
+    /* Felső és alsó perforáció (lyukak) elkészítése CSS mintával */
+    background-image: 
+        linear-gradient(to right, #222 70%, transparent 70%),
+        linear-gradient(to right, #222 70%, transparent 70%);
+    background-position: top center, bottom center;
+    background-size: 15px 8px; /* A kis lyukak mérete és távolsága */
+    background-repeat: repeat-x;
+}
+
+/* Biztosítjuk, hogy a belső elemek ne lógjanak rá a perforációra */
+.filmstrip-item {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Finom hover effekt: a videó picit kiemelkedik, ha ráközelítenek */
+.filmstrip-item:hover {
+    transform: scale(1.05);
+    z-index: 10;
+}
