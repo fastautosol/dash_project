@@ -66,7 +66,7 @@ def layout(model_slug=None, **kwargs):
                     html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
                     html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")])]),
                 ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
-        ], fluid=True, className="px-5 py-2")
+        ], fluid=True, className="px-5 py-1")
 
 
 # --- EREDETI FOTÓ MODAL CALLBACK ---
