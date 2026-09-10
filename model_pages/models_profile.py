@@ -1,4 +1,4 @@
-# 2026.09.10  12.00
+# 2026.09.10  14.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
@@ -39,18 +39,16 @@ def layout(model_slug=None, **kwargs):
                 ], className="text-center py-4",
             ),
 
-            # --- VIDEO PREVIEW STRIP (5 clips, link out to Fanvue) ---
+            # --- VIDEO PREVIEW STRIP (5 clips, link out to Fanvue with Filmstrip effect) ---
             html.Div(
                 [html.A(
-                        [html.Img(src=vid, style={"width": "200px", "height": "150px", "objectFit": "cover", "borderRadius": "15px", "display": "block"}),
-                        html.I(className="fa-solid fa-play", style={
-                            "position": "absolute", "top": "50%", "left": "50%", "transform": "translate(-50%, -50%)",
-                            "color": "white", "fontSize": "25px", "textShadow": "0 0 6px rgba(0,0,0,0.8)", "pointerEvents": "none"}),
-                        ], href=model["fanvue"], target="_blank", rel="noopener noreferrer", style={"position": "relative", "display": "inline-block", "cursor": "pointer"},
-                    )
+                        [html.Img(src=vid, style={"width": "200px", "height": "150px", "objectFit": "cover", "borderRadius": "4px", "display": "block"}),
+                        html.I(className="fa-solid fa-play", style={"position": "absolute", "top": "50%", "left": "50%", "transform": "translate(-50%, -50%)",
+                            "color": "white", "fontSize": "25px", "textShadow": "0 0 6px rgba(0,0,0,0.8)", "pointerEvents": "none"})], 
+                        href=model["fanvue"], target="_blank", rel="noopener noreferrer", 
+                        className="filmstrip-item", style={"position": "relative", "display": "inline-block", "cursor": "pointer"})
                     for vid in model["video_thumbs"]
-                ],
-                className="d-flex justify-content-center gap-3 flex-wrap mb-5",
+                ], className="d-flex justify-content-center gap-3 flex-wrap mb-5 filmstrip-effect",
             ) if model["video_thumbs"] else None,
 
             dbc.Row(thumbnails, className="g-5"),
