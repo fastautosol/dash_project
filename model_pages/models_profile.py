@@ -1,4 +1,4 @@
-# 2026.09.10  14.00
+# 2026.09.10  15.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
@@ -12,8 +12,8 @@ def layout(model_slug=None, **kwargs):
     if model is None:
         return dbc.Container([
             html.H3("Model not found", className="text-light text-center mt-5"),
-            html.Div(dcc.Link("<-- Back to all models", href="/", className="text-info"), className="text-center mt-3"),
-        ], className="py-5")
+            html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left-long me-2"), "Back to all models"], href="/", className="back-btn-modern"), className="mb-1"),    
+        ], className="py-3")
 
     if model["photos"]:
         thumbnails = [
