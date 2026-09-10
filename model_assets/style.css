@@ -1,3 +1,28 @@
+/* Modern Vissza gomb stílus */
+.back-btn-modern {
+    display: inline-flex;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.6) !important; /* Finom, nem hivalkodó fehér */
+    text-decoration: none !important; /* Aláhúzás eltávolítása */
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 30px; /* Teljesen lekerekített szélek */
+    background: rgba(255, 255, 255, 0.03); /* Minimális áttetsző háttér */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Halvány keret */
+    transition: all 0.25s ease-in-out;
+}
+
+/* Hover (rámutatási) effektus */
+.back-btn-modern:hover {
+    color: #0dcaf0 !important; /* Dash Bootstrap info kék színére vált */
+    background: rgba(13, 202, 240, 0.1); /* Halvány kék izzás a háttérben */
+    border-color: rgba(13, 202, 240, 0.3); /* Erősebb kék keret */
+    transform: translateX(-4px); /* Finoman megmozdul balra, jelezve az irányt */
+    box-shadow: 0 4px 15px rgba(13, 202, 240, 0.15);
+}
+
+
 /* Új, jól látható filmszalag konténer effektus */
 .filmstrip-effect {
     background-color: #1e1e24; /* Világosabb, karbon-szürke alap, ami elüt a lila háttértől */
