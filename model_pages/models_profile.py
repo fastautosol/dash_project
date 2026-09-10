@@ -20,7 +20,7 @@ def layout(model_slug=None, **kwargs):
             dbc.Col(
                 html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
                     style={"width": "100%",  "aspectRatio": "3 / 4",  "objectFit": "cover", "objectPosition": "top", "borderRadius": "10px", "cursor": "pointer",
-                        "boxShadow": "0 15px 30px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.2)"},
+                        "boxShadow": "0 20px 30px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.2)"},
                 ), xs=6, sm=4, md=2, className="mb-3") for i, photo in enumerate(model["photos"])
         ]
     else:
