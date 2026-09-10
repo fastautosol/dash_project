@@ -1,11 +1,12 @@
 /* Új, jól látható filmszalag konténer effektus */
 .filmstrip-effect {
     background-color: #1e1e24; /* Világosabb, karbon-szürke alap, ami elüt a lila háttértől */
-    padding: 25px 20px;
-    border-radius: 6px;
+    padding: 20px 20px;
+    border-radius: 10px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
     position: relative;
-    width: 100%; /* Biztosítja, hogy szépen átérje a teljes szélességet */
+    width: 80%;
+    margin: 0 auto 3rem auto;
     border-top: 2px solid #2d2d35;
     border-bottom: 2px solid #2d2d35;
     
@@ -20,8 +21,8 @@
 
 /* A belső videó elemek elhelyezkedése a szalagon belül */
 .filmstrip-item {
-    margin-top: 12px;
-    margin-bottom: 12px;
+    margin-top: 5px;
+    margin-bottom: 5px;
     transition: all 0.2s ease-in-out;
 }
 
