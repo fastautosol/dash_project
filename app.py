@@ -15,7 +15,7 @@ import apis.youtube_api as youtube_api
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets",
     suppress_callback_exceptions=True,
-    external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"],
+    external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css"],
     external_scripts=["https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"])
 
 # ----- 2. SIDEBAR & LAYOUT — must be defined BEFORE the WSGI mount -----
