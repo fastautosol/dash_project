@@ -12,7 +12,7 @@ def layout(model_slug=None, **kwargs):
     if model is None:
         return dbc.Container([
             html.H3("Model not found", className="text-light text-center mt-5"),
-            html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back to all models"], href="/", className="back-btn-modern"), className="mb-2"),
+            html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back to all models"],  href="/",  className="back-btn-modern"), className="mb-2"),
         ], className="py-3")
 
     if model["photos"]:
@@ -28,16 +28,19 @@ def layout(model_slug=None, **kwargs):
 
     return dbc.Container(
         [
-            html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back to all models"], href="/", className="back-btn-modern"), className="mb-2"),
-      
+            html.Div(
+                [dcc.Link( [html.I(className="fa-solid fa-arrow-left me-2"), "Back to all models"], href="/", className="back-btn-modern"),
+                html.H2(model["name"], className="text-light fw-bold mb-0"),
+                html.Div(style={"width": "160px"})], className="d-flex justify-content-between align-items-center px-2 py-3",
+            ),
+
             html.Div(
                 [
-                html.H2(model["name"], className="text-light fw-bold mb-1"),
                 html.P(model["niche"], className="text-info mb-1"),
                 html.Div(    
                     html.A(f"{model['name']}'s Exclusive Photos & Videos",  href=model["fanvue"], id="fanvue-link-btn",
                         target="_blank", rel="noopener noreferrer", className="btn btn-info btn-lg fw-bold", style={"width": "30%"}), className="text-center"),                                     
-                ], className="text-center py-4",
+                ], className="text-center pb-4",
             ),
 
             # --- VIDEO PREVIEW STRIP (5 clips, link out to Fanvue with Filmstrip effect) ---
