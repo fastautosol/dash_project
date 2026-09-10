@@ -1,4 +1,4 @@
-# 2026.09.09  18.00
+# 2026.09.10  12.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update, clientside_callback
 import dash_bootstrap_components as dbc
@@ -18,8 +18,8 @@ def layout(model_slug=None, **kwargs):
     if model["photos"]:
         thumbnails = [
             dbc.Col(
-                html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
-                    style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "borderRadius": "10px", "cursor": "pointer"},
+                html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0, className="shadow-sm",
+                    style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "objectPosition": "top", "borderRadius": "10px", "cursor": "pointer"},
                 ), xs=6, sm=4, md=2, className="mb-3") for i, photo in enumerate(model["photos"])
         ]
     else:
