@@ -1,29 +1,33 @@
-/* Filmszalag konténer effektus */
+/* Új, jól látható filmszalag konténer effektus */
 .filmstrip-effect {
-    background-color: #111111; /* Klasszikus fekete filmalap */
-    padding: 20px 10px;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    background-color: #1e1e24; /* Világosabb, karbon-szürke alap, ami elüt a lila háttértől */
+    padding: 25px 20px;
+    border-radius: 6px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
     position: relative;
+    width: 100%; /* Biztosítja, hogy szépen átérje a teljes szélességet */
+    border-top: 2px solid #2d2d35;
+    border-bottom: 2px solid #2d2d35;
     
-    /* Felső és alsó perforáció (lyukak) elkészítése CSS mintával */
+    /* VILÁGÍTÓ PERFORÁCIÓ: fehér kis lyukak, amik azonnal kitűnnek a sötétben */
     background-image: 
-        linear-gradient(to right, #222 70%, transparent 70%),
-        linear-gradient(to right, #222 70%, transparent 70%);
-    background-position: top center, bottom center;
-    background-size: 15px 8px; /* A kis lyukak mérete és távolsága */
+        linear-gradient(to right, rgba(255, 255, 255, 0.15) 60%, transparent 60%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.15) 60%, transparent 60%);
+    background-position: top 8px center, bottom 8px center; /* Kicsit beljebb hozzuk az élektől */
+    background-size: 20px 8px; /* 20px-enként ismétlődő 8px magas fehér lyukak */
     background-repeat: repeat-x;
 }
 
-/* Biztosítjuk, hogy a belső elemek ne lógjanak rá a perforációra */
+/* A belső videó elemek elhelyezkedése a szalagon belül */
 .filmstrip-item {
-    margin-top: 8px;
-    margin-bottom: 8px;
-    transition: transform 0.2s ease-in-out;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease-in-out;
 }
 
-/* Finom hover effekt: a videó picit kiemelkedik, ha ráközelítenek */
+/* Hover effekt: a videó picit megemelkedik és kap egy belső ragyogást */
 .filmstrip-item:hover {
     transform: scale(1.05);
     z-index: 10;
+    filter: brightness(1.1);
 }
