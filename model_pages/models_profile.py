@@ -12,7 +12,20 @@ def layout(model_slug=None, **kwargs):
     if model is None:
         return dbc.Container([
             html.H3("Model not found", className="text-light text-center mt-5"),
-            html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left-long me-2"), "Back to all models"], href="/", className="back-btn-modern"), className="mb-1"),    
+
+                        html.Div(
+                dcc.Link(
+                    [
+                        html.I(className="fa-solid fa-arrow-left-long me-2"), 
+                        "Back to all models"
+                    ], 
+                    href="/", 
+                    className="back-btn-modern" 
+                ),
+                className="mb-2" 
+            ),
+
+         
         ], className="py-3")
 
     if model["photos"]:
