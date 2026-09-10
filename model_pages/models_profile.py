@@ -1,6 +1,6 @@
 # 2026.09.10  12.00
 import dash
-from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update, clientside_callback
+from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
 from model_pages.models import MODELS_BY_SLUG
 
@@ -18,8 +18,9 @@ def layout(model_slug=None, **kwargs):
     if model["photos"]:
         thumbnails = [
             dbc.Col(
-                html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0, className="shadow-lg",
-                    style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "objectPosition": "top", "borderRadius": "10px", "cursor": "pointer"},
+                html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
+                    style={"width": "100%",  "aspectRatio": "3 / 4",  "objectFit": "cover", "objectPosition": "top", "borderRadius": "10px", "cursor": "pointer",
+                        "boxShadow": "0 15px 30px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.2)"},
                 ), xs=6, sm=4, md=2, className="mb-3") for i, photo in enumerate(model["photos"])
         ]
     else:
@@ -27,10 +28,6 @@ def layout(model_slug=None, **kwargs):
 
     return dbc.Container(
         [
-            # Két rejtett komponens az adatok átadásához a JavaScriptnek
-            html.Div(id="trigger-page-view", style={"display": "none"}),
-            dcc.Store(id="current-model-slug", data=model_slug),
-
             dcc.Link("<-- Back to all models", href="/", className="text-muted small"),
             html.Div(
                 [
@@ -68,34 +65,6 @@ def layout(model_slug=None, **kwargs):
                     html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")])]),
                 ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
         ], fluid=True, className="px-4 py-4")
-
-
-# --- PIXEL KLIENSOLDALI CALLBACKEK ---
-# 1. PageView mérése automatikusan az oldal betöltődésekor
-clientside_callback(
-    """
-    function(slug) {
-        if (slug && window.trackModelPage) { window.trackModelPage(slug);}
-        return "";
-    }
-    """,
-    Output("trigger-page-view", "children"),
-    Input("current-model-slug", "data")
-)
-
-# 2. Fanvue gombkattintás mérése
-clientside_callback(
-    """
-    function(n_clicks, slug) {
-        if (n_clicks && window.trackFanvueClick) { window.trackFanvueClick(slug);}
-        return no_update;
-    }
-    """,
-    Output("fanvue-link-btn", "id"), # Technikai kimenet, nem változtat semmit
-    Input("fanvue-link-btn", "n_clicks"),
-    State("current-model-slug", "data"),
-    prevent_initial_call=True
-)
 
 
 # --- EREDETI FOTÓ MODAL CALLBACK ---
