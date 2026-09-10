@@ -55,7 +55,7 @@ def layout(model_slug=None, **kwargs):
                 ], className="d-flex justify-content-center gap-3 flex-wrap mb-5 filmstrip-effect",
             ) if model["video_thumbs"] else None,
 
-            dbc.Row(thumbnails, className="g-5"),
+            dbc.Row(thumbnails, className="g-4"),
 
             dbc.Modal(
                 [dbc.ModalHeader( dbc.ModalTitle(model["name"]), close_button=True),
@@ -66,7 +66,7 @@ def layout(model_slug=None, **kwargs):
                     html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
                     html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")])]),
                 ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
-        ], fluid=True, className="px-2 py-2")
+        ], fluid=True, className="px-5 py-2")
 
 
 # --- EREDETI FOTÓ MODAL CALLBACK ---
