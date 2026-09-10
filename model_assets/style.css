@@ -1,27 +1,27 @@
-/* Modern Vissza gomb stílus */
+/* Modern Vissza gomb stílus - Javított, DARKLY-kompatibilis verzió */
 .back-btn-modern {
-    display: inline-flex;
-    align-items: center;
-    color: rgba(255, 255, 255, 0.6) !important; /* Finom, nem hivalkodó fehér */
-    text-decoration: none !important; /* Aláhúzás eltávolítása */
-    font-size: 0.9rem;
-    font-weight: 500;
-    padding: 8px 16px;
-    border-radius: 30px; /* Teljesen lekerekített szélek */
-    background: rgba(255, 255, 255, 0.03); /* Minimális áttetsző háttér */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Halvány keret */
-    transition: all 0.25s ease-in-out;
+    display: inline-flex !important;
+    align-items: center !important;
+    color: rgba(255, 255, 255, 0.7) !important; 
+    text-decoration: none !important; 
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    padding: 8px 18px !important;
+    border-radius: 30px !important; 
+    background: rgba(255, 255, 255, 0.05) !important; 
+    border: 1px solid rgba(255, 255, 255, 0.15) !important; 
+    transition: all 0.25s ease-in-out !important;
 }
 
 /* Hover (rámutatási) effektus */
 .back-btn-modern:hover {
-    color: #0dcaf0 !important; /* Dash Bootstrap info kék színére vált */
-    background: rgba(13, 202, 240, 0.1); /* Halvány kék izzás a háttérben */
-    border-color: rgba(13, 202, 240, 0.3); /* Erősebb kék keret */
-    transform: translateX(-4px); /* Finoman megmozdul balra, jelezve az irányt */
-    box-shadow: 0 4px 15px rgba(13, 202, 240, 0.15);
+    color: #0dcaf0 !important; 
+    background: rgba(13, 202, 240, 0.15) !important; 
+    border-color: rgba(13, 202, 240, 0.4) !important; 
+    transform: translateX(-4px) !important; 
+    box-shadow: 0 4px 20px rgba(13, 202, 240, 0.2) !important;
 }
-
 
 /* Új, jól látható filmszalag konténer effektus */
 .filmstrip-effect {
