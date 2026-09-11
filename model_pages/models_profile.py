@@ -28,12 +28,11 @@ def layout(model_slug=None, **kwargs):
 
     return dbc.Container(
         [
-            html.Div(
-                [dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back"], href="/", className="back-btn-modern"),
-                html.Div(
-                    html.H2(model["name"], className="text-light fw-bold mb-0 name-header"), style={"flex": "1", "minWidth": "0", "textAlign": "center", "overflow": "hidden"}),
-                html.Div(style={"width": "160px"}, className="d-none d-md-block")], className="d-flex justify-content-between align-items-center px-2 py-3",
-            ),
+           html.Div(
+            [html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back"], href="/", className="back-btn-modern")),
+            html.Div(html.H2(model["name"], className="text-light fw-bold mb-0 name-header"), style={"textAlign": "center", "overflow": "hidden"}),
+            html.Div(), 
+        ], className="px-2 py-3", style={"display": "grid", "gridTemplateColumns": "1fr auto 1fr", "alignItems": "center", "gap": "10px"}),
 
             html.Div(
                 [
