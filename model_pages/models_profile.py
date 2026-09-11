@@ -32,7 +32,7 @@ def layout(model_slug=None, **kwargs):
             [html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back"], href="/", className="back-btn-modern")),
             html.Div(html.H2(model["name"], className="text-light fw-bold mb-0 name-header"), style={"textAlign": "center", "overflow": "hidden"}),
             html.Div(), 
-        ], className="px-2 py-3", style={"display": "grid", "gridTemplateColumns": "1fr auto 1fr", "alignItems": "center", "gap": "10px"}),
+            ], className="px-2 py-3", style={"display": "grid", "gridTemplateColumns": "1fr auto 1fr", "alignItems": "center", "gap": "10px"}),
 
             html.Div(
                 [
