@@ -29,9 +29,10 @@ def layout(model_slug=None, **kwargs):
     return dbc.Container(
         [
             html.Div(
-                [dcc.Link( [html.I(className="fa-solid fa-arrow-left me-2"), "Back"], href="/", className="back-btn-modern"),
-                html.H2(model["name"], className="text-light fw-bold mb-0"),
-                html.Div(style={"width": "160px"})], className="d-flex justify-content-between align-items-center px-2 py-3",
+                [dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back"], href="/", className="back-btn-modern"),
+                html.Div(
+                    html.H2(model["name"], className="text-light fw-bold mb-0 name-header"), style={"flex": "1", "minWidth": "0", "textAlign": "center", "overflow": "hidden"}),
+                html.Div(style={"width": "160px"}, className="d-none d-md-block")], className="d-flex justify-content-between align-items-center px-2 py-3",
             ),
 
             html.Div(
