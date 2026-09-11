@@ -12,7 +12,7 @@ def layout(model_slug=None, **kwargs):
     if model is None:
         return dbc.Container([
             html.H3("Model not found", className="text-light text-center mt-5"),
-            html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back to all models"],  href="/",  className="back-btn-modern"), className="mb-2"),
+            html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back"],  href="/",  className="back-btn-modern"), className="mb-2"),
         ], className="py-3")
 
     if model["photos"]:
@@ -38,8 +38,8 @@ def layout(model_slug=None, **kwargs):
                 [
                 html.P(model["niche"], className="text-info mb-1"),
                 html.Div(    
-                    html.A(f"{model['name']}'s Exclusive Photos & Videos",  href=model["fanvue"], id="fanvue-link-btn",
-                        target="_blank", rel="noopener noreferrer", className="btn btn-info btn-lg fw-bold", style={"width": "30%"}), className="text-center"),                                     
+                    html.A(f"{model['name']}'s Exclusive content",  href=model["fanvue"], id="fanvue-link-btn",
+                        target="_blank", rel="noopener noreferrer", className="btn btn-info btn-lg fw-bold", style={"width": "80%"}), className="text-center"),                                     
                 ], className="text-center pb-4",
             ),
 
@@ -66,7 +66,7 @@ def layout(model_slug=None, **kwargs):
                     html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
                     html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")])]),
                 ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
-        ], fluid=True, className="px-5 py-1")
+        ], fluid=True, className="px-3 py-1")
 
 
 # --- EREDETI FOTÓ MODAL CALLBACK ---
