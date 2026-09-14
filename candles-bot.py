@@ -1,4 +1,4 @@
-# 2026.08.27  15.00
+# 2026.09.14  14.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -23,9 +23,9 @@ XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT",  "COIN
 
 ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
 
-POLL_INTERVAL = 75       # Seconds between DB upserts (fast, no artificial delay)
-#TICKER_INTERVAL = 300    # Seconds between ticker cache refreshes (5 mins)
-CLEANUP_HOURS = 60       # Hours of data to retain
+POLL_INTERVAL = 75        # Seconds between DB upserts
+TICKER_INTERVAL = 300     # Seconds between ticker cache refreshes (funding/OI/turnover)
+CLEANUP_HOURS = 60        # Hours of data to retain
 
 # =========================
 # SHARED STATE
@@ -33,6 +33,8 @@ CLEANUP_HOURS = 60       # Hours of data to retain
 class MarketState:
     def __init__(self) -> None:
         self.ohlcv: dict[str, list] = {}
+        self.ticker_cache: dict[str, dict] = {}
+        self.last_ticker_fetch: float = 0.0
         self.last_cleanup: float = 0.0
         self.pipeline_lock = asyncio.Lock()  # Serialize dlt pipeline calls
 
@@ -53,8 +55,33 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
             await asyncio.sleep(3)
 
 # =========================
+# TICKER CACHE REFRESH (funding / OI / turnover / 24h change)
+# =========================
+async def refresh_ticker_cache(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) -> None:
+    """Refreshes funding/OI/turnover/vwap data every TICKER_INTERVAL seconds.
+    Uses REST fetch_tickers (cheap, batched) rather than per-candle REST calls."""
+    while True:
+        try:
+            linear_tickers = await ex_linear.fetch_tickers(symbols=CRYPTO_SYMBOLS)
+            spot_tickers = await ex_spot.fetch_tickers(symbols=XSTOCK_SYMBOLS)
+            state.ticker_cache = {**linear_tickers, **spot_tickers}
+            state.last_ticker_fetch = time.time()
+        except Exception as e:
+            log.warning(f"[TICKER] refresh failed: {e}")
+        await asyncio.sleep(TICKER_INTERVAL)
+
+# =========================
 # DB WRITER & CLEANUP LOOP
 # =========================
+def _safe_float(value, default=0.0) -> float:
+    """Never lets a None/missing field crash record building — no silent bad records."""
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
 async def db_writer_loop(pipeline) -> None:
     """Upserts the latest state + ticker stats to DB every POLL_INTERVAL seconds."""
     while True:
@@ -69,14 +96,24 @@ async def db_writer_loop(pipeline) -> None:
             if not bar:
                 continue
 
+            ticker = state.ticker_cache.get(sym, {})
+            info = ticker.get("info", {}) if ticker else {}
+
             records.append({
-                "symbol":        sym,
-                "timestamp":     datetime.fromtimestamp(bar[0] / 1000, tz=UTC),
-                "open":          float(bar[1] or 0),
-                "high":          float(bar[2] or 0),
-                "low":           float(bar[3] or 0),
-                "close":         float(bar[4] or 0),
-                "volume":        float(bar[5] or 0)
+                "symbol":         sym,
+                "timestamp":      datetime.fromtimestamp(bar[0] / 1000, tz=UTC),
+                # Raw floats — do NOT round to 2 decimals here, sub-$1 symbols
+                # (SUI, ZEN, etc.) would collapse to 0.00 and lose precision.
+                "open":           _safe_float(bar[1]),
+                "high":           _safe_float(bar[2]),
+                "low":            _safe_float(bar[3]),
+                "close":          _safe_float(bar[4]),
+                "volume":         _safe_float(bar[5]),
+                "vwap":           _safe_float(ticker.get("vwap")) if ticker else None,
+                "turnover24h":    _safe_float(info.get("turnover24h")),
+                "price24hpcnt":   _safe_float(info.get("price24hPcnt")),
+                "funding":        _safe_float(info.get("fundingRate") or info.get("lastFundingRate")),
+                "oi":             _safe_float(info.get("openInterest")),
             })
 
         # 2. Upsert to database (Single unified table, just like the old bot)
@@ -97,7 +134,7 @@ async def db_writer_loop(pipeline) -> None:
                         with pipeline.sql_client() as client:
                             tname = client.make_qualified_table_name("bybit_candles")
                             client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
-                    
+
                     await asyncio.to_thread(_cleanup)
                 log.info(f"[CLEANUP] Removed data older than {CLEANUP_HOURS}h")
             except Exception as e:
@@ -130,6 +167,9 @@ async def main() -> None:
     for sym in XSTOCK_SYMBOLS:
         tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_spot, sym), name=f"ws-spot-{sym}"))
 
+    # Start ticker cache refresher (funding / OI / turnover — every 5 min, REST)
+    tasks.append(asyncio.create_task(refresh_ticker_cache(ex_linear, ex_spot), name="ticker-cache"))
+
     # Start unified DB writer
     tasks.append(asyncio.create_task(db_writer_loop(pipeline), name="db-writer"))
 
@@ -145,4 +185,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-
