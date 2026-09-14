@@ -1,4 +1,5 @@
 # 2026.09.14  14.00
+# 2026.09.14  15.30
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -27,6 +28,16 @@ POLL_INTERVAL = 75        # Seconds between DB upserts
 TICKER_INTERVAL = 300     # Seconds between ticker cache refreshes (funding/OI/turnover)
 CLEANUP_HOURS = 60        # Hours of data to retain
 
+def to_linear(symbol: str) -> str:
+    """ccxt's unified symbol for a bybit USDT-margined linear perpetual is
+    'BASE/QUOTE:SETTLE' (e.g. 'BTC/USDT:USDT') — NOT the plain spot-style
+    'BTC/USDT'. Passing the plain form resolves to the SPOT market instead
+    (silently — no error), which is why funding/OI always come back as 0/None:
+    spot tickers simply don't carry those fields. Storage keys (symbol column,
+    dict keys) stay in the plain 'BTC/USDT' form for compatibility with the
+    existing dashboard/DB; only the outgoing ccxt calls use this suffixed form."""
+    return f"{symbol}:USDT"
+
 # =========================
 # SHARED STATE
 # =========================
@@ -43,11 +54,14 @@ state = MarketState()
 # =========================
 # WEBSOCKET — OHLCV WATCHER
 # =========================
-async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
-    """Continuously watch 5m candles and update shared state in real-time."""
+async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, is_linear: bool) -> None:
+    """Continuously watch 5m candles and update shared state in real-time.
+    is_linear=True symbols are queried via their :USDT-suffixed ccxt symbol
+    (see to_linear()) but stored under the plain symbol key."""
+    ws_symbol = to_linear(symbol) if is_linear else symbol
     while True:
         try:
-            ohlcv = await exchange.watch_ohlcv(symbol, timeframe="5m", limit=1)
+            ohlcv = await exchange.watch_ohlcv(ws_symbol, timeframe="5m", limit=1)
             if ohlcv:
                 state.ohlcv[symbol] = ohlcv[-1]
         except Exception as e:
@@ -62,8 +76,15 @@ async def refresh_ticker_cache(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit)
     Uses REST fetch_tickers (cheap, batched) rather than per-candle REST calls."""
     while True:
         try:
-            linear_tickers = await ex_linear.fetch_tickers(symbols=CRYPTO_SYMBOLS)
+            linear_symbols = [to_linear(s) for s in CRYPTO_SYMBOLS]
+            linear_tickers_raw = await ex_linear.fetch_tickers(symbols=linear_symbols)
             spot_tickers = await ex_spot.fetch_tickers(symbols=XSTOCK_SYMBOLS)
+            # Remap ccxt's 'BTC/USDT:USDT' ticker keys back to plain 'BTC/USDT'
+            # so db_writer_loop can look them up by the same key used in ALL_SYMBOLS.
+            linear_tickers = {
+                sym: linear_tickers_raw[to_linear(sym)]
+                for sym in CRYPTO_SYMBOLS if to_linear(sym) in linear_tickers_raw
+            }
             state.ticker_cache = {**linear_tickers, **spot_tickers}
             state.last_ticker_fetch = time.time()
         except Exception as e:
@@ -159,13 +180,14 @@ async def main() -> None:
 
     tasks = []
 
-    # Start WebSocket watchers for Crypto
+    # Start WebSocket watchers for Crypto (linear perpetuals — is_linear=True
+    # so they're queried via the ':USDT'-suffixed ccxt symbol, see to_linear())
     for sym in CRYPTO_SYMBOLS:
-        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym), name=f"ws-linear-{sym}"))
+        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym, is_linear=True), name=f"ws-linear-{sym}"))
 
-    # Start WebSocket watchers for X-Stocks
+    # Start WebSocket watchers for X-Stocks (genuinely spot — plain symbol is correct)
     for sym in XSTOCK_SYMBOLS:
-        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_spot, sym), name=f"ws-spot-{sym}"))
+        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_spot, sym, is_linear=False), name=f"ws-spot-{sym}"))
 
     # Start ticker cache refresher (funding / OI / turnover — every 5 min, REST)
     tasks.append(asyncio.create_task(refresh_ticker_cache(ex_linear, ex_spot), name="ticker-cache"))
