@@ -1,6 +1,7 @@
 ccxt
 httpx
 pandas
+pandas-ta-classic
 requests
 SQLAlchemy
 psycopg[binary]
