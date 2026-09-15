@@ -52,11 +52,8 @@ previous_state: dict[str, dict] = {}
 # =========================
 def fetch_symbol_df(symbol: str) -> pd.DataFrame | None:
     sql = text("""
-        SELECT timestamp, open, high, low, close, volume, turnover24h, price24hpcnt, funding, oi
-        FROM bybit_data.bybit_candles
-        WHERE symbol = :sym
-        ORDER BY timestamp DESC
-        LIMIT :lookback
+        SELECT timestamp, open, high, low, close, volume,  vwap, turnover24h, price24hpcnt, funding, oi
+        FROM bybit_data.bybit_candles WHERE symbol = :sym ORDER BY timestamp DESC LIMIT :lookback
     """)
     with engine.connect() as conn:
         df = pd.read_sql(sql, conn, params={"sym": symbol, "lookback": CANDLE_LOOKBACK})
@@ -65,14 +62,11 @@ def fetch_symbol_df(symbol: str) -> pd.DataFrame | None:
         return None  # not enough history yet for a stable EMA100
 
     df = df.sort_values("timestamp").reset_index(drop=True)
-    for col in ["open", "high", "low", "close", "volume"]:
+    for col in ["open", "high", "low", "close", "volume", "vwap"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df["ema_fast"] = ta.ema(df["close"], length=EMA_FAST)
     df["ema_slow"] = ta.ema(df["close"], length=EMA_SLOW)
-    # Session VWAP computed from the candle series itself — more reliable for
-    # entry-distance checks than the ticker's rolling 'vwap' field.
-    df["session_vwap"] = ta.vwap(high=df["high"], low=df["low"], close=df["close"], volume=df["volume"])
 
     return df
 
