@@ -1,4 +1,4 @@
-# 2026.09.15  15.00
+# 2026.09.15  16.00
 import asyncio
 import logging
 import time
@@ -22,9 +22,6 @@ WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"  # adjust if y
 
 POLL_INTERVAL = 300  # 5 min — matches the 5m candle timeframe and the ticker-cache refresh in candles-bot.py
 
-# Same crypto symbols as candles-bot.py's CRYPTO_SYMBOLS. The xstock symbols are
-# deliberately excluded — they showed near-zero real volume in the DB sample,
-# so EMA/VWAP signals on them would be meaningless.
 SYMBOLS = [
     "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "LTC/USDT", "ETC/USDT", "COMP/USDT",
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT", "NEAR/USDT", "AAVE/USDT", "ICP/USDT",
@@ -33,8 +30,8 @@ SYMBOLS = [
 EMA_FAST = 50
 EMA_SLOW = 100
 CANDLE_LOOKBACK = 300           # 5m bars pulled per symbol (~25h) — plenty for EMA100 to settle
-VWAP_MAX_DIST_PCT = 3.0         # only enter within X% of session VWAP — avoids chasing an extended move
-MIN_TURNOVER_24H = 1_000_000    # liquidity floor (USDT) — filters out thin books
+VWAP_MAX_DIST_PCT = 5.0         # only enter within X% of session VWAP — avoids chasing an extended move
+MIN_TURNOVER_24H = 3_000_000    # liquidity floor (USDT) — filters out thin books
 MIN_PRICE_CHANGE_PCT = 1.0      # below this the 24h move is noise, skip
 MAX_PRICE_CHANGE_PCT = 15.0     # above this it's an extended/overheated move, not a fresh trend entry
 
@@ -76,20 +73,20 @@ def fetch_symbol_df(symbol: str) -> pd.DataFrame | None:
 def evaluate_symbol(symbol: str, df: pd.DataFrame) -> dict | None:
     last = df.iloc[-1]
 
-    if pd.isna(last["ema_fast"]) or pd.isna(last["ema_slow"]) or pd.isna(last["session_vwap"]):
+    if pd.isna(last["ema_fast"]) or pd.isna(last["ema_slow"]) or pd.isna(last["vwap"]):
         return None
 
     close    = float(last["close"])
     ema_fast = float(last["ema_fast"])
     ema_slow = float(last["ema_slow"])
-    vwap     = float(last["session_vwap"])
+    vwap     = float(last["vwap"])
     turnover = float(last["turnover24h"] or 0)
     pcnt     = float(last["price24hpcnt"] or 0) * 100
     funding  = float(last["funding"] or 0)
     oi       = float(last["oi"] or 0)
 
     vwap_dist_pct = abs(close - vwap) / vwap * 100 if vwap else 999.0
-    trend_up      = close > ema_fast > ema_slow   # both alignment AND fast>slow — not just a crossover blip
+    trend_up      = close > ema_fast > ema_slow and close > vwap
     trend_break   = close < ema_fast
 
     liquidity_ok = turnover >= MIN_TURNOVER_24H
