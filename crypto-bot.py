@@ -34,7 +34,7 @@ EMA_FAST = 50
 EMA_SLOW = 100
 CANDLE_LOOKBACK = 300           # 5m bars pulled per symbol (~25h) — plenty for EMA100 to settle
 VWAP_MAX_DIST_PCT = 3.0         # only enter within X% of session VWAP — avoids chasing an extended move
-MIN_TURNOVER_24H = 5_000_000    # liquidity floor (USDT) — filters out thin books
+MIN_TURNOVER_24H = 1_000_000    # liquidity floor (USDT) — filters out thin books
 MIN_PRICE_CHANGE_PCT = 1.0      # below this the 24h move is noise, skip
 MAX_PRICE_CHANGE_PCT = 12.0     # above this it's an extended/overheated move, not a fresh trend entry
 
