@@ -6,12 +6,12 @@ import dlt
 # ---------------- CONFIG ----------------
 N8N_WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/meme-alert"
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-POLL_INTERVAL = 90                 # main loop cadence (s)
-DISCOVERY_INTERVAL = 300           # discover new tokens every 5 min
-WATCHLIST_EXPIRY_MINS = 30         # max time a token stays on watchlist
-CLEANUP_HOURS = 12                 # delete DB rows older than this
-MAX_DISCOVERY_TOKENS = 20          # tokens processed per discovery cycle
-MAX_TOKENS_PER_REQUEST = 30        # DexScreener multi-token limit
+POLL_INTERVAL = 900                 # main loop cadence (s)
+DISCOVERY_INTERVAL = 3600           # discover new tokens every 60 min
+WATCHLIST_EXPIRY_MINS = 30          # max time a token stays on watchlist
+CLEANUP_HOURS = 12                  # delete DB rows older than this
+MAX_DISCOVERY_TOKENS = 20           # tokens processed per discovery cycle
+MAX_TOKENS_PER_REQUEST = 30         # DexScreener multi-token limit
 
 HTTP_TIMEOUT = aiohttp.ClientTimeout(total=20, connect=10, sock_read=15)
 USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"  "(KHTML, like Gecko) Chrome/151.0 Safari/537.36")
