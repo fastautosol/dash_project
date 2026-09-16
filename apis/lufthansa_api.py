@@ -1,4 +1,4 @@
-# 2026.05.12  9.00
+# 2026.09.16  10.00
 import os
 import httpx
 import asyncio
@@ -108,16 +108,13 @@ async def get_flightroute_details(flight_date: str):
         clean_data.append(filtered)
     
     # --------------------------------------------------------------------------------------------------
-    pipeline = dlt.pipeline(pipeline_name="lufthansa_ingest", 
-                            destination=dlt.destinations.postgres(credentials=DB_CONFIG), 
-                            dataset_name="bronze")
+    pipeline = dlt.pipeline(pipeline_name="lufthansa_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze")
     try:
-        load_info = pipeline.run(flights_resource(clean_data), write_disposition="merge", 
-                                 primary_key=["route_key", "departure__scheduled__date", "departure__scheduled__time"])
+        load_info = pipeline.run(flights_resource(clean_data), write_disposition="merge", primary_key=["route_key", "departure__scheduled__date", "departure__scheduled__time"])
 
     except PipelineStepFailed as e:    
         if e.step == "load" or "does not exist" in str(e).lower():
-            pipeline.drop_pending_packages()
+            pipeline.abort_packages()
             load_info = pipeline.run(flights_resource(clean_data), write_disposition="append")
         else:
             raise
