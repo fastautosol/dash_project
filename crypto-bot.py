@@ -1,4 +1,4 @@
-# 2026.09.15  16.00
+# 2026.09.16  10.00
 import asyncio
 import logging
 import time
@@ -20,7 +20,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 WEBHOOK_URL = "https://n8n.fastautosol.com/webhook/crypto-alerts"  # adjust if you want a dedicated n8n endpoint for EMA signals
 
-POLL_INTERVAL = 300  # 5 min — matches the 5m candle timeframe and the ticker-cache refresh in candles-bot.py
+POLL_INTERVAL = 150  
 
 SYMBOLS = [
     "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "LTC/USDT", "ETC/USDT", "COMP/USDT",
@@ -144,7 +144,8 @@ def evaluate_symbol(symbol: str, df: pd.DataFrame) -> dict | None:
 async def send_webhook(payload: dict):
     async with webhook_semaphore:
         try:
-            resp = await http_client.post(WEBHOOK_URL, json=payload)
+            webhook_payload = {**payload, "timestamp": payload["timestamp"].isoformat()}
+            resp = await http_client.post(WEBHOOK_URL, json=webhook_payload)
             if resp.status_code == 200:
                 log.info(f"[WEBHOOK] {payload['signal_type']} sent for {payload['symbol']}")
             else:
@@ -176,20 +177,14 @@ async def check_all_symbols():
 async def main():
     global http_client, pipeline
     http_client = httpx.AsyncClient(timeout=10.0)
-    pipeline = dlt.pipeline(
-        pipeline_name="crypto_ema_signals",
-        destination=dlt.destinations.postgres(credentials=DB_URL),
-        dataset_name="bybit_data")
+    pipeline = dlt.pipeline(pipeline_name="crypto_ema_signals", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bybit_data")
     pipeline.drop_pending_packages()
 
     try:
         log.info(f"EMA signal bot activated. Checking {len(SYMBOLS)} symbols every {POLL_INTERVAL}s.")
         while True:
-            start = time.time()
             await check_all_symbols()
-            elapsed = time.time() - start
-            log.info(f"Loop completed in {elapsed:.2f}s")
-            await asyncio.sleep(max(0, POLL_INTERVAL - elapsed))
+            await asyncio.sleep(POLL_INTERVAL)
     except asyncio.CancelledError:
         log.info("Shutdown requested.")
     finally:
