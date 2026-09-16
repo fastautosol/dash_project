@@ -178,7 +178,7 @@ async def main():
     global http_client, pipeline
     http_client = httpx.AsyncClient(timeout=10.0)
     pipeline = dlt.pipeline(pipeline_name="crypto_ema_signals", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bybit_data")
-    pipeline.drop_pending_packages()
+    pipeline.abort_packages()
 
     try:
         log.info(f"EMA signal bot activated. Checking {len(SYMBOLS)} symbols every {POLL_INTERVAL}s.")
