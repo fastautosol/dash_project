@@ -85,12 +85,8 @@ def get_movie_details(movie_id: int) -> dict | None:
     return tmdb_get(f"movie/{movie_id}", {"append_to_response": "reviews", "language": "en-US"})
 
 
-@dlt.resource(
-    name="tmdb_movies",
-    write_disposition="merge",
-    primary_key="movie_id",
-    # a json hint miatt a dlt NEM bontja külön child táblába a listát, hanem jsonb oszlopba teszi
-    columns={"user_reviews": {"data_type": "json"}})
+@dlt.resource(name="tmdb_movies_raw", write_disposition="merge", primary_key="movie_id", columns={"user_reviews": {"data_type": "json"}})
+
 def fetch_movies(max_movies: int = 20, updated_at=dlt.sources.incremental("updated_at")):
     """Filmenként EGY sor: metaadatok + user_reviews (jsonb)."""
     now = datetime.now(timezone.utc)
@@ -113,6 +109,7 @@ def fetch_movies(max_movies: int = 20, updated_at=dlt.sources.incremental("updat
             continue
 
         reviews = m.get("reviews", {}).get("results", [])
+        credits = m.get("credits", {})
         yield {
             "movie_id": m.get("id"),
             "title": m.get("title"),
@@ -120,10 +117,22 @@ def fetch_movies(max_movies: int = 20, updated_at=dlt.sources.incremental("updat
             "revenue": m.get("revenue", 0),
             "release_date": m.get("release_date"),
             "vote_average": m.get("vote_average", 0.0),
-            "overview": clean_text(m.get("overview", "")),      # szöveg RAG-hoz (1. szint)
-            # jsonb: a kritikák tisztított szövege RAG-hoz (2. szint)
-            "user_reviews": [clean_text(r["content"])[:MAX_REVIEW_CHARS]
-                             for r in reviews if r.get("content")],
+            "overview": clean_text(m.get("overview", "")),   
+            "user_reviews": [clean_text(r["content"])[:MAX_REVIEW_CHARS] for r in reviews if r.get("content")],
+            "original_title": m.get("original_title"),
+            "original_language": m.get("original_language"),
+            "tagline": m.get("tagline"),
+            "runtime": m.get("runtime"),
+            "status": m.get("status"),
+            "popularity": m.get("popularity"),
+            "vote_count": m.get("vote_count"),
+            "imdb_id": m.get("imdb_id"),
+            "poster_path": m.get("poster_path"),
+            "collection": (m.get("belongs_to_collection") or {}).get("name"),
+            "genres": [g["name"] for g in m.get("genres", [])],
+            "keywords": [k["name"] for k in m.get("keywords", {}).get("keywords", [])],
+            "director": next((c["name"] for c in credits.get("crew", []) if c.get("job") == "Director"), None),
+            "top_cast": [c["name"] for c in credits.get("cast", [])[:10]],
             "processed": False,
             "updated_at": ingested_at,
         }
