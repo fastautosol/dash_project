@@ -4,6 +4,9 @@ import requests
 from datetime import datetime, timedelta
 import time
 
+from fastapi import APIRouter
+router = APIRouter()
+
 # TMDB API Hosszú Bearer Token (ami eyJ-vel kezdődik)
 TMDB_API_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2NmNhZGRhZmFlZTExMGU4ZDZiNzEzNjkxZTA4N2E5NiIsIm5iZiI6MTc5MTIwNjk4OC40NTIsInN1YiI6IjZhYzNhNjRjODU4MTM4MmU0OTQ1NWI2NSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sJPOOZ-NQNlYCDPMqqe3ikQUxjK6USitksUuCB6qyFI"
 
