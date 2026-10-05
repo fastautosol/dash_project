@@ -82,7 +82,7 @@ def get_changed_movie_ids(start_date: str, end_date: str, max_movies: int) -> li
 
 def get_movie_details(movie_id: int) -> dict | None:
     """Részletes adatok + user reviewk egy hívásban (append_to_response)."""
-    return tmdb_get(f"movie/{movie_id}", {"append_to_response": "reviews", "language": "en-US"})
+    return tmdb_get(f"movie/{movie_id}", {"append_to_response": "reviews,credits,keywords", "language": "en-US"})
 
 
 @dlt.resource(name="tmdb_movies_raw", write_disposition="merge", primary_key="movie_id", columns={"user_reviews": {"data_type": "json"}})
