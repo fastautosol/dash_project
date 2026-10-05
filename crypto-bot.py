@@ -181,7 +181,7 @@ async def main():
     pipeline.abort_packages()
 
     try:
-        log.info(f"EMA signal bot activated. Checking {len(SYMBOLS)} symbols every {POLL_INTERVAL}s.")
+        log.info(f"Signal bot activated. Checking {len(SYMBOLS)} symbols every {POLL_INTERVAL}s.")
         while True:
             await check_all_symbols()
             await asyncio.sleep(POLL_INTERVAL)
