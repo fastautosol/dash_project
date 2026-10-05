@@ -7,7 +7,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgresql-data:/var/lib/postgresql/data
+      - postgresql:/var/lib/postgresql
     environment:
       POSTGRES_USER: ${SERVICE_USER_POSTGRES}
       POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
@@ -210,7 +210,7 @@ services:
 volumes:
   n8n-data:
     driver: local
-  postgresql-data:
+  postgresql:
     driver: local
 networks:
   n8n-shared-net:
