@@ -1,8 +1,4 @@
-
-
-
-DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
-
+# 2026.10.05  18.00
 import dlt
 import requests
 from datetime import datetime, timedelta
@@ -10,7 +6,6 @@ import time
 
 # TMDB API Hosszú Bearer Token (ami eyJ-vel kezdődik)
 TMDB_API_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2NmNhZGRhZmFlZTExMGU4ZDZiNzEzNjkxZTA4N2E5NiIsIm5iZiI6MTc5MTIwNjk4OC40NTIsInN1YiI6IjZhYzNhNjRjODU4MTM4MmU0OTQ1NWI2NSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sJPOOZ-NQNlYCDPMqqe3ikQUxjK6USitksUuCB6qyFI"
-
 
 POSTGRES_CONN_STR = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 # ==============================================================================
@@ -44,11 +39,11 @@ def tmdb_source(api_token: str):
         response = requests.get(url, headers=headers)
         
         if response.status_code != 200:
-            print(f"⚠️ Hiba a TMDB API elérésekor: {response.status_code}")
+            print(f"Hiba a TMDB API elérésekor: {response.status_code}")
             return
 
         changes = response.json().get("results", [])
-        print(f"🎬 Összesen {len(changes)} módosult film található a TMDB-n {start_dt} óta.")
+        print(f"Összesen {len(changes)} módosult film található a TMDB-n {start_dt} óta.")
         
         # A gyors teszteléshez limitáljuk a kört a top 20-ra, hogy ne fusson sokáig
         for item in changes[:20]:
@@ -77,7 +72,7 @@ def tmdb_source(api_token: str):
                 }
             
             # Betartjuk a TMDB rate limitet (biztonsági játék, másodpercenként max 40 kérés)
-            time.sleep(0.05)
+            time.sleep(0.1)
 
     return get_movies
 
@@ -86,13 +81,14 @@ if __name__ == "__main__":
     # Létrehozzuk a dlt pipeline-t, és közvetlenül átadjuk neki a Postgres kapcsolati stringet credentials-ként
     pipeline = dlt.pipeline(
         pipeline_name="tmdb_data_pipeline",
-        destination="postgres",
-        credentials=POSTGRES_CONN_STR, # Így nem kell a secrets.toml fájl a teszthez
-        dataset_name="production_tables" # Ebbe a sémába fog pakolni a Postgresen belül
+        #destination="postgres",
+        destination=dlt.destinations.postgres(credentials=DB_CONFIG), 
+        #credentials=POSTGRES_CONN_STR, # Így nem kell a secrets.toml fájl a teszthez
+        dataset_name="bronze" # Ebbe a sémába fog pakolni a Postgresen belül
     )
     
-    print("🚀 dlt pipeline indul: TMDB -> PostgreSQL 18 (TOML nélkül)...")
+    print("dlt pipeline indul: TMDB -> PostgreSQL 18 (TOML nélkül)...")
     load_info = pipeline.run(tmdb_source(api_token=TMDB_API_TOKEN))
     
-    print("✅ Adatbetöltés sikeres!")
+    print("Adatbetöltés sikeres!")
     print(load_info)
