@@ -12,24 +12,15 @@ POSTGRES_CONN_STR = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 @dlt.source(name="tmdb")
 def tmdb_source(api_token: str):
-    """
-    TMDB Adatforrás dlt-hez, közvetlenül átadott API tokennel.
-    """
-    
+
     # Inkrementális kapuőr: Megjegyzi a Postgresben az utolsó sikeres futás dátumát.
     # Első futáskor az elmúlt 7 nap változásait nézi, utána már csak a legfrissebbet!
-    incremental_gate = dlt.sources.incremental(
-        "change_date", 
-        initial_value=(datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
-    )
+    incremental_gate = dlt.sources.incremental("change_date", initial_value=(datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d"))
 
     # 1. Erőforrás: A megváltozott filmek listája és azok részletes adatai
     @dlt.resource(name="movies", write_disposition="merge", primary_key="movie_id")
     def get_movies(change_date=incremental_gate):
-        headers = {
-            "accept": "application/json",
-            "Authorization": f"Bearer {api_token}"
-        }
+        headers = {"accept": "application/json", "Authorization": f"Bearer {api_token}"}
         
         start_dt = change_date.last_value
         end_dt = datetime.utcnow().strftime("%Y-%m-%d")
