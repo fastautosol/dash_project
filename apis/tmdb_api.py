@@ -86,7 +86,7 @@ def get_movie_details(movie_id: int) -> dict | None:
 
 
 @dlt.resource(
-    name="tmdb_movies_raw",
+    name="tmdb_movies",
     write_disposition="merge",
     primary_key="movie_id",
     # a json hint miatt a dlt NEM bontja külön child táblába a listát, hanem jsonb oszlopba teszi
