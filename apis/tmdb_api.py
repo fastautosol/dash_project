@@ -87,6 +87,7 @@ def get_movie_details(movie_id: int) -> dict | None:
 
 @dlt.resource(name="tmdb_movies_raw", write_disposition="merge", primary_key="movie_id", 
     columns={"user_reviews": {"data_type": "json"},
+             "genres":       {"data_type": "json"},
              "keywords":     {"data_type": "json"},
              "top_cast":     {"data_type": "json"}})
              
