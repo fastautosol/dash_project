@@ -75,7 +75,7 @@ if __name__ == "__main__":
         #destination="postgres",
         destination=dlt.destinations.postgres(credentials=DB_CONFIG), 
         #credentials=POSTGRES_CONN_STR, # Így nem kell a secrets.toml fájl a teszthez
-        dataset_name="bronze" # Ebbe a sémába fog pakolni a Postgresen belül
+        dataset_name="bronze_tmdb" # Ebbe a sémába fog pakolni a Postgresen belül
     )
     
     print("dlt pipeline indul: TMDB -> PostgreSQL 18 (TOML nélkül)...")
