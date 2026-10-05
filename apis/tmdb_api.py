@@ -85,8 +85,11 @@ def get_movie_details(movie_id: int) -> dict | None:
     return tmdb_get(f"movie/{movie_id}", {"append_to_response": "reviews,credits,keywords", "language": "en-US"})
 
 
-@dlt.resource(name="tmdb_movies_raw", write_disposition="merge", primary_key="movie_id", columns={"user_reviews": {"data_type": "json"}})
-
+@dlt.resource(name="tmdb_movies_raw", write_disposition="merge", primary_key="movie_id", 
+    columns={"user_reviews": {"data_type": "json"},
+             "keywords":     {"data_type": "json"},
+             "top_cast":     {"data_type": "json"}})
+             
 def fetch_movies(max_movies: int = 20, updated_at=dlt.sources.incremental("updated_at")):
     """Filmenként EGY sor: metaadatok + user_reviews (jsonb)."""
     now = datetime.now(timezone.utc)
