@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   postgresql:
-    image: pgvector/pgvector:pg17
+    image: pgvector/pgvector:pg18
     container_name: n8n-postgres
     restart: unless-stopped
     ports:
@@ -12,6 +12,7 @@ services:
       -c shared_buffers=256MB
       -c effective_cache_size=512MB
       -c work_mem=8MB
+      -c io_combine_limit=128 
     volumes:
       - postgresql-data:/var/lib/postgresql/data
     environment:
@@ -39,7 +40,7 @@ services:
 
 
   n8n:
-    image: docker.n8n.io/n8nio/n8n:2.41.6
+    image: docker.n8n.io/n8nio/n8n:2.41.7
     container_name: n8n
     restart: unless-stopped
     depends_on:
