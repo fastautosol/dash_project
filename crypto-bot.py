@@ -169,7 +169,7 @@ async def check_all_symbols():
 
     if db_records:
         try:
-            await asyncio.to_thread(pipeline.run, db_records, table_name="bybit_ema_signals", write_disposition="append")
+            await asyncio.to_thread(pipeline.run, db_records, table_name="bybit_signals", write_disposition="append")
             log.info(f"[POSTGRES] Logged {len(db_records)} EMA signal(s)")
         except Exception as e:
             log.error(f"[POSTGRES ERROR] {e}")
