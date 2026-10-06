@@ -1,5 +1,6 @@
 docker
 fastapi
+fastmcp
 uvicorn
 gunicorn
 dash
