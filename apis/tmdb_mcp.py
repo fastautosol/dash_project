@@ -5,7 +5,7 @@ from apis.tmdb_api import tmdb_get, clean_text
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
-logger = logging.getLogger(**name**)
+logger = logging.getLogger(name)
 
 mcp = FastMCP("tmdb", stateless_http=True, transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
 
