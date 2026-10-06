@@ -24,6 +24,7 @@ def _brief(movie: dict) -> dict:
         "overview": clean_text(movie.get("overview", ""))[:300],
     }
 
+
 @mcp.tool()
 async def search_movies(query: str, year: int = 0) -> list[dict]:
 
@@ -34,19 +35,16 @@ async def search_movies(query: str, year: int = 0) -> list[dict]:
     data = await _get("search/movie", params) or {}
     return [_brief(movie) for movie in data.get("results", [])[:10]]
 
+
 @mcp.tool()
 async def get_movie(movie_id: int) -> dict:
 
-    movie = await _get(f"movie/{movie_id}",
-        {"append_to_response": "credits,keywords", "language": "en-US"},
-    )
-
+    movie = await _get(f"movie/{movie_id}", {"append_to_response": "credits,keywords", "language": "en-US"})
     if not movie:
         return {"error": f"Movie {movie_id} not found"}
 
     credits = movie.get("credits", {})
-    keywords_payload = movie.get("keywords", {})
-    
+    keywords_payload = movie.get("keywords", {})  
     keywords_list = (keywords_payload.get("keywords", []) if isinstance(keywords_payload, dict) else [])
 
     return {
@@ -63,12 +61,12 @@ async def get_movie(movie_id: int) -> dict:
         "top_cast": [c["name"] for c in credits.get("cast", [])[:10]],
     }
 
+
 @mcp.tool()
 async def find_collection(query: str) -> dict:
 
     found = await _get("search/collection", {"query": query, "language": "en-US"}) or {}
     results = found.get("results", [])
-
     if not results:
         return {"error": f"No collection found for '{query}'"}
 
@@ -77,7 +75,6 @@ async def find_collection(query: str) -> dict:
          return {"error": "Invalid collection data format."}
 
     collection = await _get(f"collection/{first_match_id}", {"language": "en-US"}) or {}
-
     parts = sorted(collection.get("parts", []), key=lambda p: p.get("release_date") or "9999")
 
     return {
