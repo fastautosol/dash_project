@@ -3,26 +3,27 @@
 import asyncio
 import logging
 from apis.tmdb_api import tmdb_get, clean_text
-from mcp.server.fastmcp import FastMCP
+
+from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 
 logger = logging.getLogger(__name__)
 
-mcp = FastMCP(
-    "tmdb",
-    stateless_http=True,
-    transport_security=TransportSecuritySettings(
-        enable_dns_rebinding_protection=False
-    ),
-)
+mcp = MCPServer("tmdb")
 
 def mcp_asgi_app():
     """
     Az ASGI app, amit az app.py a /tmdb alá csatol.
     Végpont:
-    https://app.fastautosol.com/tmdb/mcp
+    https://fastautosol.com
     """
-    return mcp.streamable_http_app()
+    # MIGRATION FIX: Configuration properties move from constructor to app builder method
+    security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
+    
+    return mcp.streamable_http_app(
+        stateless_http=True,
+        transport_security=security
+    )
 
 async def _get(endpoint: str, params: dict | None = None):
     """
@@ -88,7 +89,6 @@ async def get_movie(
     credits = movie.get("credits", {})
     keywords_payload = movie.get("keywords", {})
     
-    # Handle both potential TMDB keyword schemas safely
     keywords_list = (
         keywords_payload.get("keywords", []) 
         if isinstance(keywords_payload, dict) 
@@ -140,8 +140,13 @@ async def find_collection(
     if not results:
         return {"error": f"No collection found for '{query}'"}
 
+    # BUGFIX: Safely fetch the ID from the index dict slice
+    first_match_id = results[0].get('id') if results else None
+    if not first_match_id:
+         return {"error": "Invalid collection data format."}
+
     collection = await _get(
-        f"collection/{results[0]['id']}",
+        f"collection/{first_match_id}",
         {
             "language": "en-US",
         },
@@ -157,4 +162,3 @@ async def find_collection(
         "other_matches": [r.get("name") for r in results[1:5]],
         "movies": [_brief(movie) for movie in parts],
     }
-
