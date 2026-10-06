@@ -26,26 +26,65 @@ def _brief(movie: dict) -> dict:
 
 
 @mcp.tool()
-async def search_movies(query: str, year: int = 0) -> list[dict]:
+async def search_movies(
+    query: str,
+    year: str = "",
+) -> list[dict]:
+    """
+    Film keresése cím alapján.
+    A 'year' paraméter opcionális (megjelenési év, pl: '2024'), üresen hagyható.
+    """
+    params = {
+        "query": query,
+        "language": "en-US",
+    }
 
-    params = {"query": query, "language": "en-US"}
-    if year:
-        params["primary_release_year"] = year
+    # Internal safe check instead of signature default primitives
+    if year and year.strip():
+        try:
+            params["primary_release_year"] = int(year.strip())
+        except ValueError:
+            logger.warning(f"Invalid year format received: {year}")
 
     data = await _get("search/movie", params) or {}
-    return [_brief(movie) for movie in data.get("results", [])[:10]]
 
+    return [
+        _brief(movie)
+        for movie in data.get("results", [])[:10]
+    ]
 
 @mcp.tool()
-async def get_movie(movie_id: int) -> dict:
+async def get_movie(
+    movie_id: str,
+) -> dict:
+    """
+    Részletes filmadatok lekérése a TMDB ID alapján.
+    A 'movie_id' egy számsor formájú string legyen (pl: '550').
+    """
+    try:
+        clean_id = int(str(movie_id).strip())
+    except ValueError:
+        return {"error": f"Invalid movie ID format provided: {movie_id}"}
 
-    movie = await _get(f"movie/{movie_id}", {"append_to_response": "credits,keywords", "language": "en-US"})
+    movie = await _get(
+        f"movie/{clean_id}",
+        {
+            "append_to_response": "credits,keywords",
+            "language": "en-US",
+        },
+    )
+
     if not movie:
-        return {"error": f"Movie {movie_id} not found"}
+        return {"error": f"Movie {clean_id} not found"}
 
     credits = movie.get("credits", {})
-    keywords_payload = movie.get("keywords", {})  
-    keywords_list = (keywords_payload.get("keywords", []) if isinstance(keywords_payload, dict) else [])
+    keywords_payload = movie.get("keywords", {})
+    
+    keywords_list = (
+        keywords_payload.get("keywords", []) 
+        if isinstance(keywords_payload, dict) 
+        else []
+    )
 
     return {
         **_brief(movie),
@@ -57,9 +96,20 @@ async def get_movie(movie_id: int) -> dict:
         "collection": (movie.get("belongs_to_collection") or {}).get("name"),
         "genres": [g["name"] for g in movie.get("genres", []) if "name" in g],
         "keywords": [k["name"] for k in keywords_list if "name" in k],
-        "director": next((c["name"] for c in credits.get("crew", []) if c.get("job") == "Director"), None),
-        "top_cast": [c["name"] for c in credits.get("cast", [])[:10]],
+        "director": next(
+            (
+                c["name"]
+                for c in credits.get("crew", [])
+                if c.get("job") == "Director"
+            ),
+            None,
+        ),
+        "top_cast": [
+            c["name"]
+            for c in credits.get("cast", [])[:10]
+        ],
     }
+
 
 
 @mcp.tool()
