@@ -1,5 +1,4 @@
-# 2026.10.06 - TMDB MCP szerver az n8n ágensnek (élő TMDB-lekérdezések, NEM a dlt betöltő)
-# Kompatibilis az mcp 1.x (FastMCP) és az mcp 2.x (MCPServer) verzióval is.
+# 2026.10.06 - TMDB MCP szerver
 import asyncio
 import logging
 
@@ -51,8 +50,9 @@ def _brief(m: dict) -> dict:
 
 
 @mcp.tool()
-async def search_movies(query: str, year: int | None = None) -> list[dict]:
-    """Filmek keresése cím alapján (opcionálisan megjelenési évvel). Max 10 találat."""
+async def search_movies(query: str, year: int = 0) -> list[dict]:
+    """Filmek keresése cím alapján. A year opcionális megjelenési év (0 = nincs szűrés). Max 10 találat."""
+    # year: egyszerű integer, nem Optional: az anyOf/null séma nem minden kliensben kezelhető egyformán
     params = {"query": query, "language": "en-US"}
     if year:
         params["primary_release_year"] = year
