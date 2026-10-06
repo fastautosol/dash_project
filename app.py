@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
 import asyncio
+from contextlib import asynccontextmanager
 
 import apis.crm_shopify_api as crm_shopify_api
 import apis.lufthansa_api as lufthansa_api
@@ -13,6 +14,7 @@ import apis.serper_places_api as serper_places
 import apis.serper_places_api_email as serper_places_email
 import apis.youtube_api as youtube_api
 import apis.tmdb_api as tmdb_api
+import apis.tmdb_mcp as tmdb_mcp
 
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets",
@@ -64,8 +66,17 @@ app.layout = html.Div([
     }),
 ])
 
-# ----- 3. FastAPI app -----
-server = FastAPI(title="Dash Demo App")
+# ----- 3. FastAPI app with Lifespan for the TMDB MCP server -----
+# Az MCP session manager az alkalmazás életciklusával együtt fut
+mcp_app = tmdb_mcp.mcp_asgi_app()   # a lifespan előtt kell létrehozni (a session_manager ettől létezik)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with tmdb_mcp.mcp.session_manager.run():
+        yield
+
+server = FastAPI(title="Dash Demo App", lifespan=lifespan)
+server.mount("/tmdb", mcp_app) # Az n8n MCP Client node végpontja: https://app.fastautosol.com/tmdb/mcp  (HTTP Streamable)
 
 # ----- 4. API routers -----
 server.include_router(crm_shopify_api.router,      prefix="/api/crm_shopify",   tags=["CRM Shopify"])
