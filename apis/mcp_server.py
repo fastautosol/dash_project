@@ -1,4 +1,4 @@
-# server.py
+# 2026.10.06 15.00 (MCP server)
 from fastmcp import FastMCP
 import requests
 import psycopg2
@@ -32,6 +32,16 @@ def trigger_customer_compensation(customer_name: str, email: str, discount_perce
         return f"Sikeres! Az n8n folyamat elindult {customer_name} részére." if response.status_code == 200 else "Hiba az n8n hívásakor."
     except Exception as e:
         return f"Kapcsolódási hiba: {str(e)}"
+
+# --- 3. FUNKCIÓ: Automatikus "Feature Request" (Fejlesztési igény) ---
+@mcp.tool()
+def log_missing_feature(feature_description: str) -> str:
+    """Akkor hívd meg, ha a felhasználó olyat kér, amit az adatbázisból nem tudsz kiszolgálni."""
+    # Ez a funkció küld egy n8n webhookot, ami neked dob egy e-mailt vagy Slack üzenetet: 
+    # "Az ügyfél az X funkciót kereste, írd meg Pythonban!"
+    requests.post("https://cegnev.hu", json={"req": feature_description})
+    return "Igény regisztrálva a fejlesztő felé."
+
 
 # --- Futtatás SSE (Server-Sent Events) protokollal, hogy az n8n elérje hálózaton ---
 if __name__ == "__main__":
