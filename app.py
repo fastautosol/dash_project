@@ -17,19 +17,15 @@ import apis.tmdb_api as tmdb_api
 import apis.tmdb_mcp as tmdb_mcp
 
 # ----- 1. Initialize Dash -----
-app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets",
-    suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.DARKLY, ])
+app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets", suppress_callback_exceptions=True,
+    external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css"],
+    external_scripts=["https://unpkg.com/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"])
 
 # ----- 2. SIDEBAR & LAYOUT — must be defined BEFORE the WSGI mount -----
 SIDEBAR_STYLE = {
-    "position": "fixed", "top": "15px", "left": "15px", "bottom": "15px",
-    "width": "220px", "padding": "2rem 1rem",
-    "background": "rgba(255, 255, 255, 0.1)",
-    "backdrop-filter": "blur(15px)",
-    "border-radius": "20px",
-    "border": "1px solid rgba(255, 255, 255, 0.1)",
-    "box-shadow": "0 8px 32px 0 rgba(0, 0, 0, 0.5)",
-}
+    "position": "fixed", "top": "15px", "left": "15px", "bottom": "15px", "width": "220px", "padding": "2rem 1rem",
+    "background": "rgba(255, 255, 255, 0.1)", "backdrop-filter": "blur(15px)",
+    "border-radius": "20px", "border": "1px solid rgba(255, 255, 255, 0.1)", "box-shadow": "0 8px 32px 0 rgba(0, 0, 0, 0.5)"}
 
 sidebar = html.Div([
     
