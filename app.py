@@ -1,4 +1,4 @@
-# 2026.10.06  16.10
+# 2026.10.06  18.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -18,9 +18,7 @@ import apis.tmdb_mcp as tmdb_mcp
 
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets",
-    suppress_callback_exceptions=True,
-    external_stylesheets=[dbc.themes.DARKLY, "https://cloudflare.com"],
-    external_scripts=["https://unpkg.com"])
+    suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.DARKLY, ])
 
 # ----- 2. SIDEBAR & LAYOUT — must be defined BEFORE the WSGI mount -----
 SIDEBAR_STYLE = {
@@ -67,8 +65,7 @@ app.layout = html.Div([
 ])
 
 # ----- 3. FastAPI app with Lifespan for the TMDB MCP server -----
-# Az MCP session manager az alkalmazás életciklusával együtt fut
-mcp_app = tmdb_mcp.mcp_asgi_app()   # a lifespan előtt kell létrehozni (a session_manager ettől létezik)
+mcp_app = tmdb_mcp.mcp_asgi_app()  
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -76,7 +73,7 @@ async def lifespan(app: FastAPI):
         yield
 
 server = FastAPI(title="Dash Demo App", lifespan=lifespan)
-server.mount("/tmdb", mcp_app) # Az n8n MCP Client node végpontja: https://app.fastautosol.com/tmdb/mcp  (HTTP Streamable)
+server.mount("/tmdb", mcp_app) # https://app.fastautosol.com/tmdb/mcp  (HTTP Streamable)
 
 # ----- 4. API routers -----
 server.include_router(crm_shopify_api.router,      prefix="/api/crm_shopify",   tags=["CRM Shopify"])
