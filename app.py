@@ -1,10 +1,11 @@
-# 2026.10.05  18.00
+# 2026.10.06  16.10
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
+import asyncio
 
 import apis.crm_shopify_api as crm_shopify_api
 import apis.lufthansa_api as lufthansa_api
@@ -16,8 +17,8 @@ import apis.tmdb_api as tmdb_api
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets",
     suppress_callback_exceptions=True,
-    external_stylesheets=[dbc.themes.DARKLY, "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css"],
-    external_scripts=["https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"])
+    external_stylesheets=[dbc.themes.DARKLY, "https://cloudflare.com"],
+    external_scripts=["https://unpkg.com"])
 
 # ----- 2. SIDEBAR & LAYOUT — must be defined BEFORE the WSGI mount -----
 SIDEBAR_STYLE = {
@@ -63,10 +64,18 @@ app.layout = html.Div([
     }),
 ])
 
-# ----- 3. FastAPI app -----
-server = FastAPI(title="Dash Demo App")
+# ----- 3. FastAPI app with Lifespan for TMDB MCP Server -----
+# A lifespan biztosítja, hogy a háttérben az MCP session manager fusson az alkalmazás életciklusával együtt
+server = FastAPI(
+    title="Dash Demo App", 
+    lifespan=lambda app: tmdb_api.mcp.session_manager.run()
+)
 
-# ----- 4. API routers -----
+# ----- 4. Mount TMDB FastMCP HTTP/SSE Application -----
+# Így az n8n ágensed a http://localhost:8000/tmdb/sse végponton éri el a szervert
+server.mount("/tmdb", tmdb_api.mcp.streamable_http_app())
+
+# ----- 5. API routers -----
 server.include_router(crm_shopify_api.router,      prefix="/api/crm_shopify",   tags=["CRM Shopify"])
 server.include_router(lufthansa_api.router,        prefix="/api/lufthansa",     tags=["Lufthansa"])
 server.include_router(serper_places.router,        prefix="/api/serper",        tags=["Serper Places"])
@@ -74,11 +83,12 @@ server.include_router(serper_places_email.router,  prefix="/api/serper_email",  
 server.include_router(youtube_api.router,          prefix="/api/youtube",       tags=["Youtube Single"])
 server.include_router(tmdb_api.router,             prefix="/api/tmdb",          tags=["TMDB Movies"])
 
-# ----- 5. Health endpoint -----
+# ----- 6. Health endpoint -----
 @server.get("/health")
 def health():
     return {"status": "ok"}
 
-# ----- 6. Mount Dash, after layout is set and assets are mounted -----
+# ----- 7. Mount Dash, after layout is set and assets are mounted -----
 server.mount("/app_assets", StaticFiles(directory="app_assets"), name="app_assets")
 server.mount("/", WSGIMiddleware(app.server))
+
