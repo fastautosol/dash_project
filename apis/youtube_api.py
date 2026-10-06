@@ -25,7 +25,7 @@ STORE_KEYWORDS = ("shopify", "store", "gumroad", "etsy", "tiktokshop", "merch", 
 TRANSCRIPT_LANGS = ["hu", "en"]      # előnyben részesített nyelvek, ha nincs, a videó saját nyelve
 NO_TRANSCRIPT = "no transcript"
 STORE_SEGMENTS = True                # időbélyeges szegmensek jsonb-ben (chunkoláshoz / &t=123s linkhez)
-TRANSCRIPT_DELAY_SEC = 1.0           # kis szünet videók között, csökkenti a blokkolás esélyét
+TRANSCRIPT_DELAY_SEC = 0.25           # kis szünet videók között, csökkenti a blokkolás esélyét
 TRANSCRIPT_PROXY_URL = os.getenv("TRANSCRIPT_PROXY_URL")  # opcionális, szerver IP-blokk esetére
 
 EMOJI_PATTERN = re.compile(
