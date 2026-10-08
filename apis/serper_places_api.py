@@ -119,12 +119,20 @@ async def fetch_serper_async(city: str,limit: int):
                 break
 
             payload = {"q": f"{v} in {city}", "gl": "hu", "hl": "hu"}
+            try:
+                async with session.post(url, headers={"X-API-KEY": SERPER_KEY, "Content-Type": "application/json"},
+                    json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+    
+                    resp.raise_for_status()
+                    places = (await resp.json()).get("places", [])
+                        
+            except asyncio.TimeoutError:
+                logger.warning("Serper timeout for query=%s city=%s", v, city)
+                continue
 
-            async with session.post(url, headers={"X-API-KEY": SERPER_KEY, "Content-Type": "application/json"},
-                json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
-
-                resp.raise_for_status()
-                places = (await resp.json()).get("places", [])
+            except Exception as e:
+                logger.warning("Serper request failed query=%s city=%s error=%s", v, city, e)
+                continue
 
             for p in places:
 
