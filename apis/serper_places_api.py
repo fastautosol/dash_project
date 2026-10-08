@@ -1,4 +1,4 @@
-# 2026.10.08 15.00
+# 2026.10.08 16.00
 
 from fastapi import APIRouter, BackgroundTasks
 import asyncio
@@ -70,7 +70,12 @@ async def search_email_via_serper(session: aiohttp.ClientSession, company_name: 
 
             return list(set(emails))
 
-    except Exception:
+    except asyncio.TimeoutError:
+        logger.warning("Website timeout: %s", url)
+        return []
+    
+    except Exception as e:
+        logger.warning("Website scrape failed %s : %s", url, e)
         return []
 
 
@@ -119,6 +124,7 @@ async def fetch_serper_async(city: str,limit: int):
                 break
 
             payload = {"q": f"{v} in {city}", "gl": "hu", "hl": "hu"}
+            
             try:
                 async with session.post(url, headers={"X-API-KEY": SERPER_KEY, "Content-Type": "application/json"},
                     json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
