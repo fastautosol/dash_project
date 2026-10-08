@@ -72,7 +72,7 @@ async def enrich_company(session: aiohttp.ClientSession, semaphore: asyncio.Sema
     return record
 
 async def fetch_serper_async(city: str, limit: int):
-    endpoint_url = "https://google.serper.dev/places"
+    url = "https://google.serper.dev/places"
     variations = ["shipping", "transport", "logistics", "freight forwarding", "warehouse", "shopping", "delivery", "factory", "producing",
         "transportation", "apartment", "hotel", "guesthouse", "car service", "restaurant", "company", "business", "office", "IT company"]
     results_map = {}
