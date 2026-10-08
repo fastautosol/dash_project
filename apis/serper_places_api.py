@@ -13,7 +13,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from bs4 import BeautifulSoup
 
-logger = logging.getLogger("serper_places_email")
+logger = logging.getLogger("serper_places")
 
 class SerperRequest(BaseModel):
     city: str
