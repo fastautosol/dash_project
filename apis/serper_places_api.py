@@ -1,4 +1,4 @@
-# 2026.10.08 16.00
+# 2026.10.08 18.00
 from fastapi import APIRouter, BackgroundTasks
 import asyncio
 import aiohttp
@@ -46,7 +46,7 @@ async def scrape_emails_from_url(session: aiohttp.ClientSession, url: str) -> li
 async def search_email_via_serper(session: aiohttp.ClientSession, company_name: str, address: str) -> list[str]:
     try:
         payload = {"q": f"{company_name} {address} email contact"}
-        async with session.post("https://serper.dev", headers={"X-API-KEY": SERPER_KEY, "Content-Type": "application/json"}, json=payload, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+        async with session.post("https://google.serper.dev/search", headers={"X-API-KEY": SERPER_KEY, "Content-Type": "application/json"}, json=payload, timeout=aiohttp.ClientTimeout(total=8)) as resp:
             data = await resp.json()
             emails = re.findall(EMAIL_REGEX, json.dumps(data))
             return list(set(emails))
