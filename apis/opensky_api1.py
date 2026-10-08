@@ -14,10 +14,7 @@ CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
 DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
-sql_engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True, pool_recycle=1800,
-    connect_args={'connect_timeout': 5, 'keepalives': 1, 'keepalives_idle': 30, 'keepalives_interval': 10, 'keepalives_count': 5})
-
-DB_CONFIG = {"host": "postgresql","port": 5432,"database": "n8n","username": "sql_admin","password": "sql_pass","connect_timeout": 15}
+engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True)
 API = "https://opensky-network.org/api"
 
 # 1. Létrehozzuk a FastAPI routert
@@ -81,14 +78,12 @@ def trigger_airport_flights_sync(background_tasks: BackgroundTasks):
     return {"message": "Az OpenSky reptéri menetrend szinkronizálása elindult a háttérben.", "timestamp": datetime.now().isoformat()}
 
 def get_tracked_icao_codes() -> list[str]:
+    query = text("SELECT DISTINCT icao24 FROM bronze.uae_flights WHERE icao24 IS NOT NULL")
     try:
-        conn = psycopg2.connect(DB_PARAMS)
-        cur = conn.cursor()
-        cur.execute("SELECT DISTINCT icao24 FROM bronze.uae_flights WHERE icao24 IS NOT NULL;")
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        return [r[0].strip() for r in rows if r[0]]
+        with engine.connect() as conn:
+            result = conn.execute(query)
+            return [row[0].strip() for row in result if row[0]]
+            
     except Exception as e:
         print(f"Adatbázis hiba az ICAO kódok lekérésekor: {e}")
         return []
