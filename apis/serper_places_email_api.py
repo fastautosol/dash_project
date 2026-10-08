@@ -13,7 +13,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from bs4 import BeautifulSoup
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("serper_places_email")
 
 class SerperRequest(BaseModel):
     city: str
@@ -21,20 +21,11 @@ class SerperRequest(BaseModel):
 
 
 SERPER_KEY = os.getenv("SERPER_API_KEY")
-
-DB_CONFIG = {
-    "host": "postgresql",
-    "port": 5432,
-    "database": "n8n",
-    "username": "sql_admin",
-    "password": "sql_pass",
-    "connect_timeout": 15
-}
+DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 
 router = APIRouter()
 
 EMAIL_REGEX = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
-
 
 # -----------------------------------------------------------------------------
 # DLT RESOURCE
@@ -49,25 +40,15 @@ def companies_resource(data):
 # EMAIL HELPERS
 # -----------------------------------------------------------------------------
 
-async def scrape_emails_from_url(
-    session: aiohttp.ClientSession,
-    url: str
-) -> list[str]:
+async def scrape_emails_from_url(session: aiohttp.ClientSession, url: str) -> list[str]:
 
     try:
-        async with session.get(
-            url,
-            timeout=aiohttp.ClientTimeout(total=7),
-            headers={"User-Agent": "Mozilla/5.0"}
-        ) as resp:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=7), headers={"User-Agent": "Mozilla/5.0"}) as resp:
 
             html = await resp.text()
             soup = BeautifulSoup(html, "html.parser")
 
-            emails = re.findall(
-                EMAIL_REGEX,
-                soup.get_text()
-            )
+            emails = re.findall(EMAIL_REGEX, soup.get_text())
 
             return list(set(emails))
 
@@ -75,33 +56,17 @@ async def scrape_emails_from_url(
         return []
 
 
-async def search_email_via_serper(
-    session: aiohttp.ClientSession,
-    company_name: str,
-    address: str
-) -> list[str]:
+async def search_email_via_serper(session: aiohttp.ClientSession, company_name: str, address: str) -> list[str]:
 
     try:
-        payload = {
-            "q": f"{company_name} {address} email contact"
-        }
+        payload = {"q": f"{company_name} {address} email contact"}
 
-        async with session.post(
-            "https://google.serper.dev/search",
-            headers={
-                "X-API-KEY": SERPER_KEY,
-                "Content-Type": "application/json"
-            },
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=8)
+        async with session.post("https://google.serper.dev/search",
+            headers={"X-API-KEY": SERPER_KEY, "Content-Type": "application/json"}, json=payload, timeout=aiohttp.ClientTimeout(total=8)
         ) as resp:
 
             data = await resp.json()
-
-            emails = re.findall(
-                EMAIL_REGEX,
-                json.dumps(data)
-            )
+            emails = re.findall(EMAIL_REGEX, json.dumps(data))
 
             return list(set(emails))
 
