@@ -2,14 +2,18 @@
 import dlt
 import requests
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from dlt.sources.helpers import requests as dlt_requests
+from fastapi import APIRouter, BackgroundTasks
 
-# ----- REPTÉR KONFIGURÁCIÓ -----
+# ----- Config -----
 AIRPORTS = ["OMDB", "OMAA", "EDDF"]  # OMDB: Dubai, OMAA: Abu Dhabi, EDDF: Frankfurt
 CLIENT_ID = "fastautosol@gmail.com-api-client"
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+
+# 1. Létrehozzuk a FastAPI routert
+router = APIRouter()
 
 def get_auth_token():
     payload = {"grant_type": "client_credentials", "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}
@@ -17,22 +21,20 @@ def get_auth_token():
     response.raise_for_status()
     return response.json()["access_token"]
 
-@dlt.resource(name="uae_flights", write_disposition="replace")
+@dlt.resource(name="uae_flights", write_disposition="replace") 
 def fetch_airport_flights():
     token = get_auth_token()
     headers = {"Authorization": f"Bearer {token}"}
     
-    # Időablak beállítása (például az elmúlt 24 óra indításai)
     time_end = int(time.time())
-    time_start = time_end - 2 * 86400
+    time_start = time_end - 2* 86400 
     
     for airport in AIRPORTS:
-        
-        url_departure = f"https://opensky-network.org/api/flights/departure?airport={airport}&begin={time_start}&end={time_end}"
+        url_departure = f"https://opensky-network.org{airport}&begin={time_start}&end={time_end}"
         
         try:
             response = dlt_requests.get(url_departure, headers=headers, timeout=15)
-            if response.status_code == 404: # Ha nincs járat az adott idősávban, ugorjunk
+            if response.status_code == 404: 
                 continue
             response.raise_for_status()
             flights = response.json()
@@ -41,7 +43,6 @@ def fetch_airport_flights():
                 callsign = (f.get("callsign") or "").strip()
                 icao24 = f.get("icao24")
                 
-                # SZŰRÉS: Emirates járatok (UAE)
                 if callsign.startswith("UAE") and icao24:
                     yield {
                         "icao24": icao24,
@@ -55,12 +56,24 @@ def fetch_airport_flights():
         except Exception as e:
             print(f"Hiba a(z) {airport} reptér lekérdezésekor: {str(e)}")
 
-if __name__ == "__main__":
+def run_dlt_pipeline():
+    """Belső függvény a dlt pipeline szinkron futtatásához."""
     pipeline = dlt.pipeline(
         pipeline_name="opensky_airport_tracker",
         destination="postgres",
         dataset_name="bronze"
     )
-    
     load_info = pipeline.run(fetch_airport_flights())
-    print(load_info)
+    return str(load_info)
+
+# ----- 2. ÚJ FASTAPI API VÉGPONT -----
+@router.get("/airport_flights")
+def trigger_airport_flights_sync(background_tasks: BackgroundTasks):
+    # A dlt futtatását áttesszük egy háttérfolyamatba (Background Task), 
+    background_tasks.add_task(run_dlt_pipeline)
+    
+    return {
+        "status": "pending",
+        "message": "Az OpenSky reptéri menetrend szinkronizálása elindult a háttérben.",
+        "timestamp": datetime.now().isoformat()
+    }
