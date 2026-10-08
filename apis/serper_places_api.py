@@ -169,34 +169,17 @@ async def fetch_serper_async(
             if len(results_map) >= limit:
                 break
 
-            payload = {
-                "q": f"{v} in {city}",
-                "gl": "hu",
-                "hl": "hu"
-            }
+            payload = {"q": f"{v} in {city}", "gl": "hu", "hl": "hu"}
 
-            async with session.post(
-                url,
-                headers={
-                    "X-API-KEY": SERPER_KEY,
-                    "Content-Type": "application/json"
-                },
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=10)
-            ) as resp:
+            async with session.post(url, headers={"X-API-KEY": SERPER_KEY, "Content-Type": "application/json"},
+                json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
 
                 resp.raise_for_status()
-
-                places = (
-                    await resp.json()
-                ).get("places", [])
+                places = (await resp.json()).get("places", [])
 
             for p in places:
 
-                key = (
-                    p.get("title"),
-                    p.get("address")
-                )
+                key = (p.get("title"), p.get("address"))
 
                 if key not in results_map:
 
@@ -222,54 +205,26 @@ async def fetch_serper_async(
 
         records = list(results_map.values())[:limit]
 
-        logger.info(
-            "Collected %s companies for city=%s",
-            len(records),
-            city
-        )
+        logger.info("Collected %s companies for city=%s", len(records), city)
 
         # ---------------------------------------------------------
         # STEP 2 - EMAIL ENRICHMENT
         # ---------------------------------------------------------
 
         semaphore = asyncio.Semaphore(5)
-
-        tasks = [
-            enrich_company(
-                session,
-                semaphore,
-                r
-            )
-            for r in records
-        ]
-
+        tasks = [enrich_company(session, semaphore, r) for r in records]
         enriched = await asyncio.gather(*tasks)
-
-        logger.info(
-            "Email enrichment finished. Records=%s",
-            len(enriched)
-        )
-
+        logger.info("Email enrichment finished. Records=%s", len(enriched))
         return enriched
-
 
 # -----------------------------------------------------------------------------
 # BACKGROUND PIPELINE
 # -----------------------------------------------------------------------------
 
-def run_dlt_pipeline(
-    city: str,
-    limit: int
-):
+def run_dlt_pipeline(city: str, limit: int):
 
     try:
-
-        logger.info(
-            "Starting background pipeline for city=%s limit=%s",
-            city,
-            limit
-        )
-
+        logger.info("Starting background pipeline for city=%s limit=%s", city, limit)
         data = asyncio.run(fetch_serper_async(city, limit))
 
         pipeline = dlt.pipeline(
