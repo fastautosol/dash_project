@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timezone
 from dlt.sources.helpers import requests as dlt_requests
 from fastapi import APIRouter, BackgroundTasks
+from sqlalchemy import create_engine, text
 
 # ----- Config -----
 AIRPORTS = ["OMDB", "OMAA", "EDDF"]  # OMDB: Dubai, OMAA: Abu Dhabi, EDDF: Frankfurt
