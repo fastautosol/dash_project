@@ -36,31 +36,33 @@ def fetch_airport_flights():
     time_start = int(time_end - 1.5 * 86400) 
     
     for airport in AIRPORTS:
-        url_departure = f"{API}/flights/departure?airport={airport}&begin={time_start}&end={time_end}"
+        for direction in ("departure", "arrival"):
+            #r = _get(f"{API}/flights/{direction}", params={"airport": airport, "begin": begin, "end": end})
+            url_flights = f"{API}/flights/{direction}?airport={airport}&begin={time_start}&end={time_end}"
                          
-        try:
-            response = dlt_requests.get(url_departure, headers=headers, timeout=15)
-            if response.status_code == 404: 
-                continue
-            response.raise_for_status()
-            flights = response.json()
-            
-            for f in flights:
-                callsign = (f.get("callsign") or "").strip()
-                icao24 = f.get("icao24")
+            try:
+                response = dlt_requests.get(url_flights, headers=headers, timeout=15)
+                if response.status_code == 404: 
+                    continue
+                response.raise_for_status()
+                flights = response.json()
                 
-                if callsign.startswith("UAE") and icao24:
-                    yield {
-                        "icao24": icao24,
-                        "callsign": callsign,
-                        "est_departure_airport": f.get("estDepartureAirport"),
-                        "est_arrival_airport": f.get("estArrivalAirport"),
-                        "first_seen": f.get("firstSeen"),
-                        "last_seen": f.get("lastSeen"),
-                        "updated_at": datetime.now(timezone.utc).isoformat() #datetime.now()
-                    }
-        except Exception as e:
-            print(f"Hiba a(z) {airport} reptér lekérdezésekor: {str(e)}")
+                for f in flights:
+                    callsign = (f.get("callsign") or "").strip()
+                    icao24 = f.get("icao24")
+                    
+                    if callsign.startswith("UAE") and icao24:
+                        yield {
+                            "icao24": icao24,
+                            "callsign": callsign,
+                            "est_departure_airport": f.get("estDepartureAirport"),
+                            "est_arrival_airport": f.get("estArrivalAirport"),
+                            "first_seen": f.get("firstSeen"),
+                            "last_seen": f.get("lastSeen"),
+                            "updated_at": datetime.now(timezone.utc).isoformat() #datetime.now()
+                        }
+            except Exception as e:
+                print(f"Hiba a(z) {airport} reptér lekérdezésekor: {str(e)}")
 
 def run_dlt_pipeline():
 
