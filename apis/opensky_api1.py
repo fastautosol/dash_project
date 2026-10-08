@@ -12,6 +12,7 @@ CLIENT_ID = "fastautosol@gmail.com-api-client"
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 DB_CONFIG = {"host": "postgresql","port": 5432,"database": "n8n","username": "sql_admin","password": "sql_pass","connect_timeout": 15}
+API = "https://opensky-network.org/api"
 
 # 1. Létrehozzuk a FastAPI routert
 router = APIRouter()
@@ -31,7 +32,7 @@ def fetch_airport_flights():
     time_start = int(time_end - 1.5 * 86400) 
     
     for airport in AIRPORTS:
-        url_departure = f"https://opensky-network.org/api/flights/departure?airport={airport}&begin={time_start}&end={time_end}"
+        url_departure = f"{API}/flights/departure?airport={airport}&begin={time_start}&end={time_end}"
                          
         try:
             response = dlt_requests.get(url_departure, headers=headers, timeout=15)
@@ -94,7 +95,7 @@ async def fetch_live_states_from_opensky(icao_list: list[str]) -> list[dict]:
     
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            response = await client.get(OPENSKY_STATES_URL, params=params)
+            response = await client.get(f"{API}/metadata/aircraft/icao/"), params=params)
             if response.status_code != 200:
                 return []
                 
