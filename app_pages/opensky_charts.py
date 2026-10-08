@@ -9,20 +9,16 @@ from sqlalchemy import create_engine, text
 
 dash.register_page(__name__, path="/flight-radar", name="Emirates A380 Radar", icon="fa-plane")
 
-# DATABASE_URL = postgresql+psycopg2://user:pass@host/dbname
-engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
+DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
+engine = create_engine(DB_URL, pool_pre_ping=True)
 
-SCHEMA = "sky_monitor"
+SCHEMA = "bronze"
 PATH_HOURS = 24      # ennyi órányi előzményt rajzolunk ki
 GAP_MINUTES = 20     # ennél nagyobb időhézagnál megszakítjuk a vonalat (új járat / adathiány)
 LIVE_MINUTES = 5     # ennél frissebb pozíciójú gépet tekintünk "élőnek"
 REFRESH_SECONDS = 60  # igazodjon a pozíciógyűjtő --loop értékéhez
 
-EMPTY_COLS = [
-    "icao24", "callsign", "latitude", "longitude",
-    "altitude_m", "velocity_mps", "heading_deg", "on_ground", "snapshot_time",
-]
-
+EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg", "on_ground", "snapshot_time"]
 
 def load_positions(hours: int) -> pd.DataFrame:
     """A dlt által mentett pozíciók (egyetlen lekérdezés: útvonalhoz és élő réteghez is)."""
