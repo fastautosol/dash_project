@@ -16,7 +16,7 @@ from sqlalchemy import create_engine, text
 # ----- KONFIGURÁCIÓ -----
 API = "https://opensky-network.org/api"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-CLIENT_ID =  "fastautosol@gmail.com-api-client",
+CLIENT_ID =  "fastautosol@gmail.com-api-client"
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
@@ -40,7 +40,7 @@ def _auth_headers() -> dict:
     if not CLIENT_ID:
         return {}
     if time.time() > _token["exp"] - 60:
-        r = requests.post(AUTH_URL,vdata={"grant_type": "client_credentials", "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}, timeout=15)
+        r = requests.post(AUTH_URL, data={"grant_type": "client_credentials", "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}, timeout=15)
         r.raise_for_status()
         j = r.json()
         _token["value"] = j["access_token"]
@@ -209,7 +209,7 @@ PATHS_SQL = text(
 def get_live_positions():
     """A legutóbbi (max. 5 perces) pozíció gépenként."""
     try:
-        with get_engine().connect() as conn:
+        with engine.connect() as conn:
             rows = conn.execute(LATEST_SQL).mappings().all()
     except Exception as e:
         print(f"Adatbázis hiba: {e}")
@@ -222,7 +222,7 @@ def get_paths(hours: int = 24):
     """Útvonal-pontok az elmúlt N órából."""
     hours = max(1, min(hours, 24 * POSITIONS_RETENTION_DAYS))
     try:
-        with get_engine().connect() as conn:
+        with engine.connect() as conn:
             rows = conn.execute(PATHS_SQL, {"h": hours}).mappings().all()
     except Exception as e:
         print(f"Adatbázis hiba: {e}")
