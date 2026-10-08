@@ -2,7 +2,7 @@
 import dlt
 import requests
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from dlt.sources.helpers import requests as dlt_requests
 from fastapi import APIRouter, BackgroundTasks
 
@@ -51,7 +51,7 @@ def fetch_airport_flights():
                         "est_arrival_airport": f.get("estArrivalAirport"),
                         "first_seen": f.get("firstSeen"),
                         "last_seen": f.get("lastSeen"),
-                        "updated_at": datetime.now()
+                        "updated_at": datetime.now(timezone.utc).isoformat() #datetime.now()
                     }
         except Exception as e:
             print(f"Hiba a(z) {airport} reptér lekérdezésekor: {str(e)}")
