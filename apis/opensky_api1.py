@@ -2,6 +2,7 @@
 import dlt
 import requests
 import time
+import httpx
 from datetime import datetime, timezone
 from dlt.sources.helpers import requests as dlt_requests
 from fastapi import APIRouter, BackgroundTasks
