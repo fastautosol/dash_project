@@ -1,4 +1,4 @@
-# pipelines/opensky_airport_pipeline.py
+# 2026.10.08  18.00
 import dlt
 import requests
 import time
@@ -7,31 +7,27 @@ from dlt.sources.helpers import requests as dlt_requests
 
 # ----- REPTÉR KONFIGURÁCIÓ -----
 AIRPORTS = ["OMDB", "OMAA", "EDDF"]  # OMDB: Dubai, OMAA: Abu Dhabi, EDDF: Frankfurt
-CLIENT_ID = "A_TE_OPENSKY_CLIENT_ID"
-CLIENT_SECRET = "A_TE_OPENSKY_CLIENT_SECRET"
-AUTH_URL = "https://opensky-network.org"
+CLIENT_ID = "fastautosol@gmail.com-api-client"
+CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
+AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
 def get_auth_token():
-    """Lekéri az OAuth2 Bearer tokent (30 percig érvényes)"""
-    payload = {
-        "grant_type": "client_credentials",
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET
-    }
+    payload = {"grant_type": "client_credentials", "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}
     response = requests.post(AUTH_URL, data=payload)
     response.raise_for_status()
     return response.json()["access_token"]
 
-@dlt.resource(name="scheduled_a380_flights", write_disposition="replace") # Mindig frissítjük az aktuális aktív listát
+@dlt.resource(name="uae_flights", write_disposition="replace")
 def fetch_airport_flights():
     token = get_auth_token()
     headers = {"Authorization": f"Bearer {token}"}
     
     # Időablak beállítása (például az elmúlt 24 óra indításai)
     time_end = int(time.time())
-    time_start = time_end - 86400  # 1 nap másodpercekben (maximum 7 nap engedélyezett)
+    time_start = time_end - 2 * 86400
     
     for airport in AIRPORTS:
+        
         url_departure = f"https://opensky-network.org/api/flights/departure?airport={airport}&begin={time_start}&end={time_end}"
         
         try:
@@ -46,8 +42,6 @@ def fetch_airport_flights():
                 icao24 = f.get("icao24")
                 
                 # SZŰRÉS: Emirates járatok (UAE)
-                # (Mivel Dubai-ból szinte csak A380-as és B777-es Emirates gépek indulnak, az icao24 alapján a 
-                # következő lépésben a states-nél fogjuk pontosan látni, hogy melyik az aktív A380-as óriásgép)
                 if callsign.startswith("UAE") and icao24:
                     yield {
                         "icao24": icao24,
@@ -65,7 +59,7 @@ if __name__ == "__main__":
     pipeline = dlt.pipeline(
         pipeline_name="opensky_airport_tracker",
         destination="postgres",
-        dataset_name="sky_monitor"
+        dataset_name="bronze"
     )
     
     load_info = pipeline.run(fetch_airport_flights())
