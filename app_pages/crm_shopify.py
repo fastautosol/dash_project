@@ -1,4 +1,4 @@
-# 2026.05.16  18.00
+# 2026.10.08  10.00
 import dash
 import pandas as pd
 from dash import html, dcc, Input, Output, State, callback
@@ -124,7 +124,7 @@ def load_data_render(_):
 
     with sql_engine.connect() as conn:
         try:
-            df = pd.read_sql("SELECT * FROM crm_shopify.tickets LIMIT 5000", conn)
+            df = pd.read_sql("SELECT * FROM bronze.shopify_tickets LIMIT 5000", conn)
         except Exception as e:
             print("SQL ERROR:", e)
             return f"SQL error: {e}", None, None, [], [], None
