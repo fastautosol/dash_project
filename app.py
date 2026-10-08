@@ -77,6 +77,7 @@ server.include_router(lufthansa_api.router,        prefix="/api/lufthansa",     
 server.include_router(serper_places.router,        prefix="/api/serper",        tags=["Serper Places"])
 server.include_router(youtube_api.router,          prefix="/api/youtube",       tags=["Youtube Single"])
 server.include_router(tmdb_api.router,             prefix="/api/tmdb",          tags=["TMDB Movies"])
+server.include_router(opensky_api.router,          prefix="/api/opensky",       tags=["Opensky"])
 
 # ----- 5. Health endpoint -----
 @server.get("/health")
