@@ -20,7 +20,7 @@ CLIENT_ID =  "fastautosol@gmail.com-api-client",
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-engine = create_engine(DB_URL, pool_pre_ping=True))
+engine = create_engine(DB_URL, pool_pre_ping=True)
 
 AIRPORTS = ["OMDB", "EDDF"]      # OMDB: Dubai, EDDF: Frankfurt (az OMAA Etihad bázis, Emirates A380 ott nem jellemző)
 CALLSIGN_PREFIX = "UAE"          # Emirates
