@@ -14,6 +14,7 @@ import apis.serper_places_api as serper_places
 import apis.youtube_api as youtube_api
 import apis.tmdb_api as tmdb_api
 import apis.tmdb_mcp as tmdb_mcp
+import apis.opensky_api as opensky_api
 
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets", suppress_callback_exceptions=True,
