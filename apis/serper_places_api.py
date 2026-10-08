@@ -122,7 +122,7 @@ async def fetch_serper_async(city: str, limit: int):
         records = list(results_map.values())[:limit]
         logger.info("Collected %s companies for city=%s", len(records), city)
 
-        semaphore = asyncio.Semaphore(5)
+        semaphore = asyncio.Semaphore(7)
         tasks = [enrich_company(session, semaphore, r) for r in records]
         enriched = await asyncio.gather(*tasks)
         logger.info("Email enrichment finished. Records=%s", len(enriched))
