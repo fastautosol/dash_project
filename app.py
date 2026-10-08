@@ -15,6 +15,7 @@ import apis.youtube_api as youtube_api
 import apis.tmdb_api as tmdb_api
 import apis.tmdb_mcp as tmdb_mcp
 import apis.opensky_api as opensky_api
+import apis.opensky_api1 as opensky_api1
 
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets", suppress_callback_exceptions=True,
@@ -78,6 +79,7 @@ server.include_router(serper_places.router,        prefix="/api/serper",        
 server.include_router(youtube_api.router,          prefix="/api/youtube",       tags=["Youtube Single"])
 server.include_router(tmdb_api.router,             prefix="/api/tmdb",          tags=["TMDB Movies"])
 server.include_router(opensky_api.router,          prefix="/api/opensky",       tags=["Opensky"])
+server.include_router(opensky_api1.router,          prefix="/api/opensky1",     tags=["Opensky1"])
 
 # ----- 5. Health endpoint -----
 @server.get("/health")
