@@ -58,12 +58,12 @@ def fetch_airport_flights():
             print(f"Hiba a(z) {airport} reptér lekérdezésekor: {str(e)}")
 
 def run_dlt_pipeline():
-    """Belső függvény a dlt pipeline szinkron futtatásához."""
+
     pipeline = dlt.pipeline(
         pipeline_name="opensky_airport_tracker",
-        destination="postgres",
-        dataset_name="bronze"
-    )
+        destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+        dataset_name="bronze")
+    
     load_info = pipeline.run(fetch_airport_flights())
     return str(load_info)
 
