@@ -70,11 +70,65 @@ def run_dlt_pipeline():
 # ----- 2. ÚJ FASTAPI API VÉGPONT -----
 @router.get("/airport_flights")
 def trigger_airport_flights_sync(background_tasks: BackgroundTasks):
-    # A dlt futtatását áttesszük egy háttérfolyamatba (Background Task), 
-    background_tasks.add_task(run_dlt_pipeline)
+    background_tasks.add_task(run_dlt_pipeline)   
+    return {"message": "Az OpenSky reptéri menetrend szinkronizálása elindult a háttérben.", "timestamp": datetime.now().isoformat()}
+
+def get_tracked_icao_codes() -> list[str]:
+    try:
+        conn = psycopg2.connect(DB_PARAMS)
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT icao24 FROM bronze.uae_flights WHERE icao24 IS NOT NULL;")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return [r[0].strip() for r in rows if r[0]]
+    except Exception as e:
+        print(f"Adatbázis hiba az ICAO kódok lekérésekor: {e}")
+        return []
+
+async def fetch_live_states_from_opensky(icao_list: list[str]) -> list[dict]:
+    if not icao_list:
+        return []
+
+    params = [("icao24", icao_3) for icao_3 in icao_list]
     
-    return {
-        "status": "pending",
-        "message": "Az OpenSky reptéri menetrend szinkronizálása elindult a háttérben.",
-        "timestamp": datetime.now().isoformat()
-    }
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            response = await client.get(OPENSKY_STATES_URL, params=params)
+            if response.status_code != 200:
+                return []
+                
+            data = response.json()
+            states = data.get("states", [])
+            
+            live_flights = []
+            if states:
+                for s in states:
+                    # Szűrés és validálás: csak a valós koordinátákkal rendelkező, levegőben lévő gépek
+                    if s[5] is not None and s[6] is not None:
+                        live_flights.append({
+                            "icao24": s[0].strip() if s[0] else "N/A",
+                            "callsign": s[1].strip() if s[1] else "UNKNOWN",
+                            "origin_country": s[2],
+                            "longitude": float(s[5]),
+                            "latitude": float(s[6]),
+                            "altitude_m": float(s[7]) if s[7] else 0.0,
+                            "on_ground": bool(s[8]),
+                            "velocity_mps": float(s[9]) if s[9] else 0.0,
+                            "heading_deg": float(s[10]) if s[10] else 0.0,
+                            "vertical_rate_mps": float(s[11]) if s[11] else 0.0,
+                        })
+            return live_flights
+        except Exception as e:
+            print(f"Hiba az OpenSky API hívásakor: {e}")
+            return []
+
+# ----- 1. FASTAPI ENDPOINT (A Dash térkép aszinkron AJAX hívásaihoz) -----
+@router.get("/live-positions")
+async def get_live_positions():
+    icao_codes = get_tracked_icao_codes()
+    if not icao_codes:
+        return {"flights": []}
+    
+    live_data = await fetch_live_states_from_opensky(icao_codes[:50])
+    return {"flights": live_data}
