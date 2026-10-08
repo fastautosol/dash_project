@@ -15,7 +15,7 @@ DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": 
 router = APIRouter()
 
 # ---------------------------------------------------------------------------------------------
-@dlt.resource(name="tickets", max_table_nesting=0)
+@dlt.resource(name="shopify_tickets", max_table_nesting=0)
 def tickets_resource(rows: list[dict]):
     for r in rows:
         yield r
@@ -69,7 +69,7 @@ def generate_crm():
     pipeline = dlt.pipeline(
         pipeline_name="fake_shopify",
         destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-        dataset_name="crm_shopify")
+        dataset_name="bronze")
 
     try:
         load_info = pipeline.run(tickets_resource(data), write_disposition="merge", primary_key=["ticket_id", "created_at"])
