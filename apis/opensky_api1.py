@@ -11,6 +11,7 @@ AIRPORTS = ["OMDB", "OMAA", "EDDF"]  # OMDB: Dubai, OMAA: Abu Dhabi, EDDF: Frank
 CLIENT_ID = "fastautosol@gmail.com-api-client"
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+DB_CONFIG = {"host": "postgresql","port": 5432,"database": "n8n","username": "sql_admin","password": "sql_pass","connect_timeout": 15}
 
 # 1. Létrehozzuk a FastAPI routert
 router = APIRouter()
