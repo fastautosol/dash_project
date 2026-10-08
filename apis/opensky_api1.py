@@ -95,7 +95,7 @@ async def fetch_live_states_from_opensky(icao_list: list[str]) -> list[dict]:
     
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            response = await client.get(f"{API}/metadata/aircraft/icao/"), params=params)
+            response = await client.get(f"{API}/metadata/aircraft/icao/", params=params)
             if response.status_code != 200:
                 return []
                 
