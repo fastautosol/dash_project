@@ -74,30 +74,15 @@ async def search_email_via_serper(session: aiohttp.ClientSession, company_name: 
         return []
 
 
-async def find_emails(
-    session: aiohttp.ClientSession,
-    semaphore: asyncio.Semaphore,
-    website: str,
-    company_name: str,
-    address: str
-) -> str:
+async def find_emails(session: aiohttp.ClientSession, semaphore: asyncio.Semaphore, website: str, company_name: str, address: str) -> str:
 
     async with semaphore:
 
         emails = []
-
         if website and website != "UNKNOWN":
-            emails = await scrape_emails_from_url(
-                session,
-                website
-            )
-
+            emails = await scrape_emails_from_url(session, website)
         if not emails:
-            emails = await search_email_via_serper(
-                session,
-                company_name,
-                address
-            )
+            emails = await search_email_via_serper(session, company_name, address)
 
         return ", ".join(emails) if emails else "UNKNOWN"
 
@@ -106,56 +91,20 @@ async def find_emails(
 # ENRICH COMPANY
 # -----------------------------------------------------------------------------
 
-async def enrich_company(
-    session: aiohttp.ClientSession,
-    semaphore: asyncio.Semaphore,
-    record: dict
-) -> dict:
+async def enrich_company(session: aiohttp.ClientSession, semaphore: asyncio.Semaphore, record: dict) -> dict:
 
-    record["email"] = await find_emails(
-        session,
-        semaphore,
-        record["website"],
-        record["name"],
-        record["address"]
-    )
-
+    record["email"] = await find_emails(session, semaphore, record["website"], record["name"], record["address"])
     return record
-
 
 # -----------------------------------------------------------------------------
 # FETCH SERPER DATA
 # -----------------------------------------------------------------------------
 
-async def fetch_serper_async(
-    city: str,
-    limit: int
-):
+async def fetch_serper_async(city: str,limit: int):
 
     url = "https://google.serper.dev/places"
-
-    variations = [
-        "shipping",
-        "transport",
-        "logistics",
-        "freight forwarding",
-        "warehouse",
-        "shopping",
-        "delivery",
-        "factory",
-        "producing",
-        "transportation",
-        "apartment",
-        "hotel",
-        "guesthouse",
-        "car service",
-        "restaurant",
-        "company",
-        "business",
-        "office",
-        "IT company"
-    ]
-
+    variations = ["shipping", "transport", "logistics", "freight forwarding", "warehouse", "shopping", "delivery", "factory", "producing",
+        "transportation", "apartment", "hotel", "guesthouse", "car service", "restaurant", "company", "business", "office", "IT company"]
     results_map = {}
 
     async with aiohttp.ClientSession() as session:
