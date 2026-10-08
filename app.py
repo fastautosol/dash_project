@@ -11,7 +11,6 @@ from contextlib import asynccontextmanager
 import apis.crm_shopify_api as crm_shopify_api
 import apis.lufthansa_api as lufthansa_api
 import apis.serper_places_api as serper_places
-import apis.serper_places_api_email as serper_places_email
 import apis.youtube_api as youtube_api
 import apis.tmdb_api as tmdb_api
 import apis.tmdb_mcp as tmdb_mcp
@@ -75,7 +74,6 @@ server.mount("/tmdb", mcp_app) # https://app.fastautosol.com/tmdb/mcp  (HTTP Str
 server.include_router(crm_shopify_api.router,      prefix="/api/crm_shopify",   tags=["CRM Shopify"])
 server.include_router(lufthansa_api.router,        prefix="/api/lufthansa",     tags=["Lufthansa"])
 server.include_router(serper_places.router,        prefix="/api/serper",        tags=["Serper Places"])
-server.include_router(serper_places_email.router,  prefix="/api/serper_email",  tags=["Serper Places Email"])
 server.include_router(youtube_api.router,          prefix="/api/youtube",       tags=["Youtube Single"])
 server.include_router(tmdb_api.router,             prefix="/api/tmdb",          tags=["TMDB Movies"])
 
