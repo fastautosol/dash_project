@@ -1,10 +1,14 @@
-# 2026.10.07  18.00
+# 2026.10.08  - Emirates A380 tracker: dlt pipeline + FastAPI router
 #   python opensky_api.py flights              # flotta/járat felderítés (naponta elég)
 #   python opensky_api.py positions            # egyszeri pozíció-snapshot
 #   python opensky_api.py positions --loop 120 # folyamatos gyűjtés 120 mp-enként
+#
+# API (prefix az app.py-ban: /api/opensky, záró perjel NÉLKÜL hívd):
+#   GET /api/opensky/flights?hours=48&callsign=UAE1&limit=200
+#   GET /api/opensky/live-positions
+#   GET /api/opensky/paths?hours=24
 
 import argparse
-import os
 import time
 from datetime import datetime, timezone
 
@@ -12,11 +16,12 @@ import dlt
 import requests
 from fastapi import APIRouter
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import ProgrammingError
 
-# ----- KONFIGURÁCIÓ -----
+# ----- KONFIGURÁCIÓ (teszt alatt hardcode; élesben környezeti változóba, a secretet pedig cseréld le) -----
 API = "https://opensky-network.org/api"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-CLIENT_ID =  "fastautosol@gmail.com-api-client"
+CLIENT_ID = "fastautosol@gmail.com-api-client"
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
@@ -32,15 +37,21 @@ POSITIONS_RETENTION_DAYS = 7
 
 router = APIRouter()
 
+
 # ----- OPENSKY HTTP -----
 _token = {"value": None, "exp": 0.0}
+
 
 def _auth_headers() -> dict:
     """OAuth2 Bearer token cache-elve (30 percig érvényes). Kulcs nélkül anonim hívás."""
     if not CLIENT_ID:
         return {}
     if time.time() > _token["exp"] - 60:
-        r = requests.post(AUTH_URL, data={"grant_type": "client_credentials", "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}, timeout=15)
+        r = requests.post(
+            AUTH_URL,
+            data={"grant_type": "client_credentials", "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET},
+            timeout=15,
+        )
         r.raise_for_status()
         j = r.json()
         _token["value"] = j["access_token"]
@@ -55,7 +66,7 @@ def _get(url: str, params=None, retries: int = 3) -> requests.Response:
         if r.status_code == 429:
             wait = int(r.headers.get("X-Rate-Limit-Retry-After-Seconds", 30))
             if wait > 120:  # napi kredit elfogyott, nincs értelme várni
-                print(f"OpenSky rate limit, újrapróbálás {wait} mp múlva")
+                print(f"OpenSky rate limit, a következő próbálkozás {wait} mp múlva lehetséges")
                 return r
             time.sleep(wait)
             continue
@@ -67,10 +78,17 @@ _type_cache: dict[str, str | None] = {}
 
 
 def is_a380(icao24: str) -> bool:
-    """Az OpenSky aircraft metadata alapján megmondja, hogy A380-ról van-e szó (cache-elve)."""
+    """Az OpenSky aircraft metadata alapján megmondja, hogy A380-ról van-e szó.
+    Csak a sikeres (200) és a 'nem létezik' (404) válasz kerül a cache-be,
+    átmeneti hibánál (429, 5xx) a következő futás újra megpróbálja."""
     if icao24 not in _type_cache:
         r = _get(f"{API}/metadata/aircraft/icao/{icao24}")
-        _type_cache[icao24] = r.json().get("typecode") if r.status_code == 200 else None
+        if r.status_code == 200:
+            _type_cache[icao24] = r.json().get("typecode")
+        elif r.status_code == 404:
+            _type_cache[icao24] = None
+        else:
+            return False
     return _type_cache[icao24] == AIRCRAFT_TYPECODE
 
 
@@ -115,17 +133,36 @@ def a380_flights():
                 }
 
 
-def fleet_icao24() -> list[str]:
-    """A dlt által korábban összegyűjtött egyedi A380 icao24 kódok."""
+# ----- DB OLVASÁS (közös helper: hiányzó táblánál csendben üres lista) -----
+def _read(sql, params: dict | None = None) -> list[dict]:
     try:
         with engine.connect() as conn:
-            rows = conn.execute(
-                text(f"SELECT DISTINCT icao24 FROM {DATASET}.a380_flights WHERE first_seen_at > now() - make_interval(days => :d)"),
-                {"d": FLEET_MAX_AGE_DAYS}).fetchall()
-        return [r[0].lower() for r in rows if r[0]]
-    except Exception as e:
-        print(f"Adatbázis hiba az ICAO kódok lekérésekor: {e}")
+            return [dict(r) for r in conn.execute(sql, params or {}).mappings().all()]
+    except ProgrammingError as e:
+        if "does not exist" in str(e):  # a dlt még nem hozta létre a táblát (nem futott a pipeline)
+            return []
+        print(f"Adatbázis hiba: {e}")
         return []
+    except Exception as e:
+        print(f"Adatbázis hiba: {e}")
+        return []
+
+
+def _jsonable(rows: list[dict]) -> list[dict]:
+    """datetime -> ISO string, hogy a válasz JSON-szerializálható legyen."""
+    return [{k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in r.items()} for r in rows]
+
+
+def fleet_icao24() -> list[str]:
+    """A dlt által korábban összegyűjtött egyedi A380 icao24 kódok."""
+    rows = _read(
+        text(
+            f"SELECT DISTINCT icao24 FROM {DATASET}.a380_flights "
+            f"WHERE first_seen_at > now() - make_interval(days => :d)"
+        ),
+        {"d": FLEET_MAX_AGE_DAYS},
+    )
+    return [r["icao24"].lower() for r in rows if r["icao24"]]
 
 
 # ----- 2. DLT RESOURCE: élő pozíciók (append -> ebből rajzolódik az útvonal) -----
@@ -136,7 +173,7 @@ def a380_positions():
         print("Üres a flotta lista – előbb futtasd: python opensky_api.py flights")
         return
 
-    # Egyetlen hívás az egész flottára (egy hívás kevesebb API kreditet fogyaszt, mint több kisebb)
+    # Egyetlen hívás az egész flottára (kevesebb API kredit, mint több kisebb hívás)
     params = [("icao24", i) for i in icaos[:300]]
     r = _get(f"{API}/states/all", params=params)
     if r.status_code != 200:
@@ -179,11 +216,23 @@ def prune_positions():
                 text(f"DELETE FROM {DATASET}.a380_positions WHERE snapshot_time < now() - make_interval(days => :d)"),
                 {"d": POSITIONS_RETENTION_DAYS},
             )
+    except ProgrammingError:
+        pass  # a tábla még nem létezik
     except Exception as e:
         print(f"Takarítási hiba: {e}")
 
 
 # ----- 3. FASTAPI ENDPOINTOK (csak DB-ből olvasnak, nem hívják az OpenSky-t) -----
+FLIGHTS_SQL = """
+    SELECT icao24, callsign, est_departure_airport, est_arrival_airport,
+           first_seen_at, last_seen_at
+    FROM {schema}.a380_flights
+    WHERE first_seen_at > now() - make_interval(hours => :h)
+    {callsign_filter}
+    ORDER BY first_seen_at DESC
+    LIMIT :n
+"""
+
 LATEST_SQL = text(
     f"""
     SELECT DISTINCT ON (icao24)
@@ -205,29 +254,32 @@ PATHS_SQL = text(
 )
 
 
+@router.get("/flights")
+def get_flights(hours: int = 48, callsign: str | None = None, limit: int = 200):
+    """A380-as Emirates járatok (indulás/érkezés) az elmúlt N órából.
+    Példa: /api/opensky/flights?hours=72&callsign=UAE1"""
+    hours = max(1, min(hours, 24 * FLEET_MAX_AGE_DAYS))
+    limit = max(1, min(limit, 1000))
+    params = {"h": hours, "n": limit}
+    callsign_filter = ""
+    if callsign:
+        callsign_filter = "AND callsign = :cs"
+        params["cs"] = callsign.strip().upper()
+    sql = text(FLIGHTS_SQL.format(schema=DATASET, callsign_filter=callsign_filter))
+    return {"flights": _jsonable(_read(sql, params))}
+
+
 @router.get("/live-positions")
 def get_live_positions():
     """A legutóbbi (max. 5 perces) pozíció gépenként."""
-    try:
-        with engine.connect() as conn:
-            rows = conn.execute(LATEST_SQL).mappings().all()
-    except Exception as e:
-        print(f"Adatbázis hiba: {e}")
-        return {"flights": []}
-    return {"flights": [{**r, "snapshot_time": r["snapshot_time"].isoformat()} for r in rows]}
+    return {"flights": _jsonable(_read(LATEST_SQL))}
 
 
 @router.get("/paths")
 def get_paths(hours: int = 24):
     """Útvonal-pontok az elmúlt N órából."""
     hours = max(1, min(hours, 24 * POSITIONS_RETENTION_DAYS))
-    try:
-        with engine.connect() as conn:
-            rows = conn.execute(PATHS_SQL, {"h": hours}).mappings().all()
-    except Exception as e:
-        print(f"Adatbázis hiba: {e}")
-        return {"points": []}
-    return {"points": [{**r, "snapshot_time": r["snapshot_time"].isoformat()} for r in rows]}
+    return {"points": _jsonable(_read(PATHS_SQL, {"h": hours}))}
 
 
 if __name__ == "__main__":
