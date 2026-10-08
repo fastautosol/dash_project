@@ -3,8 +3,6 @@
 #   python opensky_api.py positions            # egyszeri pozíció-snapshot
 #   python opensky_api.py positions --loop 120 # folyamatos gyűjtés 120 mp-enként
 
-#   OPENSKY_CLIENT_ID, OPENSKY_CLIENT_SECRET   (OAuth2 client credentials)
-#   DATABASE_URL = postgresql+psycopg2://user:pass@host/dbname   (olvasáshoz: API + Dash)
 import argparse
 import os
 import time
@@ -18,49 +16,31 @@ from sqlalchemy import create_engine, text
 # ----- KONFIGURÁCIÓ -----
 API = "https://opensky-network.org/api"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID", "")
-CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET", "")
+CLIENT_ID =  "fastautosol@gmail.com-api-client",
+CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
+
+DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
+engine = create_engine(DB_URL, pool_pre_ping=True))
 
 AIRPORTS = ["OMDB", "EDDF"]      # OMDB: Dubai, EDDF: Frankfurt (az OMAA Etihad bázis, Emirates A380 ott nem jellemző)
 CALLSIGN_PREFIX = "UAE"          # Emirates
 AIRCRAFT_TYPECODE = "A388"       # ICAO típuskód: Airbus A380-800
-DATASET = "sky_monitor"
+DATASET = "bronze"
 FLIGHT_LOOKBACK_H = 36           # az airport endpoint max. 2 napos ablakot enged
 FLEET_MAX_AGE_DAYS = 14          # ennyi napnál régebben nem látott gépet kihagyunk a lekérdezésből
 POSITIONS_RETENTION_DAYS = 7
 
 router = APIRouter()
 
-
-# ----- ADATBÁZIS (olvasás) -----
-_engine = None
-
-
-def get_engine():
-    global _engine
-    if _engine is None:
-        _engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
-    return _engine
-
-
 # ----- OPENSKY HTTP -----
 _token = {"value": None, "exp": 0.0}
-
 
 def _auth_headers() -> dict:
     """OAuth2 Bearer token cache-elve (30 percig érvényes). Kulcs nélkül anonim hívás."""
     if not CLIENT_ID:
         return {}
     if time.time() > _token["exp"] - 60:
-        r = requests.post(
-            AUTH_URL,
-            data={
-                "grant_type": "client_credentials",
-                "client_id": CLIENT_ID,
-                "client_secret": CLIENT_SECRET,
-            },
-            timeout=15,
-        )
+        r = requests.post(AUTH_URL,vdata={"grant_type": "client_credentials", "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}, timeout=15)
         r.raise_for_status()
         j = r.json()
         _token["value"] = j["access_token"]
@@ -138,14 +118,10 @@ def a380_flights():
 def fleet_icao24() -> list[str]:
     """A dlt által korábban összegyűjtött egyedi A380 icao24 kódok."""
     try:
-        with get_engine().connect() as conn:
+        with engine.connect() as conn:
             rows = conn.execute(
-                text(
-                    f"SELECT DISTINCT icao24 FROM {DATASET}.a380_flights "
-                    f"WHERE first_seen_at > now() - make_interval(days => :d)"
-                ),
-                {"d": FLEET_MAX_AGE_DAYS},
-            ).fetchall()
+                text(f"SELECT DISTINCT icao24 FROM {DATASET}.a380_flights WHERE first_seen_at > now() - make_interval(days => :d)"),
+                {"d": FLEET_MAX_AGE_DAYS}).fetchall()
         return [r[0].lower() for r in rows if r[0]]
     except Exception as e:
         print(f"Adatbázis hiba az ICAO kódok lekérésekor: {e}")
@@ -198,7 +174,7 @@ def _pipeline():
 
 def prune_positions():
     try:
-        with get_engine().begin() as conn:
+        with engine.begin() as conn:
             conn.execute(
                 text(f"DELETE FROM {DATASET}.a380_positions WHERE snapshot_time < now() - make_interval(days => :d)"),
                 {"d": POSITIONS_RETENTION_DAYS},
