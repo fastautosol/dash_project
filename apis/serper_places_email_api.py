@@ -270,38 +270,19 @@ def run_dlt_pipeline(
             limit
         )
 
-        data = asyncio.run(
-            fetch_serper_async(
-                city,
-                limit
-            )
-        )
+        data = asyncio.run(fetch_serper_async(city, limit))
 
         pipeline = dlt.pipeline(
             pipeline_name="serper_companies",
-            destination=dlt.destinations.postgres(
-                credentials=DB_CONFIG
-            ),
-            dataset_name="serper"
-        )
+            destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+            dataset_name="serper")
 
-        load_info = pipeline.run(
-            companies_resource(data),
-            write_disposition="merge",
-            primary_key=["name", "address"]
-        )
-
-        logger.info(
-            "DLT pipeline finished successfully: %s",
-            load_info
-        )
+        load_info = pipeline.run(companies_resource(data), write_disposition="merge", primary_key=["name", "address"])
+        logger.info("DLT pipeline finished successfully: %s", load_info)
 
     except Exception as e:
 
-        logger.exception(
-            "Pipeline failed: %s",
-            e
-        )
+        logger.exception("Pipeline failed: %s", e)
 
 
 # -----------------------------------------------------------------------------
@@ -309,16 +290,9 @@ def run_dlt_pipeline(
 # -----------------------------------------------------------------------------
 
 @router.post("/")
-async def get_companies(
-    req: SerperRequest,
-    background_tasks: BackgroundTasks
-):
+async def get_companies(req: SerperRequest, background_tasks: BackgroundTasks):
 
-    background_tasks.add_task(
-        run_dlt_pipeline,
-        req.city,
-        req.limit
-    )
+    background_tasks.add_task(run_dlt_pipeline, req.city, req.limit)
 
     return {
         "status": "success",
