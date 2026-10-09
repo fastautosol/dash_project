@@ -61,7 +61,7 @@ def fetch_airport_flights():
                     
                     #if callsign.startswith("UAE") and icao24 and dep and arr:
                     AIRLINES = ["UAE", "QTR", "ETD", "DLH", "QFA"]
-                    if callsign[:5] in AIRLINES and icao24 and dep and arr:
+                    if callsign[:3] in AIRLINES and icao24 and dep and arr:
                         yield {
                             "icao24": icao24,
                             "callsign": callsign,
