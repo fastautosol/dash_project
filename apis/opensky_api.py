@@ -56,21 +56,19 @@ def fetch_airport_flights():
                 for f in flights:
                     callsign = (f.get("callsign") or "").strip()
                     icao24 = f.get("icao24")
-                    est_departure_airport = f.get("estDepartureAirport")
-                    est_arrival_airport = f.get("estArrivalAirport")
+                    dep = f.get("estDepartureAirport")
+                    arr = f.get("estArrivalAirport")
                     
-                    if callsign.startswith("UAE") and icao24 and est_departure_airport and est_arrival_airport:
+                    #if callsign.startswith("UAE") and icao24 and dep and arr:
+                    AIRLINES = ["UAE", "QTR", "ETD", "DLH", "QFA"]
+                    if callsign[:5] in AIRLINES and icao24 and dep and arr:
                         yield {
                             "icao24": icao24,
                             "callsign": callsign,
-                            "est_departure_airport": est_departure_airport,
-                            "est_arrival_airport": est_arrival_airport,
+                            "est_departure_airport": dep,
+                            "est_arrival_airport": arr,
                             "first_seen": f.get("firstSeen"),
                             "last_seen": f.get("lastSeen"),
-                            "est_dep_horiz_dist": f.get("estDepartureAirportHorizDistance"),
-                            "est_dep_vert_dist":  f.get("estDepartureAirportVertDistance"),
-                            "est_arr_horiz_dist": f.get("estArrivalAirportHorizDistance"),
-                            "est_arr_vert_dist":  f.get("estArrivalAirportVertDistance"),
                             "updated_at": datetime.now(timezone.utc).isoformat() #datetime.now()
                         }
             except Exception as e:
