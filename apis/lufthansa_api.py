@@ -358,47 +358,25 @@ def normalize_schedule_response(
         flight_number = schedule.get("flightNumber")
         suffix = schedule.get("suffix", "")
 
-        period_utc = schedule.get(
-            "periodOfOperationUTC",
-            {},
-        )
+        period_utc = schedule.get("periodOfOperationUTC", {})
 
-        period_lt = schedule.get(
-            "periodOfOperationLT",
-            {},
-        )
+        period_lt = schedule.get("periodOfOperationLT", {})
 
-        period_start = normalize_date_lh(
-            period_utc.get("startDate")
-        )
+        period_start = normalize_date_lh(period_utc.get("startDate"))
 
-        period_end = normalize_date_lh(
-            period_utc.get("endDate")
-        )
+        period_end = normalize_date_lh(period_utc.get("endDate"))
 
-        days_of_operation = (
-            period_utc
-            .get("daysOfOperation", "")
-            .strip()
-        )
+        days_of_operation = (period_utc.get("daysOfOperation", "").strip())
 
         legs = schedule.get("legs", [])
 
-        data_elements = schedule.get(
-            "dataElements",
-            [],
-        )
+        data_elements = schedule.get("dataElements", [])
 
-        element_info = extract_data_elements(
-            data_elements
-        )
+        element_info = extract_data_elements(data_elements)
 
         for leg in legs:
 
-            leg_origin = leg.get(
-                "origin",
-                origin,
-            )
+            leg_origin = leg.get("origin", origin)
 
             leg_destination = leg.get("destination", destination)
             sequence_number = leg.get("sequenceNumber")
