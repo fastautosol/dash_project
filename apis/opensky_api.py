@@ -1,8 +1,9 @@
-# 2026.10.09  17.00
+# 2026.10.09  18.00
 import dlt
 import requests
 import time
 import httpx
+import asyncio
 from datetime import datetime, timezone
 from dlt.sources.helpers import requests as dlt_requests
 from fastapi import APIRouter, BackgroundTasks
@@ -88,8 +89,9 @@ def trigger_airport_flights_sync(background_tasks: BackgroundTasks):
     background_tasks.add_task(run_dlt_pipeline)   
     return {"message": "Az OpenSky reptéri menetrend szinkronizálása elindult a háttérben.", "timestamp": datetime.now().isoformat()}
 
+
 def get_tracked_icao_codes() -> list[str]:
-    query = text("SELECT DISTINCT icao24 FROM bronze.uae_flights WHERE icao24 IS NOT NULL")
+    query = text("SELECT DISTINCT icao24 FROM bronze.uae_flights WHERE icao24 IS NOT NULL ORDER BY icao24")
     try:
         with engine.connect() as conn:
             result = conn.execute(query)
@@ -99,15 +101,21 @@ def get_tracked_icao_codes() -> list[str]:
         print(f"Adatbázis hiba az ICAO kódok lekérésekor: {e}")
         return []
 
-async def fetch_live_states_from_opensky(icao_list: list[str]) -> list[dict]:
+
+async def fetch_live_states_from_opensky(icao_list):
     if not icao_list:
         return []
 
-    params = [("icao24", icao_3) for icao_3 in icao_list]
+    token = await asyncio.to_thread(get_cached_token)
+    headers = {"Authorization": f"Bearer {token}"}
+    params = [("icao24", c) for c in icao_list]
     
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            response = await client.get(f"{API}/states/all", params=params)
+            response = await client.get(f"{API}/states/all", params=params, headers=headers)
+            if response.status_code == 401:  # lejárt token
+                _token["exp"] = 0
+                return []
             if response.status_code != 200:
                 return []
                 
@@ -139,7 +147,7 @@ async def fetch_live_states_from_opensky(icao_list: list[str]) -> list[dict]:
 # ----- 1. FASTAPI ENDPOINT (A Dash térkép aszinkron AJAX hívásaihoz) -----
 @router.get("/live-positions")
 async def get_live_positions():
-    icao_codes = get_tracked_icao_codes()
+    icao_codes = await asyncio.to_thread(get_tracked_icao_codes)
     if not icao_codes:
         return {"flights": []}
     
