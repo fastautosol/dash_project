@@ -8,7 +8,6 @@
 # APIs:
 #   1. Customer Flight Information
 #   2. Flight Schedules
-#
 # ============================================================
 
 import os
@@ -18,9 +17,7 @@ import asyncio
 import requests
 import dlt
 import logging
-
 from datetime import datetime, timezone
-
 from fastapi import APIRouter, BackgroundTasks
 from dlt.pipeline.exceptions import PipelineStepFailed
 
@@ -28,18 +25,9 @@ logger = logging.getLogger("lufthansa_api")
 
 router = APIRouter()
 
-
-
-DB_CONFIG = {
-    "host": "postgresql",
-    "port": 5432,
-    "database": "n8n",
-    "username": "sql_admin",
-    "password": "sql_pass",
-    "connect_timeout": 15,}
-
+DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 LH_BASE_URL = "https://api.lufthansa.com/v1"
-MAX_CONCURRENT_REQUESTS = 4
+MAX_CONCURRENT_REQUESTS = 5
 REQUEST_DELAY = 0.5
 
 # =========================== ROUTES =================================
@@ -110,23 +98,11 @@ def get_lufthansa_token():
         raise RuntimeError("LH_CLIENT_ID / LH_CLIENT_SECRET environment variables are missing.")
 
     token_url = f"{LH_BASE_URL}/oauth/token"
-
-    payload = {
-        "grant_type": "client_credentials",
-        "client_id": client_id,
-        "client_secret": client_secret,
-    }
-
-    response = requests.post(
-        token_url,
-        data=payload,
-        timeout=30,
-    )
-
+    payload = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+    response = requests.post(token_url, data=payload, timeout=30)
     response.raise_for_status()
 
     return response.json()["access_token"]
-
 
 # ============================================================
 # HELPERS
@@ -143,15 +119,11 @@ def normalize_date_lh(value):
     value = value.strip()
 
     try:
-        return datetime.strptime(
-            value,
-            "%d%b%y"
-        ).date().isoformat()
+        return datetime.strptime(value, "%d%b%y").date().isoformat()
 
     except ValueError:
         return value
-
-
+        
 def minutes_to_hhmm(minutes):
     if minutes is None:
         return None
