@@ -1,5 +1,5 @@
 # ============================================================
-# Lufthansa API -> DLT -> PostgreSQL
+# 2026.01.09  12.00 Lufthansa API -> DLT -> PostgreSQL
 #
 # Bronze tables:
 #   bronze.lh_flights
@@ -216,20 +216,9 @@ async def fetch_route(client, token, origin, dest, flight_date, sem):
 # FLIGHT SCHEDULE API
 # ============================================================
 
-async def fetch_schedule(
-    client,
-    token,
-    origin,
-    dest,
-    start_date,
-    end_date,
-    sem,
-):
+async def fetch_schedule(client, token, origin, dest, start_date, end_date, sem):
 
-    url = (
-        f"{LH_BASE_URL}"
-        f"/flight-schedules/flightschedules/passenger"
-    )
+    url = (f"{LH_BASE_URL}/flight-schedules/flightschedules/passenger")
 
     params = {
         "airlines": "LH",
@@ -238,22 +227,15 @@ async def fetch_schedule(
         "daysOfOperation": "1234567",
         "timeMode": "UTC",
         "origin": origin,
-        "destination": dest,
-    }
+        "destination": dest}
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-    }
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
     async with sem:
 
         try:
-
             response = await client.get(url, headers=headers, params=params, timeout=30)
-
             await asyncio.sleep(REQUEST_DELAY)
-
             if response.status_code != 200:
                 logger.warning(f"Schedule API error {origin}-{dest}: {response.status_code}")
                 return []
