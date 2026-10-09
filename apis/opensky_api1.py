@@ -1,4 +1,4 @@
-# 2026.10.08  18.00
+# 2026.10.09  12.00
 import dlt
 import requests
 import time
@@ -14,14 +14,12 @@ CLIENT_ID = "fastautosol@gmail.com-api-client"
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
-#DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
-#engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True)
+DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
+DB_URL = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
+engine = create_engine(DB_URL, pool_size=5, max_overflow=10, pool_pre_ping=True)
 
-DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-engine = create_engine(DB_URL)
 API = "https://opensky-network.org/api"
 
-# 1. Létrehozzuk a FastAPI routert
 router = APIRouter()
 
 def get_auth_token():
