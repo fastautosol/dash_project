@@ -400,14 +400,8 @@ def normalize_schedule_response(
                 origin,
             )
 
-            leg_destination = leg.get(
-                "destination",
-                destination,
-            )
-
-            sequence_number = leg.get(
-                "sequenceNumber"
-            )
+            leg_destination = leg.get("destination", destination)
+            sequence_number = leg.get("sequenceNumber")
 
             flight_key = (
                 f"{airline}_"
@@ -419,11 +413,7 @@ def normalize_schedule_response(
                 f"{sequence_number}"
             )
 
-            marketing_flights = (
-                element_info[
-                    "marketing_flights"
-                ]
-            )
+            marketing_flights = (element_info["marketing_flights"])
 
             row = {
                 "flight_key": flight_key,
@@ -462,8 +452,7 @@ def normalize_schedule_response(
                 "data_elements_raw": json.dumps(element_info["data_elements_raw"]),
                 "requested_start_date": normalize_date_lh(requested_start),
                 "requested_end_date": normalize_date_lh(requested_end),
-                "_ingested_at": ingestion_time,
-            }
+                "_ingested_at": ingestion_time}
 
             rows.append(row)
 
@@ -474,33 +463,21 @@ def normalize_schedule_response(
 # DLT RESOURCES & PIPELINE
 # ============================================================
 
-@dlt.resource(
-    name="lh_flights",
-    write_disposition="merge",
-)
+@dlt.resource( name="lh_flights", write_disposition="merge")
 def flights_resource(rows: list[dict]):
     for row in rows:
         yield row
 
-
-@dlt.resource(
-    name="lh_schedule",
-    write_disposition="merge",
-)
+@dlt.resource(name="lh_schedule", write_disposition="merge")
 def schedule_resource(rows: list[dict]):
     for row in rows:
         yield row
 
-
 def get_pipeline():
     return dlt.pipeline(
         pipeline_name="lufthansa_ingest",
-        destination=dlt.destinations.postgres(
-            credentials=DB_CONFIG
-        ),
-        dataset_name="bronze",
-    )
-
+        destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+        dataset_name="bronze")
 
 # ============================================================
 # ASYNC FETCH WORKER
@@ -515,19 +492,9 @@ async def fetch_lufthansa_data_async(flight_date: str):
     schedule_end = schedule_start
 
     async with httpx.AsyncClient(timeout=90) as client:
-        flight_tasks = [
-            fetch_route(client, token, origin, destination, flight_date, sem)
-            for origin, destination in ROUTES_FULL
-        ]
-        schedule_tasks = [
-            fetch_schedule(client, token, origin, destination, schedule_start, schedule_end, sem)
-            for origin, destination in ROUTES_FULL
-        ]
-
-        flight_results, schedule_results = await asyncio.gather(
-            asyncio.gather(*flight_tasks),
-            asyncio.gather(*schedule_tasks)
-        )
+        flight_tasks = [fetch_route(client, token, origin, destination, flight_date, sem) for origin, destination in ROUTES_FULL]
+        schedule_tasks = [fetch_schedule(client, token, origin, destination, schedule_start, schedule_end, sem) for origin, destination in ROUTES_FULL]
+        flight_results, schedule_results = await asyncio.gather(asyncio.gather(*flight_tasks), asyncio.gather(*schedule_tasks))
 
     flight_data = [item for sublist in flight_results if sublist for item in sublist]
     schedule_data = [item for sublist in schedule_results if sublist for item in sublist]
@@ -538,8 +505,7 @@ async def fetch_lufthansa_data_async(flight_date: str):
     ALLOWED_FIELDS = {
         "Status", "Equipment", "Departure", "Arrival",
         "AircraftDetails", "MarketingCarrierList", "OperatingCarrier",
-        "route_key", "_ingested_at",
-    }
+        "route_key", "_ingested_at"}
 
     clean_flights = []
     for row in flight_data:
@@ -577,11 +543,7 @@ def run_dlt_pipeline(flight_date: str):
 
         if clean_flights:
             try:
-                load_info = pipeline.run(
-                    flights_resource(clean_flights),
-                    write_disposition="merge",
-                    primary_key=["flight_key"],
-                )
+                load_info = pipeline.run(flights_resource(clean_flights), write_disposition="merge", primary_key=["flight_key"])
                 logger.info("Flights DLT pipeline finished: %s", load_info)
             except PipelineStepFailed as e:
                 logger.error("Flight DLT pipeline error, falling back to append: %s", e)
