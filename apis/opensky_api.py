@@ -51,13 +51,15 @@ def fetch_airport_flights():
                 for f in flights:
                     callsign = (f.get("callsign") or "").strip()
                     icao24 = f.get("icao24")
+                    est_departure_airport = f.get("estDepartureAirport")
+                    est_arrival_airport = f.get("estArrivalAirport")
                     
                     if callsign.startswith("UAE") and icao24 and est_departure_airport and est_arrival_airport:
                         yield {
                             "icao24": icao24,
                             "callsign": callsign,
-                            "est_departure_airport": f.get("estDepartureAirport"),
-                            "est_arrival_airport": f.get("estArrivalAirport"),
+                            "est_departure_airport": est_departure_airport,
+                            "est_arrival_airport": est_arrival_airport,
                             "first_seen": f.get("firstSeen"),
                             "last_seen": f.get("lastSeen"),
                             "est_dep_horiz_dist": f.get("estDepartureAirportHorizDistance"),
