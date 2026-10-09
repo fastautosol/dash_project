@@ -149,19 +149,13 @@ def minutes_to_hhmm(minutes):
 
 
 def extract_data_elements(data_elements):
-    result = {
-        "marketing_flights": None,
-        "arrival_terminal": None,
-        "departure_terminal": None,
-    }
+    result = {"marketing_flights": None, "arrival_terminal": None, "departure_terminal": None}
 
     raw_elements = []
-
     for element in data_elements or []:
 
         element_id = element.get("id")
         value = element.get("value")
-
         raw_elements.append(element)
 
         if element_id == 10:
@@ -182,52 +176,25 @@ def extract_data_elements(data_elements):
 # FLIGHT INFORMATION API
 # ============================================================
 
-async def fetch_route(
-    client,
-    token,
-    origin,
-    dest,
-    flight_date,
-    sem,
-):
+async def fetch_route(client, token, origin, dest, flight_date, sem):
 
-    url = (
-        f"{LH_BASE_URL}"
-        f"/operations/customerflightinformation"
-        f"/route/{origin}/{dest}/{flight_date}"
-    )
+    url = (f"{LH_BASE_URL}/operations/customerflightinformation/route/{origin}/{dest}/{flight_date}")
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-    }
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
     async with sem:
 
         try:
 
-            response = await client.get(
-                url,
-                headers=headers,
-                timeout=30,
-            )
-
+            response = await client.get(url, headers=headers, timeout=30)
             await asyncio.sleep(REQUEST_DELAY)
 
             if response.status_code != 200:
-                logger.warning(
-                    f"Flight API error {origin}-{dest}: {response.status_code}"
-                )
+                logger.warning(f"Flight API error {origin}-{dest}: {response.status_code}")
                 return []
 
             json_data = response.json()
-
-            flights = (
-                json_data
-                .get("FlightInformation", {})
-                .get("Flights", {})
-                .get("Flight", [])
-            )
+            flights = (json_data.get("FlightInformation", {}).get("Flights", {}).get("Flight", []))
 
             if not flights:
                 return []
@@ -236,17 +203,12 @@ async def fetch_route(
                 flights = [flights]
 
             for flight in flights:
-
-                flight["route_key"] = (
-                    f"{origin}-{dest}"
-                )
+                flight["route_key"] = (f"{origin}-{dest}")
 
             return flights
 
         except Exception as e:
-            logger.warning(
-                f"Flight API exception {origin}-{dest}: {e}"
-            )
+            logger.warning(f"Flight API exception {origin}-{dest}: {e}")
             return []
 
 
