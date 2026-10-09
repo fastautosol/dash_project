@@ -14,8 +14,11 @@ CLIENT_ID = "fastautosol@gmail.com-api-client"
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
-DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
-engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True)
+#DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
+#engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True)
+
+DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
+engine = create_engine(DB_URL)
 API = "https://opensky-network.org/api"
 
 # 1. Létrehozzuk a FastAPI routert
