@@ -40,7 +40,6 @@ def fetch_airport_flights():
     
     for airport in AIRPORTS:
         for direction in ("departure", "arrival"):
-            #r = _get(f"{API}/flights/{direction}", params={"airport": airport, "begin": begin, "end": end})
             url_flights = f"{API}/flights/{direction}?airport={airport}&begin={time_start}&end={time_end}"
                          
             try:
