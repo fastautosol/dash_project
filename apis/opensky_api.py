@@ -1,4 +1,4 @@
-# 2026.10.09  12.00
+# 2026.10.09  15.00
 import dlt
 import requests
 import time
@@ -52,7 +52,7 @@ def fetch_airport_flights():
                     callsign = (f.get("callsign") or "").strip()
                     icao24 = f.get("icao24")
                     
-                    if callsign.startswith("UAE") and icao24:
+                    if callsign.startswith("UAE") and icao24 and est_departure_airport and est_arrival_airport:
                         yield {
                             "icao24": icao24,
                             "callsign": callsign,
@@ -60,6 +60,10 @@ def fetch_airport_flights():
                             "est_arrival_airport": f.get("estArrivalAirport"),
                             "first_seen": f.get("firstSeen"),
                             "last_seen": f.get("lastSeen"),
+                            "est_dep_horiz_dist": f.get("estDepartureAirportHorizDistance"),
+                            "est_dep_vert_dist":  f.get("estDepartureAirportVertDistance"),
+                            "est_arr_horiz_dist": f.get("estArrivalAirportHorizDistance"),
+                            "est_arr_vert_dist":  f.get("estArrivalAirportVertDistance"),
                             "updated_at": datetime.now(timezone.utc).isoformat() #datetime.now()
                         }
             except Exception as e:
