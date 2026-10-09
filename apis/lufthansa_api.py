@@ -288,19 +288,12 @@ async def fetch_schedule(
 
         try:
 
-            response = await client.get(
-                url,
-                headers=headers,
-                params=params,
-                timeout=30,
-            )
+            response = await client.get(url, headers=headers, params=params, timeout=30)
 
             await asyncio.sleep(REQUEST_DELAY)
 
             if response.status_code != 200:
-                logger.warning(
-                    f"Schedule API error {origin}-{dest}: {response.status_code}"
-                )
+                logger.warning(f"Schedule API error {origin}-{dest}: {response.status_code}")
                 return []
 
             data = response.json()
@@ -315,8 +308,7 @@ async def fetch_schedule(
                     or data.get("FlightSchedules")
                     or data.get("schedules")
                     or data.get("data")
-                    or []
-                )
+                    or [])
 
             else:
                 schedules = []
@@ -326,13 +318,10 @@ async def fetch_schedule(
                 origin=origin,
                 destination=dest,
                 requested_start=start_date,
-                requested_end=end_date,
-            )
+                requested_end=end_date)
 
         except Exception as e:
-            logger.warning(
-                f"Schedule API exception {origin}-{dest}: {e}"
-            )
+            logger.warning(f"Schedule API exception {origin}-{dest}: {e}")
             return []
 
 
@@ -340,16 +329,9 @@ async def fetch_schedule(
 # NORMALIZE SCHEDULE RESPONSE
 # ============================================================
 
-def normalize_schedule_response(
-    schedules,
-    origin,
-    destination,
-    requested_start,
-    requested_end,
-):
+def normalize_schedule_response(schedules, origin, destination, requested_start, requested_end):
 
     rows = []
-
     ingestion_time = utc_now_iso()
 
     for schedule in schedules:
@@ -357,40 +339,21 @@ def normalize_schedule_response(
         airline = schedule.get("airline")
         flight_number = schedule.get("flightNumber")
         suffix = schedule.get("suffix", "")
-
         period_utc = schedule.get("periodOfOperationUTC", {})
-
         period_lt = schedule.get("periodOfOperationLT", {})
-
         period_start = normalize_date_lh(period_utc.get("startDate"))
-
         period_end = normalize_date_lh(period_utc.get("endDate"))
-
         days_of_operation = (period_utc.get("daysOfOperation", "").strip())
-
         legs = schedule.get("legs", [])
-
         data_elements = schedule.get("dataElements", [])
-
         element_info = extract_data_elements(data_elements)
 
         for leg in legs:
 
             leg_origin = leg.get("origin", origin)
-
             leg_destination = leg.get("destination", destination)
             sequence_number = leg.get("sequenceNumber")
-
-            flight_key = (
-                f"{airline}_"
-                f"{flight_number}"
-                f"{suffix}_"
-                f"{period_start}_"
-                f"{leg_origin}_"
-                f"{leg_destination}_"
-                f"{sequence_number}"
-            )
-
+            flight_key = (f"{airline}_{flight_number}{suffix}_{period_start}_{leg_origin}_{leg_destination}_{sequence_number}")
             marketing_flights = (element_info["marketing_flights"])
 
             row = {
