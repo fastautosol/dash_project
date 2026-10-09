@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks
 from sqlalchemy import create_engine, text
 
 # ----- Config -----
-AIRPORTS = ["OMDB", "OMAA", "EDDF"]  # OMDB: Dubai, OMAA: Abu Dhabi, EDDF: Frankfurt
+AIRPORTS = ["OMDB", "OMAA", "EDDF", "VHHH", "YSSY", "KLAX", "EHAM"]
 CLIENT_ID = "fastautosol@gmail.com-api-client"
 CLIENT_SECRET = "1Fk2Xga7e85duhpQYbjNAseMt2Qn5gcF"
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
