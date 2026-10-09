@@ -1,4 +1,4 @@
-# 2026.10.09  15.00
+# 2026.10.09  17.00
 import dlt
 import requests
 import time
@@ -28,8 +28,10 @@ def get_auth_token():
     response.raise_for_status()
     return response.json()["access_token"]
 
-@dlt.resource(name="uae_flights", write_disposition="replace") 
+
+@dlt.resource(name="uae_flights", write_disposition="merge", primary_key=["icao24", "first_seen"])
 def fetch_airport_flights():
+    
     token = get_auth_token()
     headers = {"Authorization": f"Bearer {token}"}
     
