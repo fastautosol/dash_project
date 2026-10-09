@@ -29,9 +29,6 @@ logger = logging.getLogger("lufthansa_api")
 router = APIRouter()
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
 
 DB_CONFIG = {
     "host": "postgresql",
@@ -39,67 +36,53 @@ DB_CONFIG = {
     "database": "n8n",
     "username": "sql_admin",
     "password": "sql_pass",
-    "connect_timeout": 15,
-}
+    "connect_timeout": 15,}
 
 LH_BASE_URL = "https://api.lufthansa.com/v1"
-
 MAX_CONCURRENT_REQUESTS = 4
 REQUEST_DELAY = 0.5
 
-
-# ============================================================
-# ROUTES
-# ============================================================
+# =========================== ROUTES =================================
 
 ROUTES_FULL = [
 
-    # --------------------------------------------------------
-    # FRA - Long Haul
-    # --------------------------------------------------------
-
-    ("FRA", "SIN"),
-    ("FRA", "HND"),
-    ("FRA", "LAX"),
-    ("FRA", "JFK"),
-    ("FRA", "EWR"),
-    ("FRA", "ORD"),
-    ("FRA", "IAD"),
-    ("FRA", "BOS"),
-    ("FRA", "DEN"),
-    ("FRA", "SFO"),
-    ("FRA", "MIA"),
-    ("FRA", "YYZ"),
-    ("FRA", "MEX"),
-    ("FRA", "DEL"),
-    ("FRA", "BOM"),
-    ("FRA", "BLR"),
-    ("FRA", "HYD"),
-    ("FRA", "ICN"),
-    ("FRA", "GRU"),
-    ("FRA", "DXB"),
-    ("FRA", "CAI"),
-    ("FRA", "TLV"),
-    ("FRA", "BEY"),
-
-    # --------------------------------------------------------
-    # FRA - Europe
-    # --------------------------------------------------------
-
-    ("FRA", "LHR"),
-    ("FRA", "LCY"),
-    ("FRA", "CDG"),
-    ("FRA", "AMS"),
-    ("FRA", "MAD"),
-    ("FRA", "BCN"),
-    ("FRA", "LIS"),
-    ("FRA", "ATH"),
-    ("FRA", "IST"),
-    ("FRA", "BER"),
-    ("FRA", "HAM"),
-    ("FRA", "DUS"),
-    ("FRA", "MUC"),
-    ("FRA", "VIE"),
+    ("FRA", "SIN"),        ("MUC", "LAX"),        ("HAM", "FRA"),        ("BER", "FRA"),
+    ("FRA", "HND"),        ("MUC", "SFO"),        ("HAM", "MUC"),        ("BER", "MUC"),
+    ("FRA", "LAX"),        ("MUC", "DEN"),        ("HAM", "LHR"),        ("BER", "LHR"),
+    ("FRA", "JFK"),        ("MUC", "ORD"),        ("HAM", "CDG"),        ("BER", "CDG"),
+    ("FRA", "EWR"),        ("MUC", "EWR"),        ("HAM", "AMS"),        ("BER", "AMS"),
+    ("FRA", "ORD"),        ("MUC", "JFK"),        ("HAM", "MAD"),        ("BER", "MAD"),
+    ("FRA", "IAD"),        ("MUC", "BOS"),        ("HAM", "BCN"),        ("BER", "BCN"),
+    ("FRA", "BOS"),        ("MUC", "DEL"),        ("HAM", "LIS"),        ("BER", "LIS"),
+    ("FRA", "DEN"),        ("MUC", "BOM"),        ("HAM", "ATH"),        ("BER", "ATH"),
+    ("FRA", "SFO"),        ("MUC", "BLR"),        ("HAM", "BER"),        ("BER", "VIE"),
+    ("FRA", "MIA"),        ("MUC", "BKK"),        ("HAM", "VIE"),        ("BER", "ZRH"),
+    ("FRA", "YYZ"),        ("MUC", "JNB"),        ("HAM", "ZRH"),        ("BER", "CPH"),
+    ("FRA", "MEX"),        ("MUC", "CPT"),        ("HAM", "CPH"),        ("BER", "OSL"),
+    ("FRA", "DEL"),        ("MUC", "DXB"),        ("HAM", "OSL"),        ("BER", "HEL"),
+    ("FRA", "BOM"),        ("MUC", "LHR"),        ("HAM", "HEL"),        ("BER", "WAW"),
+    ("FRA", "BLR"),        ("MUC", "CDG"),        ("HAM", "WAW"),        ("BER", "PRG"),
+    ("FRA", "HYD"),        ("MUC", "AMS"),        ("HAM", "PRG"),        ("BER", "BUD"),
+    ("FRA", "ICN"),        ("MUC", "MAD"),        ("HAM", "BUD"),        ("BER", "FCO"),
+    ("FRA", "GRU"),        ("MUC", "BCN"),        ("HAM", "FCO"),        ("BER", "MXP"),
+    ("FRA", "DXB"),        ("MUC", "LIS"),        ("HAM", "MXP"),        ("BER", "MAN"),
+    ("FRA", "CAI"),        ("MUC", "ATH"),        ("HAM", "MAN"),        ("BER", "DUB"),
+    ("FRA", "TLV"),        ("MUC", "BER"),        ("HAM", "DUB"),
+    ("FRA", "BEY"),        ("MUC", "HAM"),
+    ("FRA", "LHR"),        ("MUC", "DUS"),
+    ("FRA", "LCY"),        ("MUC", "FRA"),
+    ("FRA", "CDG"),        ("MUC", "VIE"),
+    ("FRA", "AMS"),        ("MUC", "ZRH"),
+    ("FRA", "MAD"),        ("MUC", "CPH"),
+    ("FRA", "BCN"),        ("MUC", "OSL"),
+    ("FRA", "LIS"),        ("MUC", "WAW"),
+    ("FRA", "ATH"),        ("MUC", "PRG"),
+    ("FRA", "IST"),        ("MUC", "BUD"),
+    ("FRA", "BER"),        ("MUC", "FCO"),
+    ("FRA", "HAM"),        ("MUC", "MXP"),
+    ("FRA", "DUS"),        ("MUC", "MAN"),
+    ("FRA", "MUC"),        ("MUC", "DUB"),
+    ("FRA", "VIE"),        ("MUC", "TLV"),
     ("FRA", "ZRH"),
     ("FRA", "CPH"),
     ("FRA", "OSL"),
@@ -111,53 +94,6 @@ ROUTES_FULL = [
     ("FRA", "TLS"),
     ("FRA", "MAN"),
     ("FRA", "DUB"),
-
-    # --------------------------------------------------------
-    # MUC - Long Haul
-    # --------------------------------------------------------
-
-    ("MUC", "LAX"),
-    ("MUC", "SFO"),
-    ("MUC", "DEN"),
-    ("MUC", "ORD"),
-    ("MUC", "EWR"),
-    ("MUC", "JFK"),
-    ("MUC", "BOS"),
-    ("MUC", "DEL"),
-    ("MUC", "BOM"),
-    ("MUC", "BLR"),
-    ("MUC", "BKK"),
-    ("MUC", "JNB"),
-    ("MUC", "CPT"),
-    ("MUC", "DXB"),
-
-    # --------------------------------------------------------
-    # MUC - Europe
-    # --------------------------------------------------------
-
-    ("MUC", "LHR"),
-    ("MUC", "CDG"),
-    ("MUC", "AMS"),
-    ("MUC", "MAD"),
-    ("MUC", "BCN"),
-    ("MUC", "LIS"),
-    ("MUC", "ATH"),
-    ("MUC", "BER"),
-    ("MUC", "HAM"),
-    ("MUC", "DUS"),
-    ("MUC", "FRA"),
-    ("MUC", "VIE"),
-    ("MUC", "ZRH"),
-    ("MUC", "CPH"),
-    ("MUC", "OSL"),
-    ("MUC", "WAW"),
-    ("MUC", "PRG"),
-    ("MUC", "BUD"),
-    ("MUC", "FCO"),
-    ("MUC", "MXP"),
-    ("MUC", "MAN"),
-    ("MUC", "DUB"),
-    ("MUC", "TLV"),
 ]
 
 
@@ -171,9 +107,7 @@ def get_lufthansa_token():
     client_secret = os.getenv("LH_CLIENT_SECRET")
 
     if not client_id or not client_secret:
-        raise RuntimeError(
-            "LH_CLIENT_ID / LH_CLIENT_SECRET environment variables are missing."
-        )
+        raise RuntimeError("LH_CLIENT_ID / LH_CLIENT_SECRET environment variables are missing.")
 
     token_url = f"{LH_BASE_URL}/oauth/token"
 
