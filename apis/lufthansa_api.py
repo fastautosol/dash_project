@@ -586,10 +586,7 @@ def run_dlt_pipeline(flight_date: str):
             except PipelineStepFailed as e:
                 logger.error("Flight DLT pipeline error, falling back to append: %s", e)
                 pipeline.drop_pending_packages()
-                load_info = pipeline.run(
-                    flights_resource(clean_flights),
-                    write_disposition="append",
-                )
+                load_info = pipeline.run(flights_resource(clean_flights), write_disposition="append")
                 logger.info("Flights DLT pipeline fallback finished: %s", load_info)
 
         if schedule_data:
@@ -597,16 +594,13 @@ def run_dlt_pipeline(flight_date: str):
                 load_info = pipeline.run(
                     schedule_resource(schedule_data),
                     write_disposition="merge",
-                    primary_key=["flight_key"],
-                )
+                    primary_key=["flight_key"])
                 logger.info("Schedule DLT pipeline finished: %s", load_info)
             except PipelineStepFailed as e:
+                
                 logger.error("Schedule DLT pipeline error, falling back to append: %s", e)
                 pipeline.drop_pending_packages()
-                load_info = pipeline.run(
-                    schedule_resource(schedule_data),
-                    write_disposition="append",
-                )
+                load_info = pipeline.run(schedule_resource(schedule_data), write_disposition="append")
                 logger.info("Schedule DLT pipeline fallback finished: %s", load_info)
 
     except Exception as e:
@@ -618,17 +612,11 @@ def run_dlt_pipeline(flight_date: str):
 # ============================================================
 
 @router.get("/flights/{flight_date}")
-async def get_flightroute_details(
-    flight_date: str,
-    background_tasks: BackgroundTasks
-):
+async def get_flightroute_details(flight_date: str, background_tasks: BackgroundTasks):
     try:
         datetime.strptime(flight_date, "%Y-%m-%d")
     except ValueError:
-        return {
-            "status": "error",
-            "message": "flight_date must be YYYY-MM-DD",
-        }
+        return {"status": "error", "message": "flight_date must be YYYY-MM-DD"}
 
     background_tasks.add_task(run_dlt_pipeline, flight_date)
 
