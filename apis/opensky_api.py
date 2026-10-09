@@ -89,6 +89,16 @@ def trigger_airport_flights_sync(background_tasks: BackgroundTasks):
     background_tasks.add_task(run_dlt_pipeline)   
     return {"message": "Az OpenSky reptéri menetrend szinkronizálása elindult a háttérben.", "timestamp": datetime.now().isoformat()}
 
+_token = {"value": None, "exp": 0.0}
+def get_cached_token() -> str:
+    if time.time() > _token["exp"] - 60:
+        payload = {"grant_type": "client_credentials", "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET}
+        r = requests.post(AUTH_URL, data=payload, timeout=15)
+        r.raise_for_status()
+        j = r.json()
+        _token["value"] = j["access_token"]
+        _token["exp"] = time.time() + j.get("expires_in", 1500)
+    return _token["value"]
 
 def get_tracked_icao_codes() -> list[str]:
     query = text("SELECT DISTINCT icao24 FROM bronze.uae_flights WHERE icao24 IS NOT NULL ORDER BY icao24")
