@@ -140,12 +140,12 @@ layout = dbc.Container([
             html.H3(
                 [html.I(className="fas fa-plane-departure me-2 text-warning"), "OPENSKY FLIGHT RADAR"],
                 className="text-light mb-2", style={"letterSpacing": "1px"}),
-            html.P("Indulási repülőtér szerint szűrhető útvonalak, rajtuk a gép utolsó ismert pozíciója", className="text-muted small mb-1"),
+            html.P("Repülőtér szerint szűrhető útvonalak, rajtuk a gép utolsó ismert pozíciója", className="text-muted small mb-1"),
             html.Small(id="radar-status", className="text-muted d-block mb-3"),
         ], width=12)
     ]),
 
-    # --- Indulási repülőtér szűrő (jelölők) ---
+    # --- Repülőtér szűrő (jelölők) ---
     dbc.Row([
         dbc.Col([
             html.Div([
@@ -259,11 +259,10 @@ def update_radar_map(_, departures):
         snap = live_df["snapshot_time"].max()
         age_min = int((pd.Timestamp.now(tz="UTC") - snap).total_seconds() // 60)
         if selected:
-            filter_txt = f"indulás: {', '.join(selected)} · {routes_drawn} útvonal"
+            filter_txt = f"repterek: {', '.join(selected)} · {routes_drawn} útvonal"
         else:
-            filter_txt = "válassz indulási repteret az útvonalak megjelenítéséhez"
-        status = (f"{len(shown)} / {len(live)} gép a levegőben · {filter_txt} · "
-                  f"utolsó felvétel: {snap:%Y-%m-%d %H:%M} UTC ({age_min} perccel ezelőtt)")
+            filter_txt = "válassz repteret az útvonalak megjelenítéséhez"
+        status = (f"{len(shown)} / {len(live)} gép a levegőben · {filter_txt} · utolsó felvétel: {snap:%Y-%m-%d %H:%M} UTC ({age_min} perccel ezelőtt)")
 
     # --- TÉRKÉP STÍLUS ÉS ELRENDEZÉS ---
     fig.update_layout(
