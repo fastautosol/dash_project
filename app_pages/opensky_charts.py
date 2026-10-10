@@ -1,4 +1,4 @@
-# 2026.10.08 - Emirates A380 Flight Radar & Path Tracker
+# 2026.10.10 11.00 Flight Radar & Path Tracker
 import os
 import dash
 import dash_bootstrap_components as dbc
@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from dash import Input, Output, callback, dcc, html
 from sqlalchemy import create_engine, text
+import logging
 
 dash.register_page(__name__, path="/flight-radar", name="Emirates A380 Radar", icon="fa-plane")
 
@@ -20,23 +21,38 @@ REFRESH_SECONDS = 60  # igazodjon a pozíciógyűjtő --loop értékéhez
 
 EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg", "on_ground", "snapshot_time"]
 
-def load_positions(hours: int) -> pd.DataFrame:
-    """A dlt által mentett pozíciók (egyetlen lekérdezés: útvonalhoz és élő réteghez is)."""
-    query = text(
-        f"""
-        SELECT icao24, callsign, latitude, longitude, altitude_m,
-               velocity_mps, heading_deg, on_ground, snapshot_time
-        FROM {SCHEMA}.a380_positions
-        WHERE snapshot_time > now() - make_interval(hours => :h)
-        ORDER BY icao24, snapshot_time
-        """
-    )
+def load_path_positions(hours: int) -> pd.DataFrame:
+    """Történeti pozíciók az útvonalak kirajzolásához."""
+    query = text(f"""
+        SELECT icao24, callsign, latitude, longitude, altitude_m, velocity_mps, heading_deg, on_ground, snapshot_time
+        FROM {SCHEMA}.a380_positions WHERE snapshot_time > now() - make_interval(hours => :h)
+        ORDER BY icao24, snapshot_time""")
+
     try:
         with engine.connect() as conn:
             return pd.read_sql_query(query, conn, params={"h": hours})
-    except Exception as e:
-        print(f"Hiba a pozíciók lekérésekor: {e}")
+    except Exception:
+        logging.exception("Hiba az útvonalelőzmények lekérésekor")
         return pd.DataFrame(columns=EMPTY_COLS)
+
+
+def load_live_positions() -> pd.DataFrame:
+    """Aktuális pozíciók a merge-alapú DLT táblából."""
+    query = text(f"""
+        SELECT icao24, callsign, latitude, longitude, altitude_m, velocity_mps, heading_deg, on_ground, snapshot_at
+        FROM {SCHEMA}.opensky_live_positions WHERE snapshot_at >= now() - make_interval(mins => :minutes)""")
+
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql_query(query, conn, params={"minutes": LIVE_MINUTES})
+        if not df.empty:
+            df = df.rename(columns={"snapshot_at": "snapshot_time"})
+        return df
+        
+    except Exception:
+        logging.exception("Hiba az élő pozíciók lekérésekor")
+        return pd.DataFrame(columns=EMPTY_COLS)
+
 
 
 def build_path_lines(df: pd.DataFrame) -> tuple[list, list]:
@@ -97,7 +113,8 @@ def update_radar_map(_):
     fig = go.Figure()
     status = "Nincs adat – fut a pozíciógyűjtő? (python opensky_api.py positions --loop 120)"
 
-    df = load_positions(PATH_HOURS)
+    df = load_path_positions(PATH_HOURS)
+    live_df = load_live_positions()
 
     if not df.empty:
         # --- 1. RÉTEG: Útvonalak ---
@@ -105,8 +122,7 @@ def update_radar_map(_):
         fig.add_trace(go.Scattermap(
             lat=lats, lon=lons, mode="lines",
             line=dict(width=2, color="rgba(255, 193, 7, 0.5)"),
-            hoverinfo="skip", name="Útvonalak",
-        ))
+            hoverinfo="skip", name="Útvonalak"))
 
         # --- 2. RÉTEG: Élő pozíciók (gépenként a legutolsó, ha elég friss és nem áll a földön) ---
         latest = df.sort_values("snapshot_time").groupby("icao24").tail(1)
@@ -116,10 +132,10 @@ def update_radar_map(_):
 
         if not live.empty:
             hover = [
-                f"✈️ <b>Járat:</b> {r.callsign or r.icao24}<br>"
-                f"📈 <b>Magasság:</b> {r.altitude_m:.0f} m<br>"
-                f"🧭 <b>Irányszög:</b> {r.heading_deg:.0f}°<br>"
-                f"🚀 <b>Sebesség:</b> {r.velocity_mps * 3.6:.0f} km/h"
+                f"<b>Járat:</b> {r.callsign or r.icao24}<br>"
+                f"<b>Magasság:</b> {r.altitude_m:.0f} m<br>"
+                f"<b>Irányszög:</b> {r.heading_deg:.0f}°<br>"
+                f"<b>Sebesség:</b> {r.velocity_mps * 3.6:.0f} km/h"
                 for r in live.itertuples()
             ]
             # Kör marker: a 'symbol="airport"' ikon csak akkor jelenik meg, ha a térképstílus
@@ -131,24 +147,15 @@ def update_radar_map(_):
                 text=live["callsign"].fillna(live["icao24"]),
                 textposition="top right",
                 textfont=dict(color="white", size=10),
-                hovertext=hover, hoverinfo="text", name="Élő Járatok",
-            ))
+                hovertext=hover, hoverinfo="text", name="Élő Járatok"))
 
         status = (
             f"{len(live)} gép a levegőben · {df['icao24'].nunique()} gép az elmúlt {PATH_HOURS} órában · "
-            f"utolsó adat: {df['snapshot_time'].max():%H:%M:%S} UTC"
-        )
+            f"utolsó adat: {df['snapshot_time'].max():%H:%M:%S} UTC")
 
     # --- 3. TÉRKÉP STÍLUS ÉS ELRENDEZÉS ---
     fig.update_layout(
-        margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        showlegend=False,
-        paper_bgcolor="rgba(0,0,0,0)",
+        margin={"r": 0, "t": 0, "l": 0, "b": 0}, showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
         uirevision="radar",  # frissítéskor megtartja a felhasználó zoom/pan állását
-        map=dict(
-            style="carto-darkmatter",  # token nélküli sötét stílus
-            center=dict(lat=25.2048, lon=55.2708),  # Dubai (OMDB)
-            zoom=3,
-        ),
-    )
+        map=dict(style="carto-darkmatter", center=dict(lat=25.2048, lon=55.2708), zoom=3))
     return fig, status
