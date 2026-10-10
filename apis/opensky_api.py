@@ -1,4 +1,4 @@
-# 2026.10.10  11.00
+# 2026.10.10  12.00
 import dlt
 import requests
 import time
@@ -124,7 +124,7 @@ async def fetch_live_states_from_opensky(icao_list):
     
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            response = await client.get(f"{API}/states/all", params=params)
+            response = await client.get(f"{API}/states/all", params=params, headers=headers)
             if response.status_code == 401: # lejárt token
                 _token["exp"] = 0
                 return []
