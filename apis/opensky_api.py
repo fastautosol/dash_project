@@ -40,7 +40,7 @@ def fetch_airport_flights():
     headers = {"Authorization": f"Bearer {token}"}
     
     time_end = int(time.time())
-    time_start = int(time_end - 1.5 * 86400) 
+    time_start = int(time_end - 86400) 
     
     for airport in AIRPORTS:
         for direction in ("departure", "arrival"):
