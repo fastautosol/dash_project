@@ -24,7 +24,7 @@ SCHEMA = "bronze"
 POSITIONS_TABLE = "opensky_live_positions"
 
 # Departure filter chips. Keep in sync with AIRPORTS in opensky_api.py (ICAO code -> city label).
-DEPARTURE_AIRPORTS = {"OMDB": "Dubai", "OMAA": "Abu Dhabi", "EDDF": "Frankfurt", "VHHH": "Hong Kong", 
+AIRPORT_FILTER = {"OMDB": "Dubai", "OMAA": "Abu Dhabi", "EDDF": "Frankfurt", "VHHH": "Hong Kong", 
                       "YSSY": "Sydney", "KLAX": "Los Angeles", "EHAM": "Amsterdam", "LHBP": "Budapest"}
 
 REFRESH_SECONDS = 300    # the page only re-reads the DB; data changes a few times a day
@@ -99,7 +99,7 @@ def build_route_lines(flights: pd.DataFrame):
     """Per aircraft with a known route: origin -> aircraft (flown part) and aircraft -> destination
     (remaining part), both great circles through the real position. None separates the aircraft."""
     flown_lat, flown_lon, rest_lat, rest_lon = [], [], [], []
-    airports: dict[str, tuple[float, float]] = {}
+    airports_dict: dict[str, tuple[float, float]] = {}
     drawn = 0
 
     for r in flights.itertuples():
@@ -116,12 +116,12 @@ def build_route_lines(flights: pd.DataFrame):
         rest_lon += lo + [None]
 
         if pd.notna(r.origin_icao):
-            airports[r.origin_icao] = (r.origin_lat, r.origin_lon)
+            airports_dict[r.origin_icao] = (r.origin_lat, r.origin_lon)
         if pd.notna(r.dest_icao):
-            airports[r.dest_icao] = (r.dest_lat, r.dest_lon)
+            airports_dict[r.dest_icao] = (r.dest_lat, r.dest_lon)
         drawn += 1
 
-    return flown_lat, flown_lon, rest_lat, rest_lon, airports, drawn
+    return flown_lat, flown_lon, rest_lat, rest_lon, airports_dict, drawn
 
 
 def type_label(model, code) -> str:
@@ -150,8 +150,8 @@ layout = dbc.Container([
         dbc.Col([
             html.Div([
                 dbc.Checklist(
-                    id="departure-filter",
-                    options=[{"label": f"{icao} {city}", "value": icao} for icao, city in DEPARTURE_AIRPORTS.items()],
+                    id="airport-filter",
+                    options=[{"label": f"{icao} {city}", "value": icao} for icao, city in AIRPORT_FILTER.items()],
                     value=[], class_name="btn-group flex-wrap",
                     input_class_name="btn-check",
                     label_class_name="btn btn-outline-warning btn-sm",
@@ -179,12 +179,12 @@ layout = dbc.Container([
     Output("live-flight-radar", "figure"),
     Output("radar-status", "children"),
     Input("radar-update-clock", "n_intervals"),
-    Input("departure-filter", "value"),
+    Input("airport-filter", "value"),
 )
-def update_radar_map(_, departures):
+def update_radar_map(_, airports):
     fig = go.Figure()
     live_df = load_live_positions()              # newest snapshot -> aircraft, routes, types
-    selected = [d for d in (departures or []) if d in DEPARTURE_AIRPORTS]
+    selected = [d for d in (airports or []) if d in AIRPORT_FILTER]
 
     # csak a levegőben lévő gépek
     live = live_df.iloc[0:0]
