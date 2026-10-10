@@ -25,7 +25,7 @@ POSITIONS_TABLE = "opensky_live_positions"
 
 # Departure filter chips. Keep in sync with AIRPORTS in opensky_api.py (ICAO code -> city label).
 AIRPORT_FILTER = {"OMDB": "Dubai", "OMAA": "Abu Dhabi", "EDDF": "Frankfurt", "VHHH": "Hong Kong", 
-                      "YSSY": "Sydney", "KLAX": "Los Angeles", "EHAM": "Amsterdam", "LHBP": "Budapest"}
+                "YSSY": "Sydney", "KLAX": "Los Angeles", "EHAM": "Amsterdam", "LHBP": "Budapest", "KJFK": "New York"}
 
 REFRESH_SECONDS = 300    # the page only re-reads the DB; data changes a few times a day
 CACHE_SECONDS = 60       # filter clicks must not hit the DB every time
