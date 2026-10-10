@@ -113,6 +113,7 @@ def get_tracked_icao_codes() -> list[str]:
         print(f"Adatbázis hiba az ICAO kódok lekérésekor: {e}")
         return []
 
+
 async def fetch_live_states_from_opensky(icao_list):
     if not icao_list:
         return []
@@ -155,20 +156,69 @@ async def fetch_live_states_from_opensky(icao_list):
             print(f"Hiba az OpenSky API hívásakor: {e}")
             return []
 
+
+async def fetch_live_states_batched(icao_codes: list[str], chunk_size: int = 25, max_concurrency: int = 5) -> list[dict]:
+
+    if not icao_codes:
+        return []
+
+    semaphore = asyncio.Semaphore(max_concurrency)
+    chunks = [icao_codes[i:i + chunk_size] for i in range(0, len(icao_codes), chunk_size)]
+
+    async def fetch_chunk(chunk):
+        async with semaphore:
+            return await fetch_live_states_from_opensky(chunk)
+
+    results = await asyncio.gather(*(fetch_chunk(chunk) for chunk in chunks), return_exceptions=True)
+    live_data = []
+
+    for result in results:
+        if isinstance(result, Exception):
+            logging.error("OpenSky chunk lekérdezési hiba: %s", result)
+            continue
+
+        live_data.extend(result)
+
+    return live_data
+
+@dlt.resource(name="opensky_live_positions", write_disposition="append")
+def fetch_live_positions_resource(rows: list[dict]):
+    yield from rows
+
+
+def run_dlt_live_positions(live_data: list[dict]):
+    if not live_data:
+        logging.warning("Nincs menthető OpenSky pozíció.")
+        return None
+
+    pipeline = dlt.pipeline(
+        pipeline_name="opensky_live_positions",
+        destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+        dataset_name="bronze")
+
+    load_info = pipeline.run(fetch_live_positions_resource(live_data))
+    return str(load_info)
+
+
 # ----- 1. FASTAPI ENDPOINT (A Dash térkép aszinkron AJAX hívásaihoz) -----
 @router.get("/live-positions")
 async def get_live_positions():
+
     icao_codes = await asyncio.to_thread(get_tracked_icao_codes)
+
     if not icao_codes:
         return {"flights": []}
 
-    CHUNK_SIZE = 50
-    live_data = []
-    for i in range(0, len(icao_codes), CHUNK_SIZE):
-        chunk = icao_codes[i:i + CHUNK_SIZE]
-        chunk_data = await fetch_live_states_from_opensky(chunk)
-        live_data.extend(chunk_data)
+    live_data = await fetch_live_states_batched(icao_codes, chunk_size=50, max_concurrency=5)
+
+    if not live_data:
+        return {"flights": []}
+
+    snapshot_at = datetime.now(timezone.utc).isoformat()    # Közös időbélyeg az adott pillanatfelvételhez
+
+    for flight in live_data:
+        flight["snapshot_at"] = snapshot_at
+
+    await asyncio.to_thread(run_dlt_live_positions, live_data)
+
     return {"flights": live_data}
-    
-    #live_data = await fetch_live_states_from_opensky(icao_codes[:50])
-    #return {"flights": live_data}
