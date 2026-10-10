@@ -34,7 +34,7 @@ def get_auth_token():
     return response.json()["access_token"]
 
 
-@dlt.resource(name="uae_flights", write_disposition="merge", primary_key=["icao24", "first_seen"])
+@dlt.resource(name="opensky_flights", write_disposition="merge", primary_key=["icao24", "first_seen"])
 def fetch_airport_flights():
     
     token = get_auth_token()
