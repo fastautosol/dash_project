@@ -1,4 +1,4 @@
-# 2026.10.10  12.00
+# 2026.10.10  17.00
 import dlt
 import requests
 import time
@@ -9,7 +9,7 @@ import logging
 from datetime import datetime, timezone
 from dlt.sources.helpers import requests as dlt_requests
 from fastapi import APIRouter, BackgroundTasks
-from sqlalchemy import create_engine, text
+from sqlalchemy import bindparam, create_engine, text
 
 
 # ----- Config -----
@@ -181,6 +181,120 @@ async def fetch_live_states_batched(icao_codes: list[str], chunk_size: int = 25,
 
 
 
+# ----- Útvonal-dúsítás: hívójel -> indulási/érkezési reptér koordinátákkal (adsbdb.com), DB-ben cache-elve -----
+ROUTE_API = "https://api.adsbdb.com/v0/callsign/{callsign}"
+ROUTE_HIT_TTL_DAYS = 14      # a megtalált útvonalat ennyi napig használjuk újra
+ROUTE_MISS_TTL_DAYS = 3      # az ismeretlen hívójelet ennyi nap múlva kérdezzük újra
+MAX_ROUTE_LOOKUPS = 150      # egy /live-positions hívásban legfeljebb ennyi új hívójelet keresünk
+ROUTE_KEYS = ("origin_icao", "origin_lat", "origin_lon", "dest_icao", "dest_lat", "dest_lon")
+
+
+def _ensure_route_table():
+    with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS bronze"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS bronze.callsign_routes (
+                callsign    text PRIMARY KEY,
+                found       boolean NOT NULL,
+                origin_icao text, origin_lat double precision, origin_lon double precision,
+                dest_icao   text, dest_lat   double precision, dest_lon   double precision,
+                fetched_at  timestamptz NOT NULL DEFAULT now())"""))
+
+
+def load_route_cache(callsigns: list[str]) -> dict[str, dict]:
+    """Blocking; a még érvényes cache-sorok hívójel szerint."""
+    if not callsigns:
+        return {}
+    _ensure_route_table()
+    query = text("""
+        SELECT callsign, found, origin_icao, origin_lat, origin_lon, dest_icao, dest_lat, dest_lon
+        FROM bronze.callsign_routes
+        WHERE callsign IN :c
+          AND fetched_at > now() - CASE WHEN found THEN make_interval(days => :hit)
+                                        ELSE make_interval(days => :miss) END
+    """).bindparams(bindparam("c", expanding=True))
+    with engine.connect() as conn:
+        rows = conn.execute(query, {"c": callsigns, "hit": ROUTE_HIT_TTL_DAYS,
+                                    "miss": ROUTE_MISS_TTL_DAYS}).mappings().all()
+    return {r["callsign"]: dict(r) for r in rows}
+
+
+def save_route_cache(rows: list[dict]) -> None:
+    """Blocking; upsert a cache-táblába."""
+    if not rows:
+        return
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO bronze.callsign_routes
+                (callsign, found, origin_icao, origin_lat, origin_lon, dest_icao, dest_lat, dest_lon, fetched_at)
+            VALUES
+                (:callsign, :found, :origin_icao, :origin_lat, :origin_lon, :dest_icao, :dest_lat, :dest_lon, now())
+            ON CONFLICT (callsign) DO UPDATE SET
+                found = EXCLUDED.found,
+                origin_icao = EXCLUDED.origin_icao, origin_lat = EXCLUDED.origin_lat, origin_lon = EXCLUDED.origin_lon,
+                dest_icao = EXCLUDED.dest_icao, dest_lat = EXCLUDED.dest_lat, dest_lon = EXCLUDED.dest_lon,
+                fetched_at = now()"""), rows)
+
+
+async def _fetch_route(client, semaphore: asyncio.Semaphore, callsign: str) -> dict | None:
+    """Cache-sort ad vissza; None, ha a lekérdezés technikai okból sikertelen (azt nem cache-eljük)."""
+    async with semaphore:
+        try:
+            response = await client.get(ROUTE_API.format(callsign=callsign))
+        except Exception as e:
+            logging.warning("adsbdb hiba (%s): %s", callsign, e)
+            return None
+        await asyncio.sleep(0.2)   # udvarias tempó a közösségi API felé
+
+    row = {"callsign": callsign, "found": False, **{k: None for k in ROUTE_KEYS}}
+    if response.status_code == 404:          # ismeretlen hívójel
+        return row
+    if response.status_code != 200:
+        logging.warning("adsbdb HTTP %s (%s)", response.status_code, callsign)
+        return None
+    try:
+        route = response.json()["response"]["flightroute"]
+        origin, dest = route["origin"], route["destination"]
+        row.update(found=True,
+                   origin_icao=origin["icao_code"], origin_lat=float(origin["latitude"]), origin_lon=float(origin["longitude"]),
+                   dest_icao=dest["icao_code"], dest_lat=float(dest["latitude"]), dest_lon=float(dest["longitude"]))
+    except Exception:                        # váratlan válasz-alak -> nincs útvonal
+        row["found"] = False
+    return row
+
+
+async def enrich_with_routes(flights: list[dict]) -> None:
+    """Minden járathoz hozzáadja az origin_*/dest_* mezőket (None, ha nincs útvonal)."""
+    for f in flights:
+        for k in ROUTE_KEYS:
+            f[k] = None
+    try:
+        callsigns = sorted({f["callsign"] for f in flights if f.get("callsign") and f["callsign"] != "UNKNOWN"})
+        if not callsigns:
+            return
+
+        cache = await asyncio.to_thread(load_route_cache, callsigns)
+        missing = [c for c in callsigns if c not in cache][:MAX_ROUTE_LOOKUPS]
+
+        if missing:
+            semaphore = asyncio.Semaphore(3)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                results = await asyncio.gather(*(_fetch_route(client, semaphore, c) for c in missing))
+            fresh = [r for r in results if r is not None]
+            if fresh:
+                await asyncio.to_thread(save_route_cache, fresh)
+                cache.update({r["callsign"]: r for r in fresh})
+            logging.info("Útvonal-keresés: %d új hívójel, %d sikeres lekérdezés", len(missing), len(fresh))
+
+        for f in flights:
+            route = cache.get(f["callsign"])
+            if route and route["found"]:
+                for k in ROUTE_KEYS:
+                    f[k] = route[k]
+    except Exception as e:
+        logging.error("Útvonal-dúsítási hiba: %s", e)
+
+
 @dlt.resource(name="opensky_live_positions", write_disposition="merge", primary_key=["icao24", "snapshot_at"])
 def fetch_live_positions_resource(rows: list[dict]):
     yield from rows
@@ -210,6 +324,8 @@ async def get_live_positions():
         return {"flights": []}
 
     live_data = await fetch_live_states_batched(icao_codes, chunk_size=50, max_concurrency=5)
+
+    await enrich_with_routes(live_data)    # indulási/érkezési reptér a hívójel alapján
 
     if not live_data:
         return {"flights": []}
