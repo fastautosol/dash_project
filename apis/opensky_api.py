@@ -1,4 +1,4 @@
-# 2026.10.10  17.00
+# 2026.10.10  18.00
 import dlt
 import requests
 import time
@@ -13,7 +13,8 @@ from sqlalchemy import bindparam, create_engine, text
 
 
 # ----- Config -----
-AIRPORTS = ["OMDB", "OMAA", "EDDF", "VHHH", "YSSY", "KLAX", "EHAM"]
+AIRPORTS = ["OMDB", "OMAA", "EDDF", "VHHH", "YSSY", "KLAX", "EHAM", "LHBP"]
+AIRLINES = ["UAE", "QTR", "ETD", "DLH", "QFA", "WZZ"]
 CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET")
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
@@ -59,8 +60,6 @@ def fetch_airport_flights():
                     dep = f.get("estDepartureAirport")
                     arr = f.get("estArrivalAirport")
                     
-                    #if callsign.startswith("UAE") and icao24 and dep and arr:
-                    AIRLINES = ["UAE", "QTR", "ETD", "DLH", "QFA"]
                     if callsign[:3] in AIRLINES and icao24 and dep and arr:
                         yield {
                             "icao24": icao24,
