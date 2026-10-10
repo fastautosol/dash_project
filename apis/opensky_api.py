@@ -13,8 +13,8 @@ from sqlalchemy import bindparam, create_engine, text
 
 
 # ----- Config -----
-AIRPORTS = ["OMDB", "OMAA", "EDDF", "VHHH", "YSSY", "KLAX", "EHAM", "LHBP"]
-AIRLINES = ["UAE", "QTR", "ETD", "DLH", "QFA", "WZZ"]
+AIRPORTS = ["OMDB", "OMAA", "EDDF", "VHHH", "YSSY", "KLAX", "EHAM", "LHBP", "KJFK"]
+AIRLINES = ["UAE", "QTR", "ETD", "DLH", "QFA", "WZZ", "KLM", "BAW", "ARF", "AAL", "DAL"]
 CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET")
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
