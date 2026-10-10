@@ -102,7 +102,7 @@ def get_cached_token() -> str:
 
 
 def get_tracked_icao_codes() -> list[str]:
-    query = text("SELECT DISTINCT icao24 FROM bronze.uae_flights WHERE icao24 IS NOT NULL ORDER BY icao24")
+    query = text("SELECT DISTINCT icao24 FROM bronze.opensky_flights WHERE icao24 IS NOT NULL ORDER BY icao24")
     try:
         with engine.connect() as conn:
             result = conn.execute(query)
