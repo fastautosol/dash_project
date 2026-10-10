@@ -295,6 +295,113 @@ async def enrich_with_routes(flights: list[dict]) -> None:
         logging.error("Útvonal-dúsítási hiba: %s", e)
 
 
+# ----- Géptípus-dúsítás: icao24 -> típus (adsbdb.com), DB-ben cache-elve -----
+AIRCRAFT_API = "https://api.adsbdb.com/v0/aircraft/{icao24}"
+TYPE_HIT_TTL_DAYS = 180      # a gép típusa gyakorlatilag nem változik
+TYPE_MISS_TTL_DAYS = 14      # az ismeretlen gépet ennyi nap múlva kérdezzük újra
+MAX_TYPE_LOOKUPS = 150       # egy /live-positions hívásban legfeljebb ennyi új gépet keresünk
+TYPE_KEYS = ("aircraft_icao_type", "aircraft_type")   # pl. "A388" és a modell neve
+
+
+def _ensure_type_table():
+    with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS bronze"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS bronze.aircraft_types (
+                icao24     text PRIMARY KEY,
+                found      boolean NOT NULL,
+                icao_type  text,
+                model      text,
+                fetched_at timestamptz NOT NULL DEFAULT now())"""))
+
+
+def load_type_cache(icao24s: list[str]) -> dict[str, dict]:
+    """Blocking; a még érvényes cache-sorok icao24 szerint."""
+    if not icao24s:
+        return {}
+    _ensure_type_table()
+    query = text("""
+        SELECT icao24, found, icao_type, model
+        FROM bronze.aircraft_types
+        WHERE icao24 IN :c
+          AND fetched_at > now() - CASE WHEN found THEN make_interval(days => :hit)
+                                        ELSE make_interval(days => :miss) END
+    """).bindparams(bindparam("c", expanding=True))
+    with engine.connect() as conn:
+        rows = conn.execute(query, {"c": icao24s, "hit": TYPE_HIT_TTL_DAYS,
+                                    "miss": TYPE_MISS_TTL_DAYS}).mappings().all()
+    return {r["icao24"]: dict(r) for r in rows}
+
+
+def save_type_cache(rows: list[dict]) -> None:
+    """Blocking; upsert a cache-táblába."""
+    if not rows:
+        return
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO bronze.aircraft_types (icao24, found, icao_type, model, fetched_at)
+            VALUES (:icao24, :found, :icao_type, :model, now())
+            ON CONFLICT (icao24) DO UPDATE SET
+                found = EXCLUDED.found, icao_type = EXCLUDED.icao_type,
+                model = EXCLUDED.model, fetched_at = now()"""), rows)
+
+
+async def _fetch_aircraft_type(client, semaphore: asyncio.Semaphore, icao24: str) -> dict | None:
+    """Cache-sort ad vissza; None, ha a lekérdezés technikai okból sikertelen (azt nem cache-eljük)."""
+    async with semaphore:
+        try:
+            response = await client.get(AIRCRAFT_API.format(icao24=icao24))
+        except Exception as e:
+            logging.warning("adsbdb gép-hiba (%s): %s", icao24, e)
+            return None
+        await asyncio.sleep(0.2)   # udvarias tempó a közösségi API felé
+
+    row = {"icao24": icao24, "found": False, "icao_type": None, "model": None}
+    if response.status_code == 404:          # ismeretlen gép
+        return row
+    if response.status_code != 200:
+        logging.warning("adsbdb gép HTTP %s (%s)", response.status_code, icao24)
+        return None
+    try:
+        aircraft = response.json()["response"]["aircraft"]
+        row.update(found=True, icao_type=aircraft.get("icao_type"), model=aircraft.get("type"))
+    except Exception:                        # váratlan válasz-alak -> nincs típus
+        row["found"] = False
+    return row
+
+
+async def enrich_with_aircraft_types(flights: list[dict]) -> None:
+    """Minden járathoz hozzáadja az aircraft_icao_type és aircraft_type mezőt (None, ha ismeretlen)."""
+    for f in flights:
+        for k in TYPE_KEYS:
+            f[k] = None
+    try:
+        icao24s = sorted({f["icao24"].lower() for f in flights if f.get("icao24") and f["icao24"] != "N/A"})
+        if not icao24s:
+            return
+
+        cache = await asyncio.to_thread(load_type_cache, icao24s)
+        missing = [c for c in icao24s if c not in cache][:MAX_TYPE_LOOKUPS]
+
+        if missing:
+            semaphore = asyncio.Semaphore(3)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                results = await asyncio.gather(*(_fetch_aircraft_type(client, semaphore, c) for c in missing))
+            fresh = [r for r in results if r is not None]
+            if fresh:
+                await asyncio.to_thread(save_type_cache, fresh)
+                cache.update({r["icao24"]: r for r in fresh})
+            logging.info("Géptípus-keresés: %d új gép, %d sikeres lekérdezés", len(missing), len(fresh))
+
+        for f in flights:
+            row = cache.get((f.get("icao24") or "").lower())
+            if row and row["found"]:
+                f["aircraft_icao_type"] = row["icao_type"]
+                f["aircraft_type"] = row["model"]
+    except Exception as e:
+        logging.error("Géptípus-dúsítási hiba: %s", e)
+
+
 @dlt.resource(name="opensky_live_positions", write_disposition="merge", primary_key=["icao24", "snapshot_at"])
 def fetch_live_positions_resource(rows: list[dict]):
     yield from rows
@@ -326,6 +433,7 @@ async def get_live_positions():
     live_data = await fetch_live_states_batched(icao_codes, chunk_size=50, max_concurrency=5)
 
     await enrich_with_routes(live_data)    # indulási/érkezési reptér a hívójel alapján
+    await enrich_with_aircraft_types(live_data)    # géptípus az icao24 alapján
 
     if not live_data:
         return {"flights": []}
