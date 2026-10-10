@@ -8,7 +8,7 @@ from dash import Input, Output, callback, dcc, html
 from sqlalchemy import create_engine, text
 import logging
 
-dash.register_page(__name__, path="/flight-radar", name="Emirates A380 Radar", icon="fa-plane")
+dash.register_page(__name__, path="/flight-radar", name="OpenSky Radar", icon="fa-plane")
 
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 engine = create_engine(DB_URL, pool_pre_ping=True)
