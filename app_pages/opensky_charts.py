@@ -124,34 +124,43 @@ def update_radar_map(_):
             line=dict(width=2, color="rgba(255, 193, 7, 0.5)"),
             hoverinfo="skip", name="Útvonalak"))
 
-        # --- 2. RÉTEG: Élő pozíciók (gépenként a legutolsó, ha elég friss és nem áll a földön) ---
-        latest = df.sort_values("snapshot_time").groupby("icao24").tail(1)
-        fresh = latest["snapshot_time"] >= pd.Timestamp.now(tz="UTC") - pd.Timedelta(minutes=LIVE_MINUTES)
-        airborne = ~latest["on_ground"].fillna(False).astype(bool)
-        live = latest[fresh & airborne]
-
+        
+    # --- 2. RÉTEG: Aktuális pozíciók a merge táblából ---
+    if not live_df.empty:
+        # Csak a levegőben lévő gépeket mutatjuk.
+        airborne = ~live_df["on_ground"].fillna(False).astype(bool)
+        live = live_df[airborne].copy()
+    
         if not live.empty:
             hover = [
                 f"<b>Járat:</b> {r.callsign or r.icao24}<br>"
                 f"<b>Magasság:</b> {r.altitude_m:.0f} m<br>"
                 f"<b>Irányszög:</b> {r.heading_deg:.0f}°<br>"
                 f"<b>Sebesség:</b> {r.velocity_mps * 3.6:.0f} km/h"
-                for r in live.itertuples()
-            ]
-            # Kör marker: a 'symbol="airport"' ikon csak akkor jelenik meg, ha a térképstílus
-            # sprite-ot tartalmaz, ezért a körös megoldás megbízhatóbb.
+                for r in live.itertuples()]
+    
             fig.add_trace(go.Scattermap(
-                lat=live["latitude"], lon=live["longitude"],
+                lat=live["latitude"],
+                lon=live["longitude"],
                 mode="markers+text",
                 marker=dict(size=12, color="#FFC107"),
                 text=live["callsign"].fillna(live["icao24"]),
                 textposition="top right",
                 textfont=dict(color="white", size=10),
-                hovertext=hover, hoverinfo="text", name="Élő Járatok"))
-
+                hovertext=hover,
+                hoverinfo="text",
+                name="Élő járatok"))
+    
         status = (
-            f"{len(live)} gép a levegőben · {df['icao24'].nunique()} gép az elmúlt {PATH_HOURS} órában · "
-            f"utolsó adat: {df['snapshot_time'].max():%H:%M:%S} UTC")
+            f"{len(live)} aktuális gép a levegőben · "
+            f"{df['icao24'].nunique() if not df.empty else 0} gép "
+            f"az útvonalelőzményekben · "
+            f"frissítés: {pd.Timestamp.now(tz='UTC'):%H:%M:%S} UTC")
+        
+    else:
+        status = ("Nincs friss élő pozíció – ellenőrizd az OpenSky adatgyűjtést.")
+
+        
 
     # --- 3. TÉRKÉP STÍLUS ÉS ELRENDEZÉS ---
     fig.update_layout(
