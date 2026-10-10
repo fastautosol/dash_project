@@ -24,15 +24,7 @@ SCHEMA = "bronze"
 POSITIONS_TABLE = "opensky_live_positions"
 
 # Departure filter chips. Keep in sync with AIRPORTS in opensky_api.py (ICAO code -> city label).
-DEPARTURE_AIRPORTS = {
-    "OMDB": "Dubai",
-    "OMAA": "Abu Dhabi",
-    "EDDF": "Frankfurt",
-    "VHHH": "Hong Kong",
-    "YSSY": "Sydney",
-    "KLAX": "Los Angeles",
-    "EHAM": "Amsterdam",
-}
+DEPARTURE_AIRPORTS = {"OMDB": "Dubai", "OMAA": "Abu Dhabi", "EDDF": "Frankfurt", "VHHH": "Hong Kong", "YSSY": "Sydney", "KLAX": "Los Angeles", "EHAM": "Amsterdam", "LHBP": "Budapest"}
 
 REFRESH_SECONDS = 300    # the page only re-reads the DB; data changes a few times a day
 CACHE_SECONDS = 60       # filter clicks must not hit the DB every time
@@ -40,13 +32,10 @@ ROUTE_POINTS = 40        # points per great-circle segment
 
 ROUTE_COLS = ["origin_icao", "origin_lat", "origin_lon", "dest_icao", "dest_lat", "dest_lon"]
 TYPE_COLS = ["aircraft_icao_type", "aircraft_type"]
-EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m", "velocity_mps",
-              "heading_deg", "on_ground", "snapshot_time"] + ROUTE_COLS + TYPE_COLS
-NUMERIC_COLS = ["latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg",
-                "origin_lat", "origin_lon", "dest_lat", "dest_lon"]
+EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg", "on_ground", "snapshot_time"] + ROUTE_COLS + TYPE_COLS
+NUMERIC_COLS = ["latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg", "origin_lat", "origin_lon", "dest_lat", "dest_lon"]
 
 _cache = {"ts": 0.0, "df": None}
-
 
 def _query_latest_positions() -> pd.DataFrame:
     """Rows of the NEWEST snapshot (one row per aircraft), including route and type columns."""
@@ -149,12 +138,8 @@ layout = dbc.Container([
         dbc.Col([
             html.H3(
                 [html.I(className="fas fa-plane-departure me-2 text-warning"), "OPENSKY FLIGHT RADAR"],
-                className="text-light mb-2", style={"letterSpacing": "1px"},
-            ),
-            html.P(
-                "Indulási repülőtér szerint szűrhető útvonalak, rajtuk a gép utolsó ismert pozíciója",
-                className="text-muted small mb-1",
-            ),
+                className="text-light mb-2", style={"letterSpacing": "1px"}),
+            html.P("Indulási repülőtér szerint szűrhető útvonalak, rajtuk a gép utolsó ismert pozíciója", className="text-muted small mb-1"),
             html.Small(id="radar-status", className="text-muted d-block mb-3"),
         ], width=12)
     ]),
@@ -163,21 +148,16 @@ layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             html.Div([
-                html.Span("Indulás:", className="text-light small me-2"),
                 dbc.Checklist(
                     id="departure-filter",
-                    options=[{"label": f"{icao} {city}", "value": icao}
-                             for icao, city in DEPARTURE_AIRPORTS.items()],
-                    value=[],
-                    class_name="btn-group flex-wrap",
+                    options=[{"label": f"{icao} {city}", "value": icao} for icao, city in DEPARTURE_AIRPORTS.items()],
+                    value=[], class_name="btn-group flex-wrap",
                     input_class_name="btn-check",
                     label_class_name="btn btn-outline-warning btn-sm",
-                    label_checked_class_name="active",
-                ),
-                dbc.Button("Törlés", id="departure-clear", color="link", size="sm", className="text-muted"),
-            ], className="d-flex align-items-center flex-wrap gap-2 mb-3"),
-        ], width=12)
-    ]),
+                    label_checked_class_name="active"),
+                    ], className="mb-3"),
+                ], width=12)
+        ]),
 
     dbc.Row([
         dbc.Col([
@@ -191,15 +171,6 @@ layout = dbc.Container([
         ], width=12)
     ])
 ], fluid=True)
-
-
-@callback(
-    Output("departure-filter", "value"),
-    Input("departure-clear", "n_clicks"),
-    prevent_initial_call=True,
-)
-def clear_departure_filter(_):
-    return []
 
 
 # ----- Reaktív Térkép Frissítő Logika (Callback) -----
