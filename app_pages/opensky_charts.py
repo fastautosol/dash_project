@@ -1,5 +1,6 @@
-# 2026.10.10 - OpenSky Flight Radar: route curve (origin -> destination) + current aircraft position
+# 2026.10.10 - OpenSky Flight Radar: departure-airport filter, route curves, aircraft type in the hint box
 import logging
+import time
 
 import dash
 import dash_bootstrap_components as dbc
@@ -19,21 +20,36 @@ engine = create_engine(DB_URL, pool_pre_ping=True)
 SCHEMA = "bronze"
 
 # Every call of /live-positions appends a snapshot; all aircraft of one call share snapshot_at.
-# The route columns (origin_*/dest_*) are filled by opensky_api.py from the callsign.
+# The route (origin_*/dest_*) and the aircraft type columns are filled by opensky_api.py.
 POSITIONS_TABLE = "opensky_live_positions"
 
+# Departure filter chips. Keep in sync with AIRPORTS in opensky_api.py (ICAO code -> city label).
+DEPARTURE_AIRPORTS = {
+    "OMDB": "Dubai",
+    "OMAA": "Abu Dhabi",
+    "EDDF": "Frankfurt",
+    "VHHH": "Hong Kong",
+    "YSSY": "Sydney",
+    "KLAX": "Los Angeles",
+    "EHAM": "Amsterdam",
+}
+
 REFRESH_SECONDS = 300    # the page only re-reads the DB; data changes a few times a day
+CACHE_SECONDS = 60       # filter clicks must not hit the DB every time
 ROUTE_POINTS = 40        # points per great-circle segment
 
 ROUTE_COLS = ["origin_icao", "origin_lat", "origin_lon", "dest_icao", "dest_lat", "dest_lon"]
-EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m",
-              "velocity_mps", "heading_deg", "on_ground", "snapshot_time"] + ROUTE_COLS
+TYPE_COLS = ["aircraft_icao_type", "aircraft_type"]
+EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m", "velocity_mps",
+              "heading_deg", "on_ground", "snapshot_time"] + ROUTE_COLS + TYPE_COLS
 NUMERIC_COLS = ["latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg",
                 "origin_lat", "origin_lon", "dest_lat", "dest_lon"]
 
+_cache = {"ts": 0.0, "df": None}
 
-def load_live_positions() -> pd.DataFrame:
-    """Rows of the NEWEST snapshot (one row per aircraft), including the route columns."""
+
+def _query_latest_positions() -> pd.DataFrame:
+    """Rows of the NEWEST snapshot (one row per aircraft), including route and type columns."""
     query = text(f"""
         SELECT *
         FROM {SCHEMA}.{POSITIONS_TABLE}
@@ -46,13 +62,24 @@ def load_live_positions() -> pd.DataFrame:
         return pd.DataFrame(columns=EMPTY_COLS)
 
     df = df.rename(columns={"snapshot_at": "snapshot_time"})
-    for col in EMPTY_COLS:                       # route columns do not exist before the first enriched run
+    for col in EMPTY_COLS:                       # new columns do not exist before the first enriched run
         if col not in df.columns:
             df[col] = None
     for col in NUMERIC_COLS:
         df[col] = pd.to_numeric(df[col], errors="coerce")
     df["snapshot_time"] = pd.to_datetime(df["snapshot_time"], utc=True)
     return df
+
+
+def load_live_positions() -> pd.DataFrame:
+    """Same as _query_latest_positions, but cached for CACHE_SECONDS (empty results are not cached)."""
+    now = time.time()
+    if _cache["df"] is not None and now - _cache["ts"] < CACHE_SECONDS:
+        return _cache["df"].copy()
+    df = _query_latest_positions()
+    if not df.empty:
+        _cache.update(ts=now, df=df)
+    return df.copy()
 
 
 def great_circle(lat1, lon1, lat2, lon2, n=ROUTE_POINTS, anchor_end=False):
@@ -107,6 +134,15 @@ def build_route_lines(flights: pd.DataFrame):
     return flown_lat, flown_lon, rest_lat, rest_lon, airports, drawn
 
 
+def type_label(model, code) -> str:
+    """'A380-800 (A388)' style text for the hint box; '–' when the type is unknown."""
+    model = None if pd.isna(model) else str(model)
+    code = None if pd.isna(code) else str(code)
+    if model and code and code not in model:
+        return f"{model} ({code})"
+    return model or code or "–"
+
+
 # ----- Dash Oldal Elrendezés (Layout) -----
 layout = dbc.Container([
     dbc.Row([
@@ -116,10 +152,30 @@ layout = dbc.Container([
                 className="text-light mb-2", style={"letterSpacing": "1px"},
             ),
             html.P(
-                "Indulási és érkezési reptér közötti útvonal, rajta a gép utolsó ismert pozíciója",
+                "Indulási repülőtér szerint szűrhető útvonalak, rajtuk a gép utolsó ismert pozíciója",
                 className="text-muted small mb-1",
             ),
             html.Small(id="radar-status", className="text-muted d-block mb-3"),
+        ], width=12)
+    ]),
+
+    # --- Indulási repülőtér szűrő (jelölők) ---
+    dbc.Row([
+        dbc.Col([
+            html.Div([
+                html.Span("Indulás:", className="text-light small me-2"),
+                dbc.Checklist(
+                    id="departure-filter",
+                    options=[{"label": f"{icao} {city}", "value": icao}
+                             for icao, city in DEPARTURE_AIRPORTS.items()],
+                    value=[],
+                    class_name="btn-group flex-wrap",
+                    input_class_name="btn-check",
+                    label_class_name="btn btn-outline-warning btn-sm",
+                    label_checked_class_name="active",
+                ),
+                dbc.Button("Törlés", id="departure-clear", color="link", size="sm", className="text-muted"),
+            ], className="d-flex align-items-center flex-wrap gap-2 mb-3"),
         ], width=12)
     ]),
 
@@ -137,15 +193,26 @@ layout = dbc.Container([
 ], fluid=True)
 
 
+@callback(
+    Output("departure-filter", "value"),
+    Input("departure-clear", "n_clicks"),
+    prevent_initial_call=True,
+)
+def clear_departure_filter(_):
+    return []
+
+
 # ----- Reaktív Térkép Frissítő Logika (Callback) -----
 @callback(
     Output("live-flight-radar", "figure"),
     Output("radar-status", "children"),
     Input("radar-update-clock", "n_intervals"),
+    Input("departure-filter", "value"),
 )
-def update_radar_map(_):
+def update_radar_map(_, departures):
     fig = go.Figure()
-    live_df = load_live_positions()              # newest snapshot -> aircraft + their routes
+    live_df = load_live_positions()              # newest snapshot -> aircraft, routes, types
+    selected = [d for d in (departures or []) if d in DEPARTURE_AIRPORTS]
 
     # csak a levegőben lévő gépek
     live = live_df.iloc[0:0]
@@ -153,52 +220,58 @@ def update_radar_map(_):
         airborne = ~live_df["on_ground"].fillna(False).astype(bool)
         live = live_df[airborne].copy()
 
+    # Nincs kijelölt reptér: minden gép pontként, útvonal nélkül.
+    # Van kijelölt reptér: csak az onnan induló (ismert útvonalú) gépek, útvonallal.
+    shown = live[live["origin_icao"].isin(selected)] if selected else live
+
     routes_drawn = 0
-    if not live.empty:
-        # --- 1. RÉTEG: útvonalgörbék (megtett rész erősebb, hátralévő rész halványabb) ---
-        flown_lat, flown_lon, rest_lat, rest_lon, airports, routes_drawn = build_route_lines(live)
+    if not shown.empty:
+        if selected:
+            # --- 1. RÉTEG: útvonalgörbék (megtett rész erősebb, hátralévő rész halványabb) ---
+            flown_lat, flown_lon, rest_lat, rest_lon, airports, routes_drawn = build_route_lines(shown)
 
-        if routes_drawn:
-            fig.add_trace(go.Scattermap(
-                lat=rest_lat, lon=rest_lon, mode="lines",
-                line=dict(width=1.5, color="rgba(255, 193, 7, 0.25)"),
-                hoverinfo="skip", name="Hátralévő útvonal"))
-            fig.add_trace(go.Scattermap(
-                lat=flown_lat, lon=flown_lon, mode="lines",
-                line=dict(width=2, color="rgba(255, 193, 7, 0.7)"),
-                hoverinfo="skip", name="Megtett útvonal"))
+            if routes_drawn:
+                fig.add_trace(go.Scattermap(
+                    lat=rest_lat, lon=rest_lon, mode="lines",
+                    line=dict(width=1.5, color="rgba(255, 193, 7, 0.25)"),
+                    hoverinfo="skip", name="Hátralévő útvonal"))
+                fig.add_trace(go.Scattermap(
+                    lat=flown_lat, lon=flown_lon, mode="lines",
+                    line=dict(width=2, color="rgba(255, 193, 7, 0.7)"),
+                    hoverinfo="skip", name="Megtett útvonal"))
 
-            # --- 2. RÉTEG: reptér pontok ---
-            fig.add_trace(go.Scattermap(
-                lat=[v[0] for v in airports.values()], lon=[v[1] for v in airports.values()],
-                mode="markers+text",
-                marker=dict(size=6, color="rgba(255, 255, 255, 0.85)"),
-                text=list(airports.keys()),
-                textposition="bottom center",
-                textfont=dict(color="rgba(255, 255, 255, 0.7)", size=9),
-                hoverinfo="text", hovertext=list(airports.keys()), name="Repterek"))
+                # --- 2. RÉTEG: reptér pontok ---
+                fig.add_trace(go.Scattermap(
+                    lat=[v[0] for v in airports.values()], lon=[v[1] for v in airports.values()],
+                    mode="markers+text",
+                    marker=dict(size=6, color="rgba(255, 255, 255, 0.85)"),
+                    text=list(airports.keys()),
+                    textposition="bottom center",
+                    textfont=dict(color="rgba(255, 255, 255, 0.7)", size=9),
+                    hoverinfo="text", hovertext=list(airports.keys()), name="Repterek"))
 
         # --- 3. RÉTEG: az aktuális gép pozíciója ---
-        live = live.assign(
-            callsign=live["callsign"].fillna(live["icao24"]),
-            altitude_m=live["altitude_m"].fillna(0),
-            heading_deg=live["heading_deg"].fillna(0),
-            velocity_mps=live["velocity_mps"].fillna(0),
+        shown = shown.assign(
+            callsign=shown["callsign"].fillna(shown["icao24"]),
+            altitude_m=shown["altitude_m"].fillna(0),
+            heading_deg=shown["heading_deg"].fillna(0),
+            velocity_mps=shown["velocity_mps"].fillna(0),
         )
         hover = [
             (f"<b>Útvonal:</b> {r.origin_icao} → {r.dest_icao}<br>"
              if pd.notna(r.origin_icao) and pd.notna(r.dest_icao) else "")
             + f"<b>Járat:</b> {r.callsign}<br>"
+              f"<b>Típus:</b> {type_label(r.aircraft_type, r.aircraft_icao_type)}<br>"
               f"<b>Magasság:</b> {r.altitude_m:.0f} m<br>"
               f"<b>Irányszög:</b> {r.heading_deg:.0f}°<br>"
               f"<b>Sebesség:</b> {r.velocity_mps * 3.6:.0f} km/h"
-            for r in live.itertuples()]
+            for r in shown.itertuples()]
 
         fig.add_trace(go.Scattermap(
-            lat=live["latitude"], lon=live["longitude"],
+            lat=shown["latitude"], lon=shown["longitude"],
             mode="markers+text",
             marker=dict(size=12, color="#FFC107"),
-            text=live["callsign"],
+            text=shown["callsign"],
             textposition="top right",
             textfont=dict(color="white", size=10),
             hovertext=hover, hoverinfo="text", name="Aktuális pozíció"))
@@ -209,12 +282,16 @@ def update_radar_map(_):
     else:
         snap = live_df["snapshot_time"].max()
         age_min = int((pd.Timestamp.now(tz="UTC") - snap).total_seconds() // 60)
-        status = (f"{len(live)} gép a levegőben · {routes_drawn} ismert útvonallal · "
+        if selected:
+            filter_txt = f"indulás: {', '.join(selected)} · {routes_drawn} útvonal"
+        else:
+            filter_txt = "válassz indulási repteret az útvonalak megjelenítéséhez"
+        status = (f"{len(shown)} / {len(live)} gép a levegőben · {filter_txt} · "
                   f"utolsó felvétel: {snap:%Y-%m-%d %H:%M} UTC ({age_min} perccel ezelőtt)")
 
     # --- TÉRKÉP STÍLUS ÉS ELRENDEZÉS ---
     fig.update_layout(
         margin={"r": 0, "t": 0, "l": 0, "b": 0}, showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
-        uirevision="radar",  # frissítéskor megtartja a felhasználó zoom/pan állását
+        uirevision="radar",  # frissítéskor / szűréskor megtartja a felhasználó zoom/pan állását
         map=dict(style="carto-darkmatter", center=dict(lat=25.2048, lon=55.2708), zoom=3))
     return fig, status
