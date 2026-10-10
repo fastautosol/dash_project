@@ -14,9 +14,9 @@ DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 engine = create_engine(DB_URL, pool_pre_ping=True)
 
 SCHEMA = "bronze"
-PATH_HOURS = 24      # ennyi órányi előzményt rajzolunk ki
-GAP_MINUTES = 20     # ennél nagyobb időhézagnál megszakítjuk a vonalat (új járat / adathiány)
-LIVE_MINUTES = 5     # ennél frissebb pozíciójú gépet tekintünk "élőnek"
+PATH_HOURS = 24       # ennyi órányi előzményt rajzolunk ki
+GAP_MINUTES = 20      # ennél nagyobb időhézagnál megszakítjuk a vonalat (új járat / adathiány)
+LIVE_MINUTES = 300    # ennél frissebb pozíciójú gépet tekintünk "élőnek"
 REFRESH_SECONDS = 60  # igazodjon a pozíciógyűjtő --loop értékéhez
 
 EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg", "on_ground", "snapshot_time"]
@@ -24,7 +24,7 @@ EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m", "velo
 def load_path_positions(hours: int) -> pd.DataFrame:
     query = text(f"""
         SELECT icao24, callsign, latitude, longitude, altitude_m, velocity_mps, heading_deg, on_ground, snapshot_time
-        FROM {SCHEMA}.opensky_live_positions 
+        FROM {SCHEMA}.uae_flights 
         WHERE snapshot_time > now() - make_interval(hours => :h)
         ORDER BY icao24, snapshot_time""")
 
