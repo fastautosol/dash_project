@@ -193,8 +193,12 @@ def update_radar_map(_, departures):
         live = live_df[airborne].copy()
 
     # Nincs kijelölt reptér: minden gép pontként, útvonal nélkül.
-    # Van kijelölt reptér: csak az onnan induló (ismert útvonalú) gépek, útvonallal.
-    shown = live[live["origin_icao"].isin(selected)] if selected else live
+    # Van kijelölt reptér: csak az onnan induló/oda érkező (ismert útvonalú) gépek, útvonallal.
+    if selected:
+        mask = live["origin_icao"].isin(selected) | live["dest_icao"].isin(selected)
+        shown = live[mask]
+    else:
+        shown = live
 
     routes_drawn = 0
     if not shown.empty:
