@@ -1,4 +1,4 @@
-# 2026.10.09  18.00
+# 2026.10.10  10.00
 import dlt
 import requests
 import time
@@ -161,6 +161,14 @@ async def get_live_positions():
     icao_codes = await asyncio.to_thread(get_tracked_icao_codes)
     if not icao_codes:
         return {"flights": []}
-    
-    live_data = await fetch_live_states_from_opensky(icao_codes[:50])
+
+    CHUNK_SIZE = 50
+    live_data = []
+    for i in range(0, len(icao_codes), CHUNK_SIZE):
+        chunk = icao_codes[i:i + CHUNK_SIZE]
+        chunk_data = await fetch_live_states_from_opensky(chunk)
+        live_data.extend(chunk_data)
     return {"flights": live_data}
+    
+    #live_data = await fetch_live_states_from_opensky(icao_codes[:50])
+    #return {"flights": live_data}
