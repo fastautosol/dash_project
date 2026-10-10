@@ -1,7 +1,9 @@
-# 2026.10.10 - OpenSky Flight Radar
+# 2026.10.10 - OpenSky Flight Radar: route curve (origin -> destination) + current aircraft position
 import logging
+
 import dash
 import dash_bootstrap_components as dbc
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from dash import Input, Output, callback, dcc, html
@@ -16,68 +18,93 @@ engine = create_engine(DB_URL, pool_pre_ping=True)
 
 SCHEMA = "bronze"
 
-# One table feeds both layers. Every call of /live-positions appends a snapshot:
-# all aircraft of that call share the same snapshot_at (key: icao24 + snapshot_at).
-#   - history of snapshots  -> trail (PATH)
-#   - the newest snapshot   -> markers (LIVE)
+# Every call of /live-positions appends a snapshot; all aircraft of one call share snapshot_at.
+# The route columns (origin_*/dest_*) are filled by opensky_api.py from the callsign.
 POSITIONS_TABLE = "opensky_live_positions"
 
-PATH_HOURS = 48          # how far back the trail goes (with ~5 snapshots/day: ~10 points)
-GAP_MINUTES = 720        # snapshots are hours apart -> only break the line after 12 h
 REFRESH_SECONDS = 300    # the page only re-reads the DB; data changes a few times a day
+ROUTE_POINTS = 40        # points per great-circle segment
 
-EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg", "on_ground", "snapshot_time"]
-
-_COLUMNS = """icao24, callsign, latitude, longitude, altitude_m, velocity_mps, heading_deg, on_ground, snapshot_at AS snapshot_time"""
-
-
-def _read(query, params: dict, what: str) -> pd.DataFrame:
-    try:
-        with engine.connect() as conn:
-            df = pd.read_sql_query(query, conn, params=params)
-        if not df.empty:
-            df["snapshot_time"] = pd.to_datetime(df["snapshot_time"], utc=True)
-        return df
-    except Exception as e:
-        log.warning("%s nem érhető el (%s.%s): %s", what, SCHEMA, POSITIONS_TABLE, str(e).splitlines()[0])
-        return pd.DataFrame(columns=EMPTY_COLS)
-
-
-def load_path_positions(hours: int) -> pd.DataFrame:
-    """History: ALL snapshots of the last `hours` hours (many rows per aircraft) -> trail."""
-    query = text(f"""
-        SELECT {_COLUMNS}
-        FROM {SCHEMA}.{POSITIONS_TABLE}
-        WHERE snapshot_at > now() - make_interval(hours => :h)
-        ORDER BY icao24, snapshot_at""")
-    return _read(query, {"h": hours}, "Útvonalelőzmények")
+ROUTE_COLS = ["origin_icao", "origin_lat", "origin_lon", "dest_icao", "dest_lat", "dest_lon"]
+EMPTY_COLS = ["icao24", "callsign", "latitude", "longitude", "altitude_m",
+              "velocity_mps", "heading_deg", "on_ground", "snapshot_time"] + ROUTE_COLS
+NUMERIC_COLS = ["latitude", "longitude", "altitude_m", "velocity_mps", "heading_deg",
+                "origin_lat", "origin_lon", "dest_lat", "dest_lon"]
 
 
 def load_live_positions() -> pd.DataFrame:
-    """Latest: only the rows of the NEWEST snapshot (one row per aircraft) -> markers."""
+    """Rows of the NEWEST snapshot (one row per aircraft), including the route columns."""
     query = text(f"""
-        SELECT {_COLUMNS}
+        SELECT *
         FROM {SCHEMA}.{POSITIONS_TABLE}
         WHERE snapshot_at = (SELECT max(snapshot_at) FROM {SCHEMA}.{POSITIONS_TABLE})""")
-    return _read(query, {}, "Aktuális pozíciók")
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql_query(query, conn)
+    except Exception as e:
+        log.warning("Aktuális pozíciók nem érhetők el (%s.%s): %s", SCHEMA, POSITIONS_TABLE, str(e).splitlines()[0])
+        return pd.DataFrame(columns=EMPTY_COLS)
+
+    df = df.rename(columns={"snapshot_at": "snapshot_time"})
+    for col in EMPTY_COLS:                       # route columns do not exist before the first enriched run
+        if col not in df.columns:
+            df[col] = None
+    for col in NUMERIC_COLS:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df["snapshot_time"] = pd.to_datetime(df["snapshot_time"], utc=True)
+    return df
 
 
-def build_path_lines(df: pd.DataFrame) -> tuple[list, list]:
-    """Egyetlen trace-be fűzi az összes útvonalat; a None értékek törik meg a vonalat
-    gépek között és nagy időhézagnál."""
-    lats, lons = [], []
-    for _, g in df.groupby("icao24"):
-        g = g.sort_values("snapshot_time")
-        new_segment = g["snapshot_time"].diff() > pd.Timedelta(minutes=GAP_MINUTES)
-        for is_new, lat, lon in zip(new_segment, g["latitude"], g["longitude"]):
-            if is_new:
-                lats.append(None)
-                lons.append(None)
-            lats.append(lat)
-            lons.append(lon)
-        lats.append(None)
-        lons.append(None)
-    return lats, lons
+def great_circle(lat1, lon1, lat2, lon2, n=ROUTE_POINTS, anchor_end=False):
+    """n points along the great circle (the curved 'straight line' on a globe).
+    Longitudes are unwrapped (continuous across +-180 deg) and shifted so the anchored end
+    keeps its original longitude: the aircraft marker and the line stay on the same map copy."""
+    def xyz(lat, lon):
+        lat, lon = np.radians(lat), np.radians(lon)
+        return np.array([np.cos(lat) * np.cos(lon), np.cos(lat) * np.sin(lon), np.sin(lat)])
+
+    a, b = xyz(lat1, lon1), xyz(lat2, lon2)
+    omega = float(np.arccos(np.clip(np.dot(a, b), -1.0, 1.0)))
+    if omega < 1e-6 or omega > np.pi - 1e-6:     # same point (or antipodal): plain segment
+        return [lat1, lat2], [lon1, lon2]
+
+    t = np.linspace(0.0, 1.0, n)
+    pts = (np.sin((1 - t) * omega)[:, None] * a + np.sin(t * omega)[:, None] * b) / np.sin(omega)
+    lats = np.degrees(np.arctan2(pts[:, 2], np.hypot(pts[:, 0], pts[:, 1])))
+    lons = np.degrees(np.unwrap(np.arctan2(pts[:, 1], pts[:, 0])))
+
+    ref_idx, ref_lon = (-1, lon2) if anchor_end else (0, lon1)
+    lons = lons + 360.0 * round((ref_lon - lons[ref_idx]) / 360.0)
+    return lats.tolist(), lons.tolist()
+
+
+def build_route_lines(flights: pd.DataFrame):
+    """Per aircraft with a known route: origin -> aircraft (flown part) and aircraft -> destination
+    (remaining part), both great circles through the real position. None separates the aircraft."""
+    flown_lat, flown_lon, rest_lat, rest_lon = [], [], [], []
+    airports: dict[str, tuple[float, float]] = {}
+    drawn = 0
+
+    for r in flights.itertuples():
+        coords = (r.origin_lat, r.origin_lon, r.dest_lat, r.dest_lon, r.latitude, r.longitude)
+        if any(pd.isna(c) for c in coords):
+            continue
+
+        la, lo = great_circle(r.origin_lat, r.origin_lon, r.latitude, r.longitude, anchor_end=True)
+        flown_lat += la + [None]
+        flown_lon += lo + [None]
+
+        la, lo = great_circle(r.latitude, r.longitude, r.dest_lat, r.dest_lon)
+        rest_lat += la + [None]
+        rest_lon += lo + [None]
+
+        if pd.notna(r.origin_icao):
+            airports[r.origin_icao] = (r.origin_lat, r.origin_lon)
+        if pd.notna(r.dest_icao):
+            airports[r.dest_icao] = (r.dest_lat, r.dest_lon)
+        drawn += 1
+
+    return flown_lat, flown_lon, rest_lat, rest_lon, airports, drawn
 
 
 # ----- Dash Oldal Elrendezés (Layout) -----
@@ -89,7 +116,7 @@ layout = dbc.Container([
                 className="text-light mb-2", style={"letterSpacing": "1px"},
             ),
             html.P(
-                "Utolsó pillanatfelvétel pozíciói és a korábbi felvételek nyomvonala",
+                "Indulási és érkezési reptér közötti útvonal, rajta a gép utolsó ismert pozíciója",
                 className="text-muted small mb-1",
             ),
             html.Small(id="radar-status", className="text-muted d-block mb-3"),
@@ -118,26 +145,40 @@ layout = dbc.Container([
 )
 def update_radar_map(_):
     fig = go.Figure()
+    live_df = load_live_positions()              # newest snapshot -> aircraft + their routes
 
-    path_df = load_path_positions(PATH_HOURS)   # history -> trail
-    live_df = load_live_positions()             # newest snapshot -> markers
-
-    # --- 1. RÉTEG: Útvonalak (a korábbi pillanatfelvételekből) ---
-    if not path_df.empty:
-        lats, lons = build_path_lines(path_df)
-        fig.add_trace(go.Scattermap(
-            lat=lats, lon=lons, mode="lines+markers",
-            line=dict(width=1.5, color="rgba(255, 193, 7, 0.45)"),
-            marker=dict(size=4, color="rgba(255, 193, 7, 0.6)"),
-            hoverinfo="skip", name="Útvonalak"))
-
-    # --- 2. RÉTEG: Utolsó pillanatfelvétel (csak a levegőben lévő gépek) ---
+    # csak a levegőben lévő gépek
     live = live_df.iloc[0:0]
     if not live_df.empty:
         airborne = ~live_df["on_ground"].fillna(False).astype(bool)
         live = live_df[airborne].copy()
 
+    routes_drawn = 0
     if not live.empty:
+        # --- 1. RÉTEG: útvonalgörbék (megtett rész erősebb, hátralévő rész halványabb) ---
+        flown_lat, flown_lon, rest_lat, rest_lon, airports, routes_drawn = build_route_lines(live)
+
+        if routes_drawn:
+            fig.add_trace(go.Scattermap(
+                lat=rest_lat, lon=rest_lon, mode="lines",
+                line=dict(width=1.5, color="rgba(255, 193, 7, 0.25)"),
+                hoverinfo="skip", name="Hátralévő útvonal"))
+            fig.add_trace(go.Scattermap(
+                lat=flown_lat, lon=flown_lon, mode="lines",
+                line=dict(width=2, color="rgba(255, 193, 7, 0.7)"),
+                hoverinfo="skip", name="Megtett útvonal"))
+
+            # --- 2. RÉTEG: reptér pontok ---
+            fig.add_trace(go.Scattermap(
+                lat=[v[0] for v in airports.values()], lon=[v[1] for v in airports.values()],
+                mode="markers+text",
+                marker=dict(size=6, color="rgba(255, 255, 255, 0.85)"),
+                text=list(airports.keys()),
+                textposition="bottom center",
+                textfont=dict(color="rgba(255, 255, 255, 0.7)", size=9),
+                hoverinfo="text", hovertext=list(airports.keys()), name="Repterek"))
+
+        # --- 3. RÉTEG: az aktuális gép pozíciója ---
         live = live.assign(
             callsign=live["callsign"].fillna(live["icao24"]),
             altitude_m=live["altitude_m"].fillna(0),
@@ -145,10 +186,12 @@ def update_radar_map(_):
             velocity_mps=live["velocity_mps"].fillna(0),
         )
         hover = [
-            f"<b>Járat:</b> {r.callsign}<br>"
-            f"<b>Magasság:</b> {r.altitude_m:.0f} m<br>"
-            f"<b>Irányszög:</b> {r.heading_deg:.0f}°<br>"
-            f"<b>Sebesség:</b> {r.velocity_mps * 3.6:.0f} km/h"
+            (f"<b>Útvonal:</b> {r.origin_icao} → {r.dest_icao}<br>"
+             if pd.notna(r.origin_icao) and pd.notna(r.dest_icao) else "")
+            + f"<b>Járat:</b> {r.callsign}<br>"
+              f"<b>Magasság:</b> {r.altitude_m:.0f} m<br>"
+              f"<b>Irányszög:</b> {r.heading_deg:.0f}°<br>"
+              f"<b>Sebesség:</b> {r.velocity_mps * 3.6:.0f} km/h"
             for r in live.itertuples()]
 
         fig.add_trace(go.Scattermap(
@@ -158,19 +201,18 @@ def update_radar_map(_):
             text=live["callsign"],
             textposition="top right",
             textfont=dict(color="white", size=10),
-            hovertext=hover, hoverinfo="text", name="Utolsó felvétel"))
+            hovertext=hover, hoverinfo="text", name="Aktuális pozíció"))
 
-    # --- Státusz: mikor készült az utolsó pillanatfelvétel ---
+    # --- Státusz ---
     if live_df.empty:
         status = f"Nincs adat a {SCHEMA}.{POSITIONS_TABLE} táblában – hívd meg a /live-positions végpontot."
     else:
         snap = live_df["snapshot_time"].max()
         age_min = int((pd.Timestamp.now(tz="UTC") - snap).total_seconds() // 60)
-        path_n = path_df["icao24"].nunique() if not path_df.empty else 0
-        status = (f"{len(live)} gép a levegőben · utolsó felvétel: {snap:%Y-%m-%d %H:%M} UTC "
-                  f"({age_min} perccel ezelőtt) · {path_n} gép előzménye az elmúlt {PATH_HOURS} órából")
+        status = (f"{len(live)} gép a levegőben · {routes_drawn} ismert útvonallal · "
+                  f"utolsó felvétel: {snap:%Y-%m-%d %H:%M} UTC ({age_min} perccel ezelőtt)")
 
-    # --- 3. TÉRKÉP STÍLUS ÉS ELRENDEZÉS ---
+    # --- TÉRKÉP STÍLUS ÉS ELRENDEZÉS ---
     fig.update_layout(
         margin={"r": 0, "t": 0, "l": 0, "b": 0}, showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
         uirevision="radar",  # frissítéskor megtartja a felhasználó zoom/pan állását
