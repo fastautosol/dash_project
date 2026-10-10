@@ -176,12 +176,12 @@ async def fetch_live_states_batched(icao_codes: list[str], chunk_size: int = 25,
         if isinstance(result, Exception):
             logging.error("OpenSky chunk lekérdezési hiba: %s", result)
             continue
-
         live_data.extend(result)
-
     return live_data
 
-@dlt.resource(name="opensky_live_positions", write_disposition="append")
+
+
+@dlt.resource(name="opensky_live_positions", write_disposition="merge", primary_key=["icao24", "snapshot_at"])
 def fetch_live_positions_resource(rows: list[dict]):
     yield from rows
 
