@@ -403,7 +403,8 @@ async def enrich_with_aircraft_types(flights: list[dict]) -> None:
         logging.error("Géptípus-dúsítási hiba: %s", e)
 
 
-@dlt.resource(name="opensky_live_positions", write_disposition="merge", primary_key=["icao24", "snapshot_at"])
+#write_disposition="merge", primary_key=["icao24", "snapshot_at"])
+@dlt.resource(name="opensky_live_positions", write_disposition="replace")
 def fetch_live_positions_resource(rows: list[dict]):
     yield from rows
 
