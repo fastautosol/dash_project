@@ -82,10 +82,22 @@ def fetch_airport_flights():
             except Exception as e:
                 logging.error(f"Hiba a(z) {airport} reptér lekérdezésekor: {str(e)}")
 
+        time.sleep(2) 
+
 # ==============================================================================
 # SEGÉDFÜGGVÉNYEK: Hiányzó elemek lekérdezése az adatbázisból
 # ==============================================================================
+def _ensure_airports_table():
+    """Létrehozza a bronze.airports táblát, ha még nem létezik."""
+    with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS bronze"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS bronze.airports (icao text PRIMARY KEY, name text, city text,
+            lat double precision, lon double precision, fetched_at timestamptz NOT NULL DEFAULT now())
+        """))
+
 def get_missing_callsigns() -> list[str]:
+    _ensure_airports_table()
     query = text("""
         SELECT DISTINCT callsign FROM bronze.opensky_flights
         WHERE callsign IS NOT NULL AND callsign != 'UNKNOWN'
