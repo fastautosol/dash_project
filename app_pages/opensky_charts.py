@@ -151,7 +151,7 @@ layout = dbc.Container([
             html.Div([
                 dbc.Checklist(
                     id="airport-filter",
-                    options=[{"label": f"{icao} {city}", "value": icao} for icao, city in AIRPORT_FILTER.items()],
+                    options=[{"label": f"{city}", "value": icao} for icao, city in AIRPORT_FILTER.items()],
                     value=[], class_name="btn-group flex-wrap",
                     input_class_name="btn-check",
                     label_class_name="btn btn-outline-warning btn-sm",
