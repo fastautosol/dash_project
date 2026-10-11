@@ -429,7 +429,7 @@ async def get_live_positions():
     if not icao_codes:
         return {"flights": []}
 
-    live_data = await fetch_live_states_batched(icao_codes, chunk_size=50, max_concurrency=5)
+    live_data = await fetch_live_states_batched(icao_codes, chunk_size=75, max_concurrency=5)
 
     await enrich_with_routes(live_data)    # indulási/érkezési reptér a hívójel alapján
     await enrich_with_aircraft_types(live_data)    # géptípus az icao24 alapján
