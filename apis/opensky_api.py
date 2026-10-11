@@ -193,7 +193,7 @@ async def fetch_live_states_batched(icao_codes: list[str], chunk_size: int = 25,
 ROUTE_API = "https://api.adsbdb.com/v0/callsign/{callsign}"
 ROUTE_HIT_TTL_DAYS = 14      # a megtalált útvonalat ennyi napig használjuk újra
 ROUTE_MISS_TTL_DAYS = 3      # az ismeretlen hívójelet ennyi nap múlva kérdezzük újra
-MAX_ROUTE_LOOKUPS = 150      # egy /live-positions hívásban legfeljebb ennyi új hívójelet keresünk
+MAX_ROUTE_LOOKUPS = 200      # egy /live-positions hívásban legfeljebb ennyi új hívójelet keresünk
 ROUTE_KEYS = ("origin_icao", "origin_lat", "origin_lon", "dest_icao", "dest_lat", "dest_lon")
 
 
@@ -393,7 +393,7 @@ async def enrich_with_aircraft_types(flights: list[dict]) -> None:
 
         if missing:
             semaphore = asyncio.Semaphore(3)
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 results = await asyncio.gather(*(_fetch_aircraft_type(client, semaphore, c) for c in missing))
             fresh = [r for r in results if r is not None]
             if fresh:
