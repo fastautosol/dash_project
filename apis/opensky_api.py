@@ -82,7 +82,7 @@ def fetch_airport_flights():
             except Exception as e:
                 logging.error(f"Hiba a(z) {airport} reptér lekérdezésekor: {str(e)}")
 
-        time.sleep(2) 
+        time.sleep(0.5) 
 
 # ==============================================================================
 # SEGÉDFÜGGVÉNYEK: Hiányzó elemek lekérdezése az adatbázisból
