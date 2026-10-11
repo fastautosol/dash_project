@@ -1,4 +1,4 @@
-# 2026.10.11  10.00
+# 2026.10.11  11.00
 import dlt
 import requests
 import time
@@ -48,11 +48,18 @@ def fetch_airport_flights():
             url_flights = f"{API}/flights/{direction}?airport={airport}&begin={time_start}&end={time_end}"
                          
             try:
-                response = dlt_requests.get(url_flights, headers=headers, timeout=15)
-                if response.status_code == 404: 
-                    continue
-                response.raise_for_status()
-                flights = response.json()
+                response = dlt_requests.get(url_flights, headers=headers, timeout=30)
+                 if response.status_code == 404: 
+                     continue
+                 if response.status_code != 200:
+                     print(f"API Hiba ({response.status_code}) a(z) {airport} reptérnél: {response.text[:100]}")
+                     continue
+                 
+                 try:
+                     flights = response.json()
+                 except Exception as json_err:
+                     print(f"JSON feldolgozási hiba a(z) {airport} reptérnél. A szerver ezt küldte: {response.text[:200]}")
+                     continue
                 
                 for f in flights:
                     callsign = (f.get("callsign") or "").strip()
