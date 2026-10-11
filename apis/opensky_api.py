@@ -387,6 +387,185 @@ async def get_live_positions():
     await asyncio.to_thread(run_dlt_live_positions, live_data)
     return {"flights": live_data}
 
-# --- Fallback enrich függvények (a korábbi kódból másolva, a biztonság kedvéért) ---
-# (Ezeket a fájl végére illeszd be a korábbi verzióból, ha szükséges, de a fenti dlt pipeline-ok 
-# miatt ezek már ritkán fognak tényleges API hívást indítani, csak a helyi DB-ből olvasnak.)
+
+# ==============================================================================
+# SEGÉDFÜGGVÉNYEK ÉS ENRICH LOGIKA (A /live végponthoz)
+# ==============================================================================
+# --- Útvonal-dúsítás ---
+ROUTE_API = "https://api.adsbdb.com/v0/callsign/{callsign}"
+ROUTE_HIT_TTL_DAYS = 14
+ROUTE_MISS_TTL_DAYS = 3
+MAX_ROUTE_LOOKUPS = 150
+ROUTE_KEYS = ("origin_icao", "origin_lat", "origin_lon", "dest_icao", "dest_lat", "dest_lon")
+
+def _ensure_route_table():
+    with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS bronze"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS bronze.callsign_routes (
+                callsign    text PRIMARY KEY,
+                found       boolean NOT NULL,
+                origin_icao text, origin_lat double precision, origin_lon double precision,
+                dest_icao   text, dest_lat   double precision, dest_lon   double precision,
+                fetched_at  timestamptz NOT NULL DEFAULT now())"""))
+
+def load_route_cache(callsigns: list[str]) -> dict[str, dict]:
+    if not callsigns: return {}
+    _ensure_route_table()
+    query = text("""
+        SELECT callsign, found, origin_icao, origin_lat, origin_lon, dest_icao, dest_lat, dest_lon
+        FROM bronze.callsign_routes
+        WHERE callsign IN :c
+        AND fetched_at > now() - CASE WHEN found THEN make_interval(days => :hit)
+                                      ELSE make_interval(days => :miss) END
+    """).bindparams(bindparam("c", expanding=True))
+    with engine.connect() as conn:
+        rows = conn.execute(query, {"c": callsigns, "hit": ROUTE_HIT_TTL_DAYS, "miss": ROUTE_MISS_TTL_DAYS}).mappings().all()
+    return {r["callsign"]: dict(r) for r in rows}
+
+def save_route_cache(rows: list[dict]) -> None:
+    if not rows: return
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO bronze.callsign_routes
+            (callsign, found, origin_icao, origin_lat, origin_lon, dest_icao, dest_lat, dest_lon, fetched_at)
+            VALUES (:callsign, :found, :origin_icao, :origin_lat, :origin_lon, :dest_icao, :dest_lat, :dest_lon, now())
+            ON CONFLICT (callsign) DO UPDATE SET
+                found = EXCLUDED.found, origin_icao = EXCLUDED.origin_icao, origin_lat = EXCLUDED.origin_lat, origin_lon = EXCLUDED.origin_lon,
+                dest_icao = EXCLUDED.dest_icao, dest_lat = EXCLUDED.dest_lat, dest_lon = EXCLUDED.dest_lon, fetched_at = now()
+        """), rows)
+
+async def _fetch_route(client, semaphore: asyncio.Semaphore, callsign: str) -> dict | None:
+    async with semaphore:
+        try:
+            response = await client.get(ROUTE_API.format(callsign=callsign))
+        except Exception as e:
+            logging.warning("adsbdb hiba (%s): %s", callsign, e)
+            return None
+        await asyncio.sleep(0.2)
+        row = {"callsign": callsign, "found": False, **{k: None for k in ROUTE_KEYS}}
+        if response.status_code == 404: return row
+        if response.status_code != 200:
+            logging.warning("adsbdb HTTP %s (%s)", response.status_code, callsign)
+            return None
+        try:
+            route = response.json()["response"]["flightroute"]
+            origin, dest = route["origin"], route["destination"]
+            row.update(found=True,
+                       origin_icao=origin["icao_code"], origin_lat=float(origin["latitude"]), origin_lon=float(origin["longitude"]),
+                       dest_icao=dest["icao_code"], dest_lat=float(dest["latitude"]), dest_lon=float(dest["longitude"]))
+        except Exception:
+            row["found"] = False
+        return row
+
+async def enrich_with_routes(flights: list[dict]) -> None:
+    for f in flights:
+        for k in ROUTE_KEYS: f[k] = None
+    try:
+        callsigns = sorted({f["callsign"] for f in flights if f.get("callsign") and f["callsign"] != "UNKNOWN"})
+        if not callsigns: return
+        cache = await asyncio.to_thread(load_route_cache, callsigns)
+        missing = [c for c in callsigns if c not in cache][:MAX_ROUTE_LOOKUPS]
+        if missing:
+            semaphore = asyncio.Semaphore(3)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                results = await asyncio.gather(*(_fetch_route(client, semaphore, c) for c in missing))
+            fresh = [r for r in results if r is not None]
+            if fresh:
+                await asyncio.to_thread(save_route_cache, fresh)
+                cache.update({r["callsign"]: r for r in fresh})
+            logging.info("Útvonal-keresés: %d új hívójel, %d sikeres lekérdezés", len(missing), len(fresh))
+        for f in flights:
+            route = cache.get(f["callsign"])
+            if route and route["found"]:
+                for k in ROUTE_KEYS: f[k] = route[k]
+    except Exception as e:
+        logging.error("Útvonal-dúsítási hiba: %s", e)
+
+
+# --- Géptípus-dúsítás ---
+AIRCRAFT_API = "https://api.adsbdb.com/v0/aircraft/{icao24}"
+TYPE_HIT_TTL_DAYS = 180
+TYPE_MISS_TTL_DAYS = 14
+MAX_TYPE_LOOKUPS = 150
+TYPE_KEYS = ("aircraft_icao_type", "aircraft_type")
+
+def _ensure_type_table():
+    with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS bronze"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS bronze.aircraft_types (
+                icao24     text PRIMARY KEY,
+                found      boolean NOT NULL,
+                icao_type  text,
+                model      text,
+                fetched_at timestamptz NOT NULL DEFAULT now())"""))
+
+def load_type_cache(icao24s: list[str]) -> dict[str, dict]:
+    if not icao24s: return {}
+    _ensure_type_table()
+    query = text("""
+        SELECT icao24, found, icao_type, model
+        FROM bronze.aircraft_types
+        WHERE icao24 IN :c
+        AND fetched_at > now() - CASE WHEN found THEN make_interval(days => :hit)
+                                      ELSE make_interval(days => :miss) END
+    """).bindparams(bindparam("c", expanding=True))
+    with engine.connect() as conn:
+        rows = conn.execute(query, {"c": icao24s, "hit": TYPE_HIT_TTL_DAYS, "miss": TYPE_MISS_TTL_DAYS}).mappings().all()
+    return {r["icao24"]: dict(r) for r in rows}
+
+def save_type_cache(rows: list[dict]) -> None:
+    if not rows: return
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO bronze.aircraft_types (icao24, found, icao_type, model, fetched_at)
+            VALUES (:icao24, :found, :icao_type, :model, now())
+            ON CONFLICT (icao24) DO UPDATE SET
+                found = EXCLUDED.found, icao_type = EXCLUDED.icao_type,
+                model = EXCLUDED.model, fetched_at = now()"""), rows)
+
+async def _fetch_aircraft_type(client, semaphore: asyncio.Semaphore, icao24: str) -> dict | None:
+    async with semaphore:
+        try:
+            response = await client.get(AIRCRAFT_API.format(icao24=icao24))
+        except Exception as e:
+            logging.warning("adsbdb gép-hiba (%s): %s", icao24, e)
+            return None
+        await asyncio.sleep(0.2)
+        row = {"icao24": icao24, "found": False, "icao_type": None, "model": None}
+        if response.status_code == 404: return row
+        if response.status_code != 200:
+            logging.warning("adsbdb gép HTTP %s (%s)", response.status_code, icao24)
+            return None
+        try:
+            aircraft = response.json()["response"]["aircraft"]
+            row.update(found=True, icao_type=aircraft.get("icao_type"), model=aircraft.get("type"))
+        except Exception:
+            row["found"] = False
+        return row
+
+async def enrich_with_aircraft_types(flights: list[dict]) -> None:
+    for f in flights:
+        for k in TYPE_KEYS: f[k] = None
+    try:
+        icao24s = sorted({f["icao24"].lower() for f in flights if f.get("icao24") and f["icao24"] != "N/A"})
+        if not icao24s: return
+        cache = await asyncio.to_thread(load_type_cache, icao24s)
+        missing = [c for c in icao24s if c not in cache][:MAX_TYPE_LOOKUPS]
+        if missing:
+            semaphore = asyncio.Semaphore(3)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                results = await asyncio.gather(*(_fetch_aircraft_type(client, semaphore, c) for c in missing))
+            fresh = [r for r in results if r is not None]
+            if fresh:
+                await asyncio.to_thread(save_type_cache, fresh)
+                cache.update({r["icao24"]: r for r in fresh})
+            logging.info("Géptípus-keresés: %d új gép, %d sikeres lekérdezés", len(missing), len(fresh))
+        for f in flights:
+            row = cache.get((f.get("icao24") or "").lower())
+            if row and row["found"]:
+                f["aircraft_icao_type"] = row["icao_type"]
+                f["aircraft_type"] = row["model"]
+    except Exception as e:
+        logging.error("Géptípus-dúsítási hiba: %s", e)
