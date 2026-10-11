@@ -41,7 +41,7 @@ def fetch_airport_flights():
     headers = {"Authorization": f"Bearer {token}"}
     
     time_end = int(time.time())
-    time_start = int(time_end - 86400) 
+    time_start = int(time_end - 1.25 * 86400) 
     
     for airport in AIRPORTS:
         for direction in ("departure", "arrival"):
@@ -102,12 +102,14 @@ def get_cached_token() -> str:
 
 
 def get_tracked_icao_codes() -> list[str]:
-    query = text("SELECT DISTINCT icao24 FROM bronze.opensky_flights WHERE icao24 IS NOT NULL ORDER BY icao24")
+    #query = text("SELECT DISTINCT icao24 FROM bronze.opensky_flights WHERE icao24 IS NOT NULL ORDER BY icao24")
+    query = text("""SELECT DISTINCT icao24 FROM bronze.uae_flights WHERE icao24 IS NOT NULL 
+          AND last_seen > extract(epoch from now() - interval '24 hours')::bigint ORDER BY icao24""") 
+    
     try:
         with engine.connect() as conn:
             result = conn.execute(query)
-            return [row[0].strip() for row in result if row[0]]
-            
+            return [row[0].strip() for row in result if row[0]]            
     except Exception as e:
         print(f"Adatbázis hiba az ICAO kódok lekérésekor: {e}")
         return []
@@ -425,20 +427,16 @@ def run_dlt_live_positions(live_data: list[dict]):
 async def get_live_positions():
 
     icao_codes = await asyncio.to_thread(get_tracked_icao_codes)
-
     if not icao_codes:
         return {"flights": []}
 
     live_data = await fetch_live_states_batched(icao_codes, chunk_size=75, max_concurrency=5)
-
     await enrich_with_routes(live_data)    # indulási/érkezési reptér a hívójel alapján
     await enrich_with_aircraft_types(live_data)    # géptípus az icao24 alapján
-
     if not live_data:
         return {"flights": []}
 
     snapshot_at = datetime.now(timezone.utc).isoformat()    # Közös időbélyeg az adott pillanatfelvételhez
-
     for flight in live_data:
         flight["snapshot_at"] = snapshot_at
 
