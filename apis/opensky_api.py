@@ -1,4 +1,4 @@
-# 2026.10.10  18.00
+# 2026.10.11  10.00
 import dlt
 import requests
 import time
@@ -84,7 +84,7 @@ def run_dlt_pipeline():
     return str(load_info)
 
 # ----- 2. ÚJ FASTAPI API VÉGPONT -----
-@router.get("/airport_flights")
+@router.get("/flights")
 def trigger_airport_flights_sync(background_tasks: BackgroundTasks):
     background_tasks.add_task(run_dlt_pipeline)   
     return {"message": "Az OpenSky reptéri menetrend szinkronizálása elindult a háttérben.", "timestamp": datetime.now().isoformat()}
@@ -421,7 +421,7 @@ def run_dlt_live_positions(live_data: list[dict]):
 
 
 # ----- 1. FASTAPI ENDPOINT (A Dash térkép aszinkron AJAX hívásaihoz) -----
-@router.get("/live-positions")
+@router.get("/live")
 async def get_live_positions():
 
     icao_codes = await asyncio.to_thread(get_tracked_icao_codes)
