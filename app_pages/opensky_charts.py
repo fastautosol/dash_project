@@ -137,9 +137,6 @@ def type_label(model, code) -> str:
 layout = dbc.Container([
     dbc.Row([
         dbc.Col([
-            html.H3(
-                [html.I(className="fas fa-plane-departure me-2 text-warning"), ""],
-                className="text-light mb-2", style={"letterSpacing": "1px"}),
             html.H2("OPENSKY FLIGHT RADAR", className="text-light fw-bold mb-0")
             html.Small(id="radar-status", className="text-muted d-block mb-3"),
         ], width=12)
@@ -262,7 +259,7 @@ def update_radar_map(_, airports):
             filter_txt = f"repterek: {', '.join(selected)} · {routes_drawn} útvonal"
         else:
             filter_txt = "válassz repteret az útvonalak megjelenítéséhez"
-        status = (f"{len(shown)} / {len(live)} gép a levegőben · {filter_txt} · utolsó felvétel: {snap:%Y-%m-%d %H:%M} UTC ({age_min} perccel ezelőtt)")
+        status = (f"{len(shown)} / {len(live)} plane on air · {filter_txt} · last snapshot: {snap:%Y-%m-%d %H:%M} UTC ({age_min} min ago)")
 
     # --- TÉRKÉP STÍLUS ÉS ELRENDEZÉS ---
     fig.update_layout(
