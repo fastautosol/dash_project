@@ -508,7 +508,7 @@ async def fetch_live_states_from_opensky(icao_list):
             return []
 
 
-async def fetch_live_states_batched(icao_codes: list[str], chunk_size: int = 50, max_concurrency: int = 5) -> list[dict]:
+async def fetch_live_states_batched(icao_codes: list[str], chunk_size: int = 100, max_concurrency: int = 5) -> list[dict]:
     if not icao_codes:
         return []
     semaphore = asyncio.Semaphore(max_concurrency)
@@ -552,7 +552,7 @@ async def get_live_positions():
     if not icao_codes:
         return {"flights": []}
 
-    live_data = await fetch_live_states_batched(icao_codes, chunk_size=50, max_concurrency=5)
+    live_data = await fetch_live_states_batched(icao_codes, chunk_size=100, max_concurrency=5)
     if not live_data:
         return {"flights": []}
 
