@@ -27,11 +27,11 @@ router = APIRouter()
 CRUCIX_API_URL = os.getenv("CRUCIX_API_URL", "http://crucix:3117/api/data")
 
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "postgresql"),
-    "port": int(os.getenv("DB_PORT", "5432")),
-    "database": os.getenv("DB_NAME", "n8n"),
-    "username": os.getenv("DB_USER", "sql_admin"),
-    "password": os.getenv("DB_PASSWORD", ""),
+    "host": os.getenv("DB_HOST", "DB_POSTGRESDB_HOST"),
+    "port": os.getenv("DB_PORT", "DB_POSTGRESDB_PORT"),
+    "database": os.getenv("DB_NAME", "DB_POSTGRESDB_DATABASE"),
+    "username": os.getenv("DB_USER", "DB_POSTGRESDB_USER"),
+    "password": os.getenv("DB_PASSWORD", "DB_POSTGRESDB_PASSWORD"),
     "connect_timeout": 15}
 
 REQUEST_TIMEOUT = 30
