@@ -24,11 +24,11 @@ AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protoco
 API = "https://opensky-network.org/api"
 
 DB_CONFIG = {
-    "host": env("DB_HOST", "DB_POSTGRESDB_HOST"),
-    "port": env("DB_PORT", "DB_POSTGRESDB_PORT"),
-    "database": env("DB_NAME", "DB_POSTGRESDB_DATABASE"),
-    "username": env("DB_USER", "DB_POSTGRESDB_USER"),
-    "password": env("DB_PASSWORD", "DB_POSTGRESDB_PASSWORD"),
+    "host": os.getenv("DB_HOST", "DB_POSTGRESDB_HOST"),
+    "port": os.getenv("DB_PORT", "DB_POSTGRESDB_PORT"),
+    "database": os.getenv("DB_NAME", "DB_POSTGRESDB_DATABASE"),
+    "username": os.getenv("DB_USER", "DB_POSTGRESDB_USER"),
+    "password": os.getenv("DB_PASSWORD", "DB_POSTGRESDB_PASSWORD"),
     "connect_timeout": 15}
 
 if not DB_CONFIG["username"] or not DB_CONFIG["password"]:
