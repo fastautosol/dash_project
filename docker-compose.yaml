@@ -1,4 +1,5 @@
 version: "3.9"
+version: "3.9"
 services:
   postgresql:
     image: pgvector/pgvector:pg18
@@ -116,8 +117,8 @@ services:
       timeout: 10s
       start_period: 90s
       retries: 5
-    mem_limit: 1500m
-    cpus: 1.0
+    mem_limit: 1000m
+    cpus: 0.5
     logging:
       driver: "json-file"
       options:
@@ -147,6 +148,8 @@ services:
       DB_NAME: ${POSTGRES_DB:-n8n}
       DB_USER: ${SERVICE_USER_POSTGRES}
       DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      # ÚJ: Crucix elérése a közös Docker hálózaton (a service/alias neve: crucix)
+      CRUCIX_API_URL: http://crucix:3117/api/data
       PYTHONUNBUFFERED: "1"
       TZ: ${TZ:-Europe/Berlin}
       UVICORN_WORKERS: 1
@@ -214,11 +217,45 @@ services:
         max-file: "3"
     networks:
       - n8n-shared-net
+
+
+  # ==========================================================
+  # Crucix OSINT terminál (calesthio/Crucix)
+  # ==========================================================
+  crucix:
+    build:
+      context: https://github.com/calesthio/Crucix.git#master
+      dockerfile: Dockerfile
+    container_name: crucix
+    restart: unless-stopped
+    expose:
+      - "3117"
+    environment:
+      PORT: 3117
+      TZ: ${TZ:-Europe/Berlin}
+      REFRESH_INTERVAL_MINUTES: ${CRUCIX_REFRESH_MINUTES:-15}
+    volumes:
+      - crucix-runs:/app/runs
+    mem_limit: 1000m
+    cpus: 0.5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      n8n-shared-net:
+        aliases:
+          - crucix
+
 volumes:
   n8n-data:
     driver: local
   postgresql-data:
     driver: local
+  crucix-runs:
+    driver: local
+
 networks:
   n8n-shared-net:
     driver: bridge
