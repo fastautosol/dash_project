@@ -234,23 +234,22 @@ services:
   crucix-dlt-gateway:
     build:
       context: .
-      dockerfile: Dockerfile.gateway  # Külön Dockerfile a dlt scriptnek és a FastAPI-nak
+      dockerfile: Dockerfile.dash  
     container_name: crucix-dlt-gateway
     restart: unless-stopped
     depends_on:
       postgresql:
         condition: service_healthy
       crucix:
-        # Megvárja, amíg a Crucix elindul
         condition: service_started
     expose:
       - "8000"
+    # Felülbíráljuk az indító parancsot, hogy az új dlt/FastAPI átjárót indítsa el:
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=${TZ:-Europe/Berlin}
-      # A belső hálózaton eléri a postgresql konténert a meglévő adatokkal
       - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgresql:5432/${POSTGRES_DB:-n8n}
-      # A belső hálózaton eléri a crucix konténer API végpontját
       - CRUCIX_API_URL=http://crucix:3117/api/feeds
     mem_limit: 1000m
     cpus: 0.5
@@ -261,6 +260,7 @@ services:
         max-file: "3"
     networks:
       - n8n-shared-net
+
 
 volumes:
   n8n-data:
