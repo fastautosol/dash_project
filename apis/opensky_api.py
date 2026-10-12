@@ -1,4 +1,4 @@
-# 2026.10.12  9.00
+# 2026.10.12  10.00
 import asyncio
 import csv
 import io
@@ -40,8 +40,7 @@ DB_URL = URL.create(
     password=DB_CONFIG["password"],
     host=DB_CONFIG["host"],
     port=DB_CONFIG["port"],
-    database=DB_CONFIG["database"],
-)
+    database=DB_CONFIG["database"])
 engine = create_engine(DB_URL, pool_size=5, max_overflow=10, pool_pre_ping=True)
 
 router = APIRouter()
@@ -49,7 +48,7 @@ router = APIRouter()
 # OpenSky /flights/* : az adatok éjszakai batch-ben frissülnek, csak a TEGNAPI és
 # korábbi napok érhetők el, az intervallum pedig max. 2 nap lehet.
 # Ezért lezárt UTC napokat kérdezünk le (a "most" végű ablak 400-as hibát ad).
-FLIGHTS_LOOKBACK_DAYS = 1          # 1 vagy 2 (max. 2 nap!)
+FLIGHTS_LOOKBACK_DAYS = 2          # 1 vagy 2 (max. 2 nap!)
 TRACKED_WINDOW_HOURS = 48          # a batch késése miatt 24 óra túl szűk
 
 # adsbdb.com védelme
@@ -272,8 +271,7 @@ def get_missing_airports() -> list[str]:
 # 2. PIPELINE: Útvonalak dúsítása (adsbdb.com callsign)
 #    Csak 200 / 404 kerül a cache-be; 429/5xx/hálózati hiba újrapróbálódik.
 # ==============================================================================
-@dlt.resource(name="callsign_routes", write_disposition="merge", primary_key="callsign")
-def fetch_missing_routes():
+def fetch_missing_routes():   # sima generátor: a sorokat SQL-lel mentjük (lásd run_full_sync_pipeline)
     missing_callsigns = get_missing_callsigns()
     logging.info("Útvonal dúsítás: %d hiányzó callsign", len(missing_callsigns))
 
@@ -313,8 +311,7 @@ def fetch_missing_routes():
 # ==============================================================================
 # 3. PIPELINE: Géptípusok dúsítása (adsbdb.com icao24)
 # ==============================================================================
-@dlt.resource(name="aircraft_types", write_disposition="merge", primary_key="icao24")
-def fetch_missing_aircraft():
+def fetch_missing_aircraft():   # sima generátor, SQL-es mentés
     missing_icao24s = get_missing_icao24s()
     logging.info("Géptípus dúsítás: %d hiányzó icao24", len(missing_icao24s))
 
@@ -360,8 +357,7 @@ def _load_airport_db() -> dict:
     return _airport_db
 
 
-@dlt.resource(name="airports", write_disposition="merge", primary_key="icao")
-def fetch_missing_airports():
+def fetch_missing_airports():   # sima generátor, SQL-es mentés
     missing_airports = get_missing_airports()
     logging.info("Reptér dúsítás: %d hiányzó reptér", len(missing_airports))
     if not missing_airports:
@@ -401,22 +397,39 @@ def run_full_sync_pipeline():
     _stats["flights"] = 0
     logging.info("=== TELJES SZINKRONIZÁCIÓ ELINDULT ===")
 
+    # Új pipeline-név: a régi (opensky_full_tracker) egy elakadt, függőben lévő
+    # csomagot tartalmaz a callsign_routes táblához, ami minden futást megakasztott.
     pipeline = dlt.pipeline(
-        pipeline_name="opensky_full_tracker",
+        pipeline_name="opensky_flights_pipeline",
         destination=dlt.destinations.postgres(credentials=DB_CONFIG),
         dataset_name="bronze",
     )
+    try:
+        pipeline.drop_pending_packages()
+    except Exception as e:
+        logging.warning("Függő csomagok törlése nem sikerült: %s", e)
 
-    steps = [
-        ("1/4: Történelmi járatok letöltése...", fetch_airport_flights),
-        ("2/4: Hiányzó útvonalak dúsítása...", fetch_missing_routes),
-        ("3/4: Hiányzó géptípusok dúsítása...", fetch_missing_aircraft),
-        ("4/4: Hiányzó repterek dúsítása...", fetch_missing_airports),
+    # 1/4: csak a járatok mennek dlt-n keresztül
+    logging.info("1/4: Történelmi járatok letöltése...")
+    try:
+        pipeline.run(fetch_airport_flights())
+    except Exception as e:
+        _stats["errors"] += 1
+        logging.error("Hiba az 1/4 lépésben: %s", e)
+
+    # 2-4/4: a cache-táblákat SQL-lel töltjük (ugyanúgy, mint a /live végpont),
+    # így nincs ütközés a dlt-s _dlt_load_id / _dlt_id oszlopokkal.
+    cache_steps = [
+        ("2/4: Hiányzó útvonalak dúsítása...", fetch_missing_routes, save_route_cache),
+        ("3/4: Hiányzó géptípusok dúsítása...", fetch_missing_aircraft, save_type_cache),
+        ("4/4: Hiányzó repterek dúsítása...", fetch_missing_airports, save_airport_cache),
     ]
-    for label, resource in steps:
+    for label, generator, saver in cache_steps:
         logging.info(label)
         try:
-            pipeline.run(resource())
+            rows = [{k: v for k, v in r.items() if k != "fetched_at"} for r in generator()]
+            saver(rows)
+            logging.info("%d sor mentve", len(rows))
         except Exception as e:
             _stats["errors"] += 1
             logging.error("Hiba a(z) '%s' lépésben: %s", label, e)   # a következő lépés lefut
@@ -669,6 +682,19 @@ def save_type_cache(rows: list[dict]) -> None:
                 model = EXCLUDED.model, fetched_at = now()"""), rows)
 
 
+def save_airport_cache(rows: list[dict]) -> None:
+    if not rows:
+        return
+    _ensure_airports_table()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            INSERT INTO bronze.airports (icao, name, city, lat, lon, fetched_at)
+            VALUES (:icao, :name, :city, :lat, :lon, now())
+            ON CONFLICT (icao) DO UPDATE SET
+                name = EXCLUDED.name, city = EXCLUDED.city,
+                lat = EXCLUDED.lat, lon = EXCLUDED.lon, fetched_at = now()"""), rows)
+
+
 async def _fetch_aircraft_type(client, semaphore: asyncio.Semaphore, icao24: str) -> dict | None:
     async with semaphore:
         try:
@@ -717,3 +743,5 @@ async def enrich_with_aircraft_types(flights: list[dict]) -> None:
                 f["aircraft_type"] = row["model"]
     except Exception as e:
         logging.error("Géptípus-dúsítási hiba: %s", e)
+
+
