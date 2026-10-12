@@ -111,8 +111,7 @@ def flight_window() -> tuple[int, int]:
     """Az utolsó FLIGHTS_LOOKBACK_DAYS lezárt UTC nap (tegnap 23:59:59-ig)."""
     today_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     end = int(today_midnight.timestamp()) - 1
-    days = max(1, min(FLIGHTS_LOOKBACK_DAYS, 2))
-    begin = end - days * 86400 + 1          # < 2 nap
+    begin = end - int(FLIGHTS_LOOKBACK_DAYS * 86400)       
     return begin, end
 
 
