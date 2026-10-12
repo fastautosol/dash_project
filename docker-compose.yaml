@@ -38,6 +38,7 @@ services:
         aliases:
           - postgresql
 
+
   n8n:
     image: docker.n8n.io/n8nio/n8n:2.42.7
     container_name: n8n
@@ -56,6 +57,7 @@ services:
       TZ: ${TZ:-Europe/Berlin}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
       N8N_MIGRATE_FS_STORAGE_PATH: "true"
+
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgresql
       DB_POSTGRESDB_PORT: 5432
@@ -63,6 +65,7 @@ services:
       DB_POSTGRESDB_SCHEMA: public
       DB_POSTGRESDB_USER: ${SERVICE_USER_POSTGRES}
       DB_POSTGRESDB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+
       EXECUTIONS_MODE: regular
       EXECUTIONS_DATA_PRUNE: true
       EXECUTIONS_DATA_MAX_AGE: 72
@@ -84,6 +87,7 @@ services:
         max-file: "3"
     networks:
       - n8n-shared-net
+
 
   media-dash-app:
     build:
@@ -112,8 +116,8 @@ services:
       timeout: 10s
       start_period: 90s
       retries: 5
-    mem_limit: 1000m
-    cpus: 0.5
+    mem_limit: 1500m
+    cpus: 1.0
     logging:
       driver: "json-file"
       options:
@@ -121,6 +125,7 @@ services:
         max-file: "3"
     networks:
       - n8n-shared-net
+
 
   demo-dash-app:
     build:
@@ -161,6 +166,7 @@ services:
     networks:
       - n8n-shared-net
 
+
   crypto-alert-bot:
     build:
       context: .
@@ -185,6 +191,7 @@ services:
     networks:
       - n8n-shared-net
 
+
   crypto-candles-bot:
     build:
       context: .
@@ -207,67 +214,11 @@ services:
         max-file: "3"
     networks:
       - n8n-shared-net
-
-  # ==========================================
-  # ÚJ: Crucix OSINT hírszerzési terminál
-  # ==========================================
-  crucix:
-    image: calesthio/crucix:latest
-    container_name: crucix-terminal
-    restart: unless-stopped
-    # Kikötjük a 3117-es portot, hogy a VPS-ed IP-címén külsőleg is elérd a GUI-t
-    ports:
-      - "3117:3117"
-    mem_limit: 1000m
-    cpus: 0.5
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - n8n-shared-net
-
-  # ==========================================
-  # ÚJ: DLT Pipeline & FastAPI Gateway konténer
-  # ==========================================
-  crucix-dlt-gateway:
-    build:
-      context: .
-      dockerfile: Dockerfile.dash  
-    container_name: crucix-dlt-gateway
-    restart: unless-stopped
-    depends_on:
-      postgresql:
-        condition: service_healthy
-      crucix:
-        condition: service_started
-    expose:
-      - "8000"
-    # Felülbíráljuk az indító parancsot, hogy az új dlt/FastAPI átjárót indítsa el:
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-    environment:
-      - PYTHONUNBUFFERED=1
-      - TZ=${TZ:-Europe/Berlin}
-      - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgresql:5432/${POSTGRES_DB:-n8n}
-      - CRUCIX_API_URL=http://crucix:3117/api/feeds
-    mem_limit: 1000m
-    cpus: 0.5
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - n8n-shared-net
-
-
 volumes:
   n8n-data:
     driver: local
   postgresql-data:
     driver: local
-
 networks:
   n8n-shared-net:
     driver: bridge
