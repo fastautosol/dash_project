@@ -137,8 +137,8 @@ def type_label(model, code) -> str:
 layout = dbc.Container([
     dbc.Row([
         dbc.Col([
-            html.H2("OPENSKY FLIGHT RADAR", className="text-light fw-bold mb-0")
-            html.Small(id="radar-status", className="text-muted d-block mb-3"),
+            html.H2("OPENSKY FLIGHT RADAR", className="text-light fw-bold mb-0"),
+            html.Small(id="radar-status", className="text-muted d-block mb-3")
         ], width=12)
     ]),
 
