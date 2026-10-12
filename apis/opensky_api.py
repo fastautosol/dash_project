@@ -1,5 +1,4 @@
 # 2026.10.12  9.00
-# 2026.10.12  javított verzió
 import asyncio
 import csv
 import io
