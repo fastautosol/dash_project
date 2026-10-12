@@ -1,4 +1,4 @@
-# 2026.10.10 - OpenSky Flight Radar: departure-airport filter, route curves, aircraft type in the hint box
+# 2026.10.12 12.00
 import logging
 import time
 
@@ -16,11 +16,7 @@ dash.register_page(__name__, path="/flight-radar", name="OpenSky Radar", icon="f
 
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 engine = create_engine(DB_URL, pool_pre_ping=True)
-
 SCHEMA = "bronze"
-
-# Every call of /live-positions appends a snapshot; all aircraft of one call share snapshot_at.
-# The route (origin_*/dest_*) and the aircraft type columns are filled by opensky_api.py.
 POSITIONS_TABLE = "opensky_live_positions"
 
 # Departure filter chips. Keep in sync with AIRPORTS in opensky_api.py (ICAO code -> city label).
@@ -39,11 +35,8 @@ NUMERIC_COLS = ["latitude", "longitude", "altitude_m", "velocity_mps", "heading_
 _cache = {"ts": 0.0, "df": None}
 
 def _query_latest_positions() -> pd.DataFrame:
-    """Rows of the NEWEST snapshot (one row per aircraft), including route and type columns."""
-    query = text(f"""
-        SELECT *
-        FROM {SCHEMA}.{POSITIONS_TABLE}
-        WHERE snapshot_at = (SELECT max(snapshot_at) FROM {SCHEMA}.{POSITIONS_TABLE})""")
+
+    query = text(f"SELECT * FROM {SCHEMA}.{POSITIONS_TABLE} WHERE snapshot_at = (SELECT max(snapshot_at) FROM {SCHEMA}.{POSITIONS_TABLE})")
     try:
         with engine.connect() as conn:
             df = pd.read_sql_query(query, conn)
@@ -73,9 +66,7 @@ def load_live_positions() -> pd.DataFrame:
 
 
 def great_circle(lat1, lon1, lat2, lon2, n=ROUTE_POINTS, anchor_end=False):
-    """n points along the great circle (the curved 'straight line' on a globe).
-    Longitudes are unwrapped (continuous across +-180 deg) and shifted so the anchored end
-    keeps its original longitude: the aircraft marker and the line stay on the same map copy."""
+
     def xyz(lat, lon):
         lat, lon = np.radians(lat), np.radians(lon)
         return np.array([np.cos(lat) * np.cos(lon), np.cos(lat) * np.sin(lon), np.sin(lat)])
@@ -125,7 +116,6 @@ def build_route_lines(flights: pd.DataFrame):
 
 
 def type_label(model, code) -> str:
-    """'A380-800 (A388)' style text for the hint box; '–' when the type is unknown."""
     model = None if pd.isna(model) else str(model)
     code = None if pd.isna(code) else str(code)
     if model and code and code not in model:
@@ -189,8 +179,6 @@ def update_radar_map(_, airports):
         airborne = ~live_df["on_ground"].fillna(False).astype(bool)
         live = live_df[airborne].copy()
 
-    # Nincs kijelölt reptér: minden gép pontként, útvonal nélkül.
-    # Van kijelölt reptér: csak az onnan induló/oda érkező (ismert útvonalú) gépek, útvonallal.
     if selected:
         mask = live["origin_icao"].isin(selected) | live["dest_icao"].isin(selected)
         shown = live[mask]
@@ -254,12 +242,8 @@ def update_radar_map(_, airports):
         status = f"Nincs adat a {SCHEMA}.{POSITIONS_TABLE} táblában – hívd meg a /live-positions végpontot."
     else:
         snap = live_df["snapshot_time"].max()
-        age_min = int((pd.Timestamp.now(tz="UTC") - snap).total_seconds() // 60)
-        if selected:
-            filter_txt = f"repterek: {', '.join(selected)} · {routes_drawn} útvonal"
-        else:
-            filter_txt = "válassz repteret az útvonalak megjelenítéséhez"
-        status = (f"{len(shown)} / {len(live)} plane on air · {filter_txt} · last snapshot: {snap:%Y-%m-%d %H:%M} UTC ({age_min} min ago)")
+        age_min = int((pd.Timestamp.now(tz="UTC") - snap).total_seconds() // 60)         
+        status = (f"{len(shown)} / {len(live)} plane on air --> last snapshot: {snap:%Y-%m-%d %H:%M} UTC ({age_min} min ago)")
 
     # --- TÉRKÉP STÍLUS ÉS ELRENDEZÉS ---
     fig.update_layout(
