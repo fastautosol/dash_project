@@ -1,4 +1,5 @@
 # 2026.10.12  9.00
+# 2026.10.12  javított verzió
 import asyncio
 import csv
 import io
@@ -23,19 +24,17 @@ CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET")
 AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 API = "https://opensky-network.org/api"
 
-# Coolify környezeti változók (ugyanazok, mint az n8n-nél: DB_POSTGRESDB_*)
 DB_CONFIG = {
-    "host": os.getenv("DB_POSTGRESDB_HOST", "postgresql"),
-    "port": int(os.getenv("DB_POSTGRESDB_PORT", "5432")),
-    "database": os.getenv("DB_POSTGRESDB_DATABASE", "n8n"),
-    "username": os.getenv("DB_POSTGRESDB_USER"),
-    "password": os.getenv("DB_POSTGRESDB_PASSWORD"),
-    "connect_timeout": 15,
-}
-if not DB_CONFIG["username"] or not DB_CONFIG["password"]:
-    raise RuntimeError("Hiányzik a DB_POSTGRESDB_USER / DB_POSTGRESDB_PASSWORD környezeti változó")
+    "host": env("DB_HOST", "DB_POSTGRESDB_HOST"),
+    "port": env("DB_PORT", "DB_POSTGRESDB_PORT"),
+    "database": env("DB_NAME", "DB_POSTGRESDB_DATABASE"),
+    "username": env("DB_USER", "DB_POSTGRESDB_USER"),
+    "password": env("DB_PASSWORD", "DB_POSTGRESDB_PASSWORD"),
+    "connect_timeout": 15}
 
-# URL.create helyesen kezeli a jelszóban lévő speciális karaktereket (@, :, / stb.)
+if not DB_CONFIG["username"] or not DB_CONFIG["password"]:
+    logging.error("Hiányzik a DB_USER / DB_PASSWORD környezeti változó az app konténerében.")
+
 DB_URL = URL.create(
     "postgresql+psycopg",
     username=DB_CONFIG["username"],
