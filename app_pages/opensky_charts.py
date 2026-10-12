@@ -138,9 +138,9 @@ layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             html.H3(
-                [html.I(className="fas fa-plane-departure me-2 text-warning"), "OPENSKY FLIGHT RADAR"],
+                [html.I(className="fas fa-plane-departure me-2 text-warning"), ""],
                 className="text-light mb-2", style={"letterSpacing": "1px"}),
-            html.P("Repülőtér szerint szűrhető útvonalak, rajtuk a gép utolsó ismert pozíciója", className="text-muted small mb-1"),
+            html.H2("OPENSKY FLIGHT RADAR", className="text-light fw-bold mb-0")
             html.Small(id="radar-status", className="text-muted d-block mb-3"),
         ], width=12)
     ]),
