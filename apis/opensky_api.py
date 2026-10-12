@@ -50,7 +50,7 @@ router = APIRouter()
 # OpenSky /flights/* : az adatok éjszakai batch-ben frissülnek, csak a TEGNAPI és
 # korábbi napok érhetők el, az intervallum pedig max. 2 nap lehet.
 # Ezért lezárt UTC napokat kérdezünk le (a "most" végű ablak 400-as hibát ad).
-FLIGHTS_LOOKBACK_DAYS = 2          # 1 vagy 2 (max. 2 nap!)
+FLIGHTS_LOOKBACK_DAYS = 1          # 1 vagy 2 (max. 2 nap!)
 TRACKED_WINDOW_HOURS = 48          # a batch késése miatt 24 óra túl szűk
 
 # adsbdb.com védelme
