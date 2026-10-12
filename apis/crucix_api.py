@@ -225,32 +225,16 @@ def fetch_signals(
 # 8. DLT PIPELINE
 # --------------------------------------------------
 
-def run_crucix_pipeline(
-    max_items: int = 200,
-    filter_keywords: bool = True,
-):
+def run_crucix_pipeline(max_items: int = 200, filter_keywords: bool = True):
     """DLT futtatása és PostgreSQL-be mentés."""
 
     try:
-        pipeline = dlt.pipeline(
-            pipeline_name="crucix_osint_pipeline",
-            destination=dlt.destinations.postgres(
-                credentials=DB_CONFIG
-            ),
-            dataset_name="bronze",
-        )
+        pipeline = dlt.pipeline(pipeline_name="crucix_osint_pipeline", destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+            dataset_name="bronze")
 
-        resource = fetch_signals(
-            max_items=max_items,
-            filter_keywords=filter_keywords,
-        )
-
+        resource = fetch_signals(max_items=max_items, filter_keywords=filter_keywords)
         load_info = pipeline.run(resource)
-
-        logger.info(
-            "Crucix DLT pipeline sikeres: %s",
-            load_info,
-        )
+        logger.info("Crucix DLT pipeline sikeres: %s", load_info)
 
         return str(load_info)
 
@@ -263,17 +247,10 @@ def run_crucix_pipeline(
 # 9. FASTAPI BACKGROUND TASK
 # --------------------------------------------------
 
-def run_pipeline_background(
-    max_items: int,
-    filter_keywords: bool,
-):
-    """A háttérfeladat naplózza a hibákat."""
+def run_pipeline_background(max_items: int, filter_keywords: bool):
 
     try:
-        run_crucix_pipeline(
-            max_items=max_items,
-            filter_keywords=filter_keywords,
-        )
+        run_crucix_pipeline(max_items=max_items, filter_keywords=filter_keywords)
     except Exception:
         # A hiba részleteit a logger.exception már rögzíti.
         # A háttérfeladat nem küld HTTP-választ.
@@ -281,17 +258,9 @@ def run_pipeline_background(
 
 
 @router.post("/run")
-async def trigger_crucix_pipeline(
-    request: CrucixRequest,
-    background_tasks: BackgroundTasks,
-):
-    """Pipeline indítása HTTP-kérésből."""
+async def trigger_crucix_pipeline(request: CrucixRequest, background_tasks: BackgroundTasks):
 
-    background_tasks.add_task(
-        run_pipeline_background,
-        request.max_items,
-        request.filter_keywords,
-    )
+    background_tasks.add_task(run_pipeline_background, request.max_items, request.filter_keywords)
 
     return {
         "status": "accepted",
@@ -300,41 +269,20 @@ async def trigger_crucix_pipeline(
         "filter_keywords": request.filter_keywords,
     }
 
-
 # --------------------------------------------------
 # 10. API HEALTH / TEST
 # --------------------------------------------------
 
 @router.get("/health")
 async def crucix_health():
-    """Ellenőrzi, hogy a Crucix API elérhető-e."""
 
     try:
         data = crucix_get()
-
-        return {
-            "status": "ok",
-            "crucix_api_url": CRUCIX_API_URL,
-            "response_type": type(data).__name__,
-        }
+        return {"status": "ok", "crucix_api_url": CRUCIX_API_URL, "response_type": type(data).__name__}
 
     except Exception as exc:
         logger.exception("Crucix API nem érhető el")
-
-        raise HTTPException(
-            status_code=502,
-            detail=f"Crucix API hiba: {str(exc)}",
-        )
+        raise HTTPException(status_code=502, detail=f"Crucix API hiba: {str(exc)}")
 
 
-# --------------------------------------------------
-# 11. MANUAL TEST
-# --------------------------------------------------
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    run_crucix_pipeline(
-        max_items=200,
-        filter_keywords=True,
-    )
