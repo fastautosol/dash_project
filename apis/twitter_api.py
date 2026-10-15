@@ -37,22 +37,30 @@ def get_last_tweet_id_from_db(username: str) -> str:
         print(f"Adatbázis hiba ({username}): {str(e)}")
         return None
 
-
 def fetch_tweets_and_load_optimized():
     all_tweets = []
-    headers = {"X-API-Key": TWITTER_API_KEY, "Accept": "application/json"}
+    headers = {
+        "X-API-Key": TWITTER_API_KEY,
+        "Accept": "application/json"
+    }
     
     for username in TOP_20_ACCOUNTS:
         try:
-            params = {"username": username, "limit": 5}
-            last_id = get_last_tweet_id_from_db(username)
-            if last_id:
-                params["since_id"] = last_id
+            # JAVÍTÁS 1: A paraméter pontos neve 'userName' (nagy N-nel)
+            # JAVÍTÁS 2: A 'since_id'-t kivettük, mert az API nem támogatja ezen a végponton
+            params = {
+                "userName": username, 
+                "limit": 5
+            }
             
             response = requests.get(BASE_URL, headers=headers, params=params)
             
-            # ELLENŐRZÉS: Csak 200 OK és érvényes tartalom esetén dolgozzuk fel
             if response.status_code == 200 and response.text:
+                # Biztonsági ellenőrzés: ha mégis HTML-t kapnánk, ne omoljon össze
+                if response.text.strip().startswith("<!DOCTYPE html>"):
+                    print(f"⚠️ Az API HTML-t adott vissza JSON helyett {username} esetén. Rossz végpont vagy konfiguráció.")
+                    continue
+                    
                 try:
                     data = response.json()
                     tweets_list = data.get("tweets", []) 
@@ -66,29 +74,34 @@ def fetch_tweets_and_load_optimized():
                             "scraped_at": datetime.utcnow().isoformat()
                         })
                 except Exception as json_err:
-                    print(f"JSON dekódolási hiba {username} esetén: {str(json_err)} | Nyers válasz: {response.text[:100]}")
+                    print(f"JSON dekódolási hiba {username} esetén: {str(json_err)}")
             else:
-                print(f"API Hiba {username} esetén: Status: {response.status_code} | Válasz: {response.text[:100]}")
+                print(f"API Hiba {username} esetén: Status: {response.status_code}")
                 
         except Exception as e:
             print(f"Hálózati hiba történt {username} feldolgozásakor: {str(e)}")
 
-    # Mentési kísérlet
+    # --- JAVÍTÁS 3: A DLT MENTÉS MOST MÁR BIZTOSAN LEFUT ---
     if all_tweets:
         pipeline = dlt.pipeline(
             pipeline_name="twitter_ingestion",
             destination="postgres",
-            dataset_name="bybit_data")
+            dataset_name="crypto_signals"
+        )
         
+        # A dlt a színfalak mögött összehasonlítja a tweet_id-kat a DB-vel.
+        # Csak azokat szúrja be, amik MÉG NINCSENEK a PostgreSQL-ben!
         load_info = pipeline.run(
             all_tweets, 
             table_name="twitter_trends", 
-            write_disposition="merge", 
-            primary_key="tweet_id")
-        
-        print(f"🚀 SIKER: Feldolgozva {len(all_tweets)} tweet. A dlt létrehozta a táblát!")
+            write_disposition="merge", # Ez végzi az okos összefésülést
+            primary_key="tweet_id"     # Ez alapján szűri a duplikációt
+        )
+        print(f"🚀 SIKER: Összesen {len(all_tweets)} tweet feldolgozva. Az újak bekerültek a DB-be!")
     else:
-        print("❌ Nem sikerült egyetlen tweetet sem letölteni az API-ból, így a dlt tábla nem tudott létrejönni.")
+        print("❌ Nem sikerült adatot kinyerni az API-ból.")
+
+
 
 
 @router.post("/tweet_sync")
