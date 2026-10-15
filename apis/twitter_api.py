@@ -1,3 +1,4 @@
+# 2026.10.15  18.00
 import os
 import dlt
 import requests
@@ -7,7 +8,7 @@ from datetime import datetime
 
 app = FastAPI(title="Optimized TwitterAPI.io Pipeline")
 
-TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "A_TE_TWITTERAPI_IO_KULCSOD")
+TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "new1_62292ead9a31403a8625219d85e689ee")
 BASE_URL = "https://twitterapi.io"
 
 # A te PostgreSQL elérhetőséged (a dlt secrets-ből vagy környezeti változóból)
