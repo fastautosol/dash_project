@@ -52,7 +52,7 @@ def extract_tweets(payload: dict) -> list:
 
 def fetch_tweets_and_load_optimized():
     if not TWITTER_API_KEY:
-        print("❌ Hiányzik a TWITTER_API_KEY környezeti változó.")
+        print("Hiányzik a TWITTER_API_KEY környezeti változó.")
         return
 
     all_tweets = []
@@ -70,7 +70,7 @@ def fetch_tweets_and_load_optimized():
                 continue
 
             if response.text.strip().lower().startswith("<!doctype html"):
-                print(f"⚠️ HTML jött JSON helyett {username} esetén. Rossz végpont?")
+                print(f"HTML jött JSON helyett {username} esetén. Rossz végpont?")
                 continue
 
             try:
@@ -107,17 +107,12 @@ def fetch_tweets_and_load_optimized():
         pipeline = dlt.pipeline(
             pipeline_name="twitter_ingestion",
             destination=dlt.destinations.postgres(credentials=DB_URL),
-            dataset_name="crypto_signals"
-        )
-        pipeline.run(
-            all_tweets,
-            table_name="twitter_trends",
-            write_disposition="merge",
-            primary_key="tweet_id"
-        )
-        print(f"🚀 SIKER: Összesen {len(all_tweets)} tweet feldolgozva. Az újak bekerültek a DB-be!")
+            dataset_name="crypto_signals")
+        
+        pipeline.run(all_tweets, table_name="twitter_trends", write_disposition="merge", primary_key="tweet_id")
+        print(f"SIKER: Összesen {len(all_tweets)} tweet feldolgozva. Az újak bekerültek a DB-be!")
     else:
-        print("❌ Nem sikerült adatot kinyerni az API-ból.")
+        print("Nem sikerült adatot kinyerni az API-ból.")
 
 
 @router.post("/tweet_sync")
