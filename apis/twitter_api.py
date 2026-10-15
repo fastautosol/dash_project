@@ -9,36 +9,33 @@ from sqlalchemy import create_engine, text
 
 TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "new1_62292ead9a31403a8625219d85e689ee")
 BASE_URL = "https://twitterapi.io"
-
-# A te PostgreSQL elérhetőséged (a dlt secrets-ből vagy környezeti változóból)
-#DB_CONN_STRING = "dbname='vector_db' user='username' password='password' host='localhost' port='5432'"
-
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 #engine = create_engine(DB_URL)
 engine = create_engine(DB_URL, pool_size=5, max_overflow=10, pool_pre_ping=True)
 
 router = APIRouter()
 
-
 TOP_20_ACCOUNTS = [
     "ElonMusk", "VitalikButerin", "Binance", "cz_binance", "Solana", 
     "SolyTrading", "Pentosh1", "GCRClassic", "Cobie", "MacnBTC",
     "ColdBloodedShill", "Ansem", "IncomeSharks", "MilesDeutscher", "crypto_rand",
-    "AltcoinSherpa", "SatoshiFlipper", "BenjaminCowen", "CryptoMichNL", "glassnode"
-]
+    "AltcoinSherpa", "SatoshiFlipper", "BenjaminCowen", "CryptoMichNL", "glassnode"]
 
-# Függvény a legutolsó letöltött tweet ID lekérésére a PostgreSQL-ből
+
 def get_last_tweet_id_from_db(username: str) -> str:
     try:
-        query = """SELECT tweet_id FROM crypto_signals.twitter_trends WHERE username = %s ORDER BY created_at DESC LIMIT 1;", 
-            (username,)"""
+        query = """SELECT tweet_id FROM crypto_signals.twitter_trends WHERE username = :username 
+            ORDER BY created_at DESC LIMIT 1;"""
+        
         with engine.begin() as conn:
-            result = conn.execute(text(query))
+            result = conn.execute(text(query), {"username": username})
+            row = result.fetchone()
             return row[0] if row else None
        
     except Exception as e:
         print(f"Nem sikerült lekérni az utolsó ID-t a DB-ből ({username}): {str(e)}")
         return None
+
 
 def fetch_tweets_and_load_optimized():
     all_tweets = []
