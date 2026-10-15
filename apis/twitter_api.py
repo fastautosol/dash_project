@@ -5,6 +5,7 @@ import requests
 import psycopg2
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from datetime import datetime
+from sqlalchemy import bindparam, create_engine, text
 
 app = FastAPI(title="Optimized TwitterAPI.io Pipeline")
 
