@@ -5,7 +5,7 @@ import requests
 import psycopg2
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from datetime import datetime
-from sqlalchemy import bindparam, create_engine, text
+from sqlalchemy import create_engine, text
 
 TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "new1_62292ead9a31403a8625219d85e689ee")
 BASE_URL = "https://twitterapi.io"
@@ -30,16 +30,12 @@ TOP_20_ACCOUNTS = [
 # Függvény a legutolsó letöltött tweet ID lekérésére a PostgreSQL-ből
 def get_last_tweet_id_from_db(username: str) -> str:
     try:
+        query = """SELECT tweet_id FROM crypto_signals.twitter_trends WHERE username = %s ORDER BY created_at DESC LIMIT 1;", 
+            (username,)"""
         with engine.begin() as conn:
-        conn.execute(text("CREATE SCHEMA IF NOT EXISTS bronze"))
-        
-        conn = psycopg2.connect(DB_CONN_STRING)
-        cur = conn.cursor()
-        cur.execute("SELECT tweet_id FROM crypto_signals.twitter_trends WHERE username = %s ORDER BY created_at DESC LIMIT 1;", (username))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        return row[0] if row else None
+            result = conn.execute(text(query))
+            return row[0] if row else None
+       
     except Exception as e:
         print(f"Nem sikerült lekérni az utolsó ID-t a DB-ből ({username}): {str(e)}")
         return None
