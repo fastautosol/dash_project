@@ -7,9 +7,7 @@ from fastapi import APIRouter, BackgroundTasks
 from datetime import datetime, timezone
 from sqlalchemy import create_engine, text
 
-# A kulcsot NE tárold a kódban: állítsd be env változóként (Coolify -> Environment Variables)
 TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "new1_62292ead9a31403a8625219d85e689ee")
-
 BASE_URL = "https://api.twitterapi.io"
 LAST_TWEETS_URL = f"{BASE_URL}/twitter/user/last_tweets"
 
@@ -108,7 +106,7 @@ def fetch_tweets_and_load_optimized():
     if all_tweets:
         pipeline = dlt.pipeline(
             pipeline_name="twitter_ingestion",
-            destination="postgres",
+            destination=dlt.destinations.postgres(credentials=DB_URL),
             dataset_name="crypto_signals"
         )
         pipeline.run(
