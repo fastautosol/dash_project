@@ -80,7 +80,7 @@ def fetch_tweets_and_load_optimized():
         pipeline = dlt.pipeline(
             pipeline_name="twitter_ingestion",
             destination="postgres",
-            dataset_name="crypto_signals"
+            dataset_name="bybit_data"
         )
         
         # Szigorú duplikáció szűrés: Ha a tweet_id már létezik, nem szúrja be újra!
@@ -94,7 +94,7 @@ def fetch_tweets_and_load_optimized():
     else:
         print("Nincsenek új tweetek az elmúlt 2 órában. Zéró felesleges adatbázis művelet.")
 
-@app.post("/api/v1/trigger-twitter-sync")
+@app.post("/tweet_sync")
 async def trigger_twitter_sync(background_tasks: BackgroundTasks):
     background_tasks.add_task(fetch_tweets_and_load_optimized)
     return {"status": "optimized_twitter_sync_started"}
