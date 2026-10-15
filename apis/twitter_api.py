@@ -24,14 +24,12 @@ TOP_20_ACCOUNTS = [
 # Függvény a legutolsó letöltött tweet ID lekérésére a PostgreSQL-ből
 def get_last_tweet_id_from_db(username: str) -> str:
     try:
+        with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS bronze"))
+        
         conn = psycopg2.connect(DB_CONN_STRING)
         cur = conn.cursor()
-        # Lekérjük a legfrissebb tweet ID-t az adott felhasználóhoz
-        # Megjegyzés: A tábla és oszlopnevek a dlt alapértelmezett elnevezéseit követik (kisbetűsítés)
-        cur.execute(
-            "SELECT tweet_id FROM crypto_signals.twitter_trends WHERE username = %s ORDER BY created_at DESC LIMIT 1;", 
-            (username,)
-        )
+        cur.execute("SELECT tweet_id FROM crypto_signals.twitter_trends WHERE username = %s ORDER BY created_at DESC LIMIT 1;", (username))
         row = cur.fetchone()
         cur.close()
         conn.close()
