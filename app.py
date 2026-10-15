@@ -15,6 +15,7 @@ import apis.youtube_api as youtube_api
 import apis.tmdb_api as tmdb_api
 import apis.tmdb_mcp as tmdb_mcp
 import apis.opensky_api as opensky_api
+import apis.crucix_api as crucix_api
 import apis.twitter_api as twitter_api
 
 # ----- 1. Initialize Dash -----
