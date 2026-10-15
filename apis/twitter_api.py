@@ -19,7 +19,7 @@ TOP_20_ACCOUNTS = [
     "ElonMusk", "VitalikButerin", "Binance", "cz_binance", "Solana", 
     "SolyTrading", "Pentosh1", "GCRClassic", "Cobie", "MacnBTC",
     "ColdBloodedShill", "Ansem", "IncomeSharks", "MilesDeutscher", "crypto_rand",
-    "AltcoinSherpa", "SatoshiFlipper", "BenjaminCowen", "CryptoMichNL", "glassnode"]
+    "AltcoinSherpa", "SatoshiFlipper", "BenjaminCowen", "glassnode"]
 
 
 def get_last_tweet_id_from_db(username: str) -> str:
