@@ -3,17 +3,22 @@ import os
 import dlt
 import requests
 import psycopg2
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from datetime import datetime
 from sqlalchemy import bindparam, create_engine, text
-
-app = FastAPI(title="Optimized TwitterAPI.io Pipeline")
 
 TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "new1_62292ead9a31403a8625219d85e689ee")
 BASE_URL = "https://twitterapi.io"
 
 # A te PostgreSQL elérhetőséged (a dlt secrets-ből vagy környezeti változóból)
-DB_CONN_STRING = "dbname='vector_db' user='username' password='password' host='localhost' port='5432'"
+#DB_CONN_STRING = "dbname='vector_db' user='username' password='password' host='localhost' port='5432'"
+
+DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
+#engine = create_engine(DB_URL)
+engine = create_engine(DB_URL, pool_size=5, max_overflow=10, pool_pre_ping=True)
+
+router = APIRouter()
+
 
 TOP_20_ACCOUNTS = [
     "ElonMusk", "VitalikButerin", "Binance", "cz_binance", "Solana", 
@@ -93,7 +98,7 @@ def fetch_tweets_and_load_optimized():
     else:
         print("Nincsenek új tweetek az elmúlt 2 órában. Zéró felesleges adatbázis művelet.")
 
-@app.post("/tweet_sync")
+@router.post("/tweet_sync")
 async def trigger_twitter_sync(background_tasks: BackgroundTasks):
     background_tasks.add_task(fetch_tweets_and_load_optimized)
     return {"status": "optimized_twitter_sync_started"}
