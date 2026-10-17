@@ -1,4 +1,4 @@
-# 2026.10.15  18.00
+# 2026.10.19  18.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -17,6 +17,7 @@ import apis.tmdb_mcp as tmdb_mcp
 import apis.opensky_api as opensky_api
 import apis.crucix_api as crucix_api
 import apis.twitter_api as twitter_api
+import apis.eia_api as eia_api
 
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets", suppress_callback_exceptions=True,
@@ -74,14 +75,15 @@ server = FastAPI(title="Dash Demo App", lifespan=lifespan)
 server.mount("/tmdb", mcp_app) # https://app.fastautosol.com/tmdb/mcp  (HTTP Streamable)
 
 # ----- 4. API routers -----
-server.include_router(crm_shopify_api.router,     prefix="/api/crm_shopify",   tags=["CRM Shopify"])
-server.include_router(lufthansa_api.router,       prefix="/api/lufthansa",     tags=["Lufthansa"])
-server.include_router(serper_places.router,       prefix="/api/serper",        tags=["Serper Places"])
-server.include_router(youtube_api.router,         prefix="/api/youtube",       tags=["Youtube Single"])
-server.include_router(tmdb_api.router,            prefix="/api/tmdb",          tags=["TMDB Movies"])
-server.include_router(opensky_api.router,         prefix="/api/opensky",       tags=["Opensky"])
-server.include_router(crucix_api.router,          prefix="/api/crucix",        tags=["Crucix"])
-server.include_router(twitter_api.router,         prefix="/api/twitter",       tags=["Twitter"])
+server.include_router(crm_shopify_api.router,   prefix="/api/crm_shopify",   tags=["CRM Shopify"])
+server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tags=["Lufthansa"])
+server.include_router(serper_places.router,     prefix="/api/serper",        tags=["Serper Places"])
+server.include_router(youtube_api.router,       prefix="/api/youtube",       tags=["Youtube Single"])
+server.include_router(tmdb_api.router,          prefix="/api/tmdb",          tags=["TMDB Movies"])
+server.include_router(opensky_api.router,       prefix="/api/opensky",       tags=["Opensky"])
+server.include_router(crucix_api.router,        prefix="/api/crucix",        tags=["Crucix"])
+server.include_router(twitter_api.router,       prefix="/api/twitter",       tags=["Twitter"])
+server.include_router(eia_api.router,           prefix="/api/eia",           tags=["EIA Energy"])
 
 # ----- 5. Health endpoint -----
 @server.get("/health")
