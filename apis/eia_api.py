@@ -1,4 +1,4 @@
-# EIA napi adatok -> dlt -> PostgreSQL bronze (FastAPI BackgroundTask)
+# 2026.10.19 18.00 EIA
 import os
 import time
 import logging
@@ -14,7 +14,7 @@ from urllib3.util.retry import Retry
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-EIA_KEY = os.getenv("EIA_API_KEY")
+EIA_KEY = os.getenv("EIA_API_KEY", "YNAIaZXieTAUvQjk3JhfehqZW44ucqOzF9jutPhB")
 BASE = "https://api.eia.gov/v2"
 PAGE = 500
 
