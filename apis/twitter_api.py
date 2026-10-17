@@ -1,4 +1,4 @@
-# 2026.10.15  18.00
+# 2026.10.17  10.00
 import os
 import time
 import dlt
@@ -17,7 +17,7 @@ engine = create_engine(DB_URL, pool_size=5, max_overflow=10, pool_pre_ping=True)
 router = APIRouter()
 
 TOP_20_ACCOUNTS = [
-    "ElonMusk", "VitalikButerin", "Binance", "cz_binance", "Solana",
+     "KobeissiLetter", "ElonMusk", "VitalikButerin", "Binance", "cz_binance", "Solana",
     "SolyTrading", "Pentosh1", "GCRClassic", "Cobie", "MacnBTC",
     "ColdBloodedShill", "Ansem", "IncomeSharks", "MilesDeutscher", "crypto_rand",
     "AltcoinSherpa", "SatoshiFlipper", "BenjaminCowen", "glassnode"]
