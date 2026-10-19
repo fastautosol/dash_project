@@ -1,4 +1,4 @@
-# 2026.07.07  18.00
+# 2026.10.19  12.00
 import dash
 from dash import dcc, html, callback, Output, Input
 import dash_bootstrap_components as dbc
@@ -64,7 +64,7 @@ def get_host_metrics():
     mem = psutil.virtual_memory()
     disk = shutil.disk_usage("/")
     return [ ("CPU Usage", f"{cpu} %"), ("CPU Cores", psutil.cpu_count(logical=True)), ("CPU Frequency", f"{cpu_freq.current:.0f} MHz"),
-        ("Memory Usage", f"{mem.percent} %"), ("Memory Total", f"{mem.total / (1024**3):.1f} GB"),
+        ("Memory Usage", f"{mem.percent} %"), ("Memory Total", f"{mem.total / (1024**3):.2f} GB"),
         ("Disk Usage", f"{disk.used / disk.total * 100:.1f} %"), ("Disk Total", f"{disk.total / (1024**3):.1f} GB")]
 
 
