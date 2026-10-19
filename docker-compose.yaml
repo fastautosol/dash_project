@@ -207,7 +207,7 @@ services:
       PYTHONUNBUFFERED: "1"
       TZ: ${TZ:-Europe/Berlin}
     command: ["python", "candles-bot.py"]
-    mem_limit: 500m
+    mem_limit: 750m
     cpus: 0.5
     logging:
       driver: "json-file"
