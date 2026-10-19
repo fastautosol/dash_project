@@ -5,6 +5,9 @@ import dlt
 from datetime import datetime, UTC, timedelta
 import time
 import logging
+import os
+os.environ.setdefault("LOAD__DELETE_COMPLETED_JOBS", "true") # dlt: a lefutott load package-ek törlése, ne halmozódjanak
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 log = logging.getLogger(__name__)
