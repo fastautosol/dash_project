@@ -148,8 +148,9 @@ def load_data_render(_):
     # -------------------
     # LOG TABLE
     # -------------------
-    log_cols = ["route_key", "status__description", "equipment__aircraft_code", "dep_sch_ts", "dep_act_ts", "arr_sch_ts", "arr_act_ts"]
-    existing_cols = [c for c in existing_cols if c in df.columns]
+    #log_cols = ["route_key", "status__description", "equipment__aircraft_code", "dep_sch_ts", "dep_act_ts", "arr_sch_ts", "arr_act_ts"]
+    #existing_cols = [c for c in existing_cols if c in df.columns]
+    status_cols = [0, 4, 5, 6, 7, 10, 11] 
 
     table = dbc.Table.from_dataframe(df.iloc[-100:, status_cols], striped=False, hover=True, responsive=True, borderless=True,
         className="text-light m-0", style={"backgroundColor": "transparent",  "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"})
