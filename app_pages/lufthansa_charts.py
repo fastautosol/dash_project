@@ -1,4 +1,4 @@
-# 2026.10.20  15.00
+# 2026.10.20  18.00
 import dash
 import pandas as pd
 from dash import html, dcc, Input, Output, State, callback
@@ -66,9 +66,14 @@ layout = dbc.Container([
 def load_data_render(_):
 
     with sql_engine.connect() as conn:
-        df = pd.read_sql("SELECT * FROM silver.lh_flights", conn)               
+        df = pd.read_sql("SELECT * FROM silver.fact_lh_flights", conn)               
     if df.empty:
         return "No data", None, [], [], None
+
+    # (A PostgreSQL view már datetime-ként adja vissza, de a biztonság kedvéért konvertáljuk)
+    for col in ["dep_sch_ts", "dep_act_ts", "arr_sch_ts", "arr_act_ts"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce')
     
     # ---- delays (safe) ----
     df["dep_delay_min"] = (df["dep_act_ts"] - df["dep_sch_ts"]).dt.total_seconds() / 60
@@ -108,7 +113,7 @@ def load_data_render(_):
     mini_charts.append(make_card("Top Delay Routes", px.bar(route.sort_values("dep_delay_min", ascending=False).head(15), x="route_key", y="dep_delay_min", template="plotly_dark")))
 
     # 4 Airport traffic
-    airport = df["arrival__airport_code"].value_counts().head(15).reset_index()
+    airport = df["arr_airport_code"].value_counts().head(15).reset_index()
     airport.columns = ["airport", "count"]
     mini_charts.append(make_card("Arrival Airports", px.bar(airport, x="airport", y="count", template="plotly_dark")))
 
@@ -143,8 +148,9 @@ def load_data_render(_):
     # -------------------
     # LOG TABLE
     # -------------------
-    #table = dbc.Table.from_dataframe(df.tail(100), striped=False, borderless=True, className="text-light small")
-    status_cols = [0,4,5,6,7,10,11]
+    log_cols = ["route_key", "status__description", "equipment__aircraft_code", "dep_sch_ts", "dep_act_ts", "arr_sch_ts", "arr_act_ts"]
+    existing_cols = [c for c in existing_cols if c in df.columns]
+
     table = dbc.Table.from_dataframe(df.iloc[-100:, status_cols], striped=False, hover=True, responsive=True, borderless=True,
         className="text-light m-0", style={"backgroundColor": "transparent",  "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"})
 
