@@ -1,5 +1,5 @@
 # ============================================================
-# 2026.01.09  12.00 Lufthansa API -> DLT -> PostgreSQL
+# 2026.10.20  18.00 Lufthansa API -> DLT -> PostgreSQL
 #
 # Bronze tables:
 #   bronze.lh_flights
