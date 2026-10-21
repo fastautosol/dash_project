@@ -20,8 +20,8 @@ import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks
 from dlt.pipeline.exceptions import PipelineStepFailed
-from lufthansa_silver import run_silver_transformation
-from lufthansa_gold import run_gold_transformation
+from apis.lufthansa_silver import run_silver_transformation
+from apis.lufthansa_gold import run_gold_transformation
 
 logger = logging.getLogger("lufthansa_api")
 
