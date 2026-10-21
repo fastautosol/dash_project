@@ -81,7 +81,7 @@ def run_gold_transformation():
             FROM pg.silver.fact_lh_flights
         ),
         date_range AS (
-            SELECT CAST(generate_series(min_date, max_date, INTERVAL '1 day') AS DATE) AS date_val
+            SELECT CAST(unnest(generate_series(min_date, max_date, INTERVAL '1 day')) AS DATE) AS date_val
             FROM bounds
         )
         SELECT date_val AS date_id, EXTRACT(YEAR FROM date_val) AS year, EXTRACT(MONTH FROM date_val) AS month, EXTRACT(DAY FROM date_val) AS day,
