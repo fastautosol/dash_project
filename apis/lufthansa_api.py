@@ -1,5 +1,5 @@
 # ============================================================
-# 2026.10.21  15.00 Lufthansa API -> DLT -> PostgreSQL
+# 2026.10.21  18.00 Lufthansa API -> DLT -> PostgreSQL
 #
 # Bronze tables:
 #   bronze.lh_flights
@@ -29,8 +29,8 @@ router = APIRouter()
 
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 LH_BASE_URL = "https://api.lufthansa.com/v1"
-MAX_CONCURRENT_REQUESTS = 5
-REQUEST_DELAY = 0.5
+MAX_CONCURRENT_REQUESTS = 4
+REQUEST_DELAY = 0.75
 
 # =========================== ROUTES =================================
 
