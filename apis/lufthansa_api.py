@@ -1,5 +1,5 @@
 # ============================================================
-# 2026.10.20  18.00 Lufthansa API -> DLT -> PostgreSQL
+# 2026.10.21  15.00 Lufthansa API -> DLT -> PostgreSQL
 #
 # Bronze tables:
 #   bronze.lh_flights
@@ -20,6 +20,8 @@ import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks
 from dlt.pipeline.exceptions import PipelineStepFailed
+from lufthansa_silver import run_silver_transformation
+from lufthansa_gold import run_gold_transformation
 
 logger = logging.getLogger("lufthansa_api")
 
@@ -438,18 +440,21 @@ def run_dlt_pipeline(flight_date: str):
 
         if schedule_data:
             try:
-                load_info = pipeline.run(
-                    schedule_resource(schedule_data),
-                    write_disposition="merge",
-                    primary_key=["flight_key"])
-                logger.info("Schedule DLT pipeline finished: %s", load_info)
+                load_info = pipeline.run(schedule_resource(schedule_data), write_disposition="merge", primary_key=["flight_key"])
+                logger.info("Schedule DLT pipeline finished: %s", load_info)  
             except PipelineStepFailed as e:
-                
                 logger.error("Schedule DLT pipeline error, falling back to append: %s", e)
                 pipeline.drop_pending_packages()
                 load_info = pipeline.run(schedule_resource(schedule_data), write_disposition="append")
                 logger.info("Schedule DLT pipeline fallback finished: %s", load_info)
-
+            
+         # >>> SILVER -> GOLD TABLES
+        logger.info("Starting Silver transformation via DuckDB...")
+        run_silver_transformation()
+        logger.info("Starting Gold transformation and indexing...")
+        run_gold_transformation() 
+        logger.info("Lufthansa E2E pipeline finished successfully for date=%s", flight_date)
+        
     except Exception as e:
         logger.exception("Lufthansa pipeline failed for date=%s: %s", flight_date, e)
 
