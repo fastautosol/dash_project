@@ -1,6 +1,5 @@
 import duckdb
-from sqlalchemy import text
-from apis.lufthansa_db import sql_engine, drop_view_if_exists
+from sqlalchemy import create_engine, text
 from apis.lufthansa_airports import AIRPORTS
 
 def run_gold_transformation():
