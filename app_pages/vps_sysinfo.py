@@ -20,7 +20,7 @@ CARD_STYLE = {
     "borderRadius": "15px", "border": "1px solid rgba(255, 255, 255, 0.1)", "padding": "20px"}
 
 TABLE_STYLE = { "backgroundColor": "transparent", "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"}
-PACKAGES = ["fastapi", "fastmcp", "pandas", "dash", "docker", "ccxt", "scikit-learn", "SQLAlchemy", "dlt", "psycopg"]
+PACKAGES = ["fastapi", "fastmcp", "pandas", "dash", "duckdb", "ccxt", "scikit-learn", "SQLAlchemy", "dlt", "psycopg"]
 ALLOWED_PREFIXES = ("crypto", "n8n", "media-dash", "demo-dash", "postgresql") 
 
 def fetch_one_docker(c) -> dict:
