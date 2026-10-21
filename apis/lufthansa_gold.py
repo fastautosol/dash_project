@@ -1,98 +1,100 @@
-import duckdb
 from sqlalchemy import create_engine, text
 from apis.lufthansa_airports import AIRPORTS
 
+# Táblák, PK-k, indexek: setup_tables.sql (egyszeri létrehozás)
+
+FACT_SQL = """
+INSERT INTO gold.fact_lh_flights (
+    flight_key, route_key, dep_airport_code, arr_airport_code, equipment__aircraft_code,
+    flight_date_id, dep_delay_min, arr_delay_min, is_landed, is_ontime, is_delayed,
+    dep_sch_ts, dep_act_ts, arr_sch_ts, arr_act_ts, _ingested_at
+)
+SELECT
+    flight_key, route_key, dep_airport_code, arr_airport_code, equipment__aircraft_code,
+    dep_sch_ts::date,
+    COALESCE((EXTRACT(EPOCH FROM (dep_act_ts - dep_sch_ts)) / 60)::int, 0),
+    COALESCE((EXTRACT(EPOCH FROM (arr_act_ts - arr_sch_ts)) / 60)::int, 0),
+    CASE WHEN status__code = 'LD' THEN 1 ELSE 0 END,
+    CASE WHEN status__code = 'ON' THEN 1 ELSE 0 END,
+    CASE WHEN status__code = 'DL' THEN 1 ELSE 0 END,
+    dep_sch_ts, dep_act_ts, arr_sch_ts, arr_act_ts, _ingested_at
+FROM silver.fact_lh_flights
+WHERE dep_sch_ts IS NOT NULL AND arr_sch_ts IS NOT NULL
+"""
+
+AIRPORT_UPSERT_SQL = """
+INSERT INTO gold.dim_lh_airports (airport_code, airport_name, city, country)
+VALUES (:code, :name, :city, :country)
+ON CONFLICT (airport_code) DO UPDATE
+SET airport_name = EXCLUDED.airport_name, city = EXCLUDED.city, country = EXCLUDED.country
+"""
+
+# Ami a forgalmi adatban szerepel, de nincs a statikus listában: üres névvel felvesszük
+AIRPORT_MISSING_SQL = """
+INSERT INTO gold.dim_lh_airports (airport_code)
+SELECT airport_code FROM (
+    SELECT dep_airport_code AS airport_code FROM silver.fact_lh_flights
+    UNION
+    SELECT arr_airport_code FROM silver.fact_lh_flights
+) a
+WHERE airport_code IS NOT NULL
+ON CONFLICT (airport_code) DO NOTHING
+"""
+
+AIRCRAFT_SQL = """
+INSERT INTO gold.dim_lh_aircraft (aircraft_code, aircraft_family, carrier_code)
+SELECT
+    equipment__aircraft_code,
+    CASE
+        WHEN equipment__aircraft_code LIKE '32%' THEN 'Airbus A320 Family'
+        WHEN equipment__aircraft_code LIKE '35%' THEN 'Airbus A350'
+        WHEN equipment__aircraft_code LIKE '38%' THEN 'Airbus A380'
+        WHEN equipment__aircraft_code LIKE '74%' THEN 'Boeing 747'
+        WHEN equipment__aircraft_code LIKE '78%' THEN 'Boeing 787'
+        ELSE 'Other'
+    END,
+    MIN(operating_carrier__airline_id)
+FROM silver.fact_lh_flights
+WHERE equipment__aircraft_code IS NOT NULL
+GROUP BY equipment__aircraft_code
+ON CONFLICT (aircraft_code) DO UPDATE
+SET aircraft_family = EXCLUDED.aircraft_family, carrier_code = EXCLUDED.carrier_code
+"""
+
+DATE_SQL = """
+INSERT INTO gold.dim_lh_date (date_id, year, month, day, day_of_week, day_name, month_name, is_weekend)
+SELECT
+    d::date,
+    EXTRACT(YEAR FROM d)::int,
+    EXTRACT(MONTH FROM d)::int,
+    EXTRACT(DAY FROM d)::int,
+    EXTRACT(ISODOW FROM d)::int,
+    trim(to_char(d, 'Day')),
+    trim(to_char(d, 'Month')),
+    EXTRACT(ISODOW FROM d) IN (6, 7)
+FROM (
+    SELECT generate_series(MIN(dep_sch_ts::date),
+                           MAX(dep_sch_ts::date) + INTERVAL '1 year',
+                           INTERVAL '1 day') AS d
+    FROM silver.fact_lh_flights
+) s
+ON CONFLICT (date_id) DO NOTHING
+"""
+
+
 def run_gold_transformation():
-    
-    conn = duckdb.connect()
-    try:
-        conn.execute("INSTALL postgres; LOAD postgres;")
-        conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")
-        conn.execute("CREATE SCHEMA IF NOT EXISTS pg.gold;")
+    # Egy tranzakció: DirectQuery közben mindig konzisztens állapot látszik
+    with sql_engine.begin() as c:
+        # Fact: teljes újraépítés (az indexek és a PK megmaradnak)
+        c.execute(text("TRUNCATE gold.fact_lh_flights"))
+        c.execute(text(FACT_SQL))
 
-        # 1. gold.fact_lh_flights
-        conn.execute("""
-            CREATE OR REPLACE TABLE pg.gold.fact_lh_flights AS
-            SELECT flight_key, route_key, dep_airport_code, arr_airport_code, equipment__aircraft_code,
-                dep_sch_ts::DATE AS flight_date_id,
-
-                COALESCE(date_diff('minute', dep_sch_ts, dep_act_ts), 0) AS dep_delay_min,
-                COALESCE(date_diff('minute', arr_sch_ts, arr_act_ts), 0) AS arr_delay_min,
-
-                CASE WHEN status__code = 'LD' THEN 1 ELSE 0 END AS is_landed,
-                CASE WHEN status__code = 'ON' THEN 1 ELSE 0 END AS is_ontime,
-                CASE WHEN status__code = 'DL' THEN 1 ELSE 0 END AS is_delayed,
-
-                dep_sch_ts, dep_act_ts, arr_sch_ts, arr_act_ts, _ingested_at
-            FROM pg.silver.fact_lh_flights
-            WHERE dep_sch_ts IS NOT NULL AND arr_sch_ts IS NOT NULL;
-        """)
-
-        # 2. gold.dim_lh_airports (név/város/ország a statikus AIRPORTS referenciából)
-        conn.execute("CREATE TEMP TABLE ref_airports (airport_code VARCHAR, airport_name VARCHAR, city VARCHAR, country VARCHAR)")
-        conn.executemany(
-            "INSERT INTO ref_airports VALUES (?, ?, ?, ?)",
-            [(code, *vals) for code, vals in AIRPORTS.items()],
+        # Dimenziók: upsert, nem kell törölni őket
+        c.execute(
+            text(AIRPORT_UPSERT_SQL),
+            [{"code": k, "name": v[0], "city": v[1], "country": v[2]} for k, v in AIRPORTS.items()],
         )
-        conn.execute("""
-            CREATE OR REPLACE TABLE pg.gold.dim_lh_airports AS
-            WITH all_airports AS (
-                SELECT dep_airport_code AS airport_code FROM pg.silver.fact_lh_flights WHERE dep_airport_code IS NOT NULL
-                UNION
-                SELECT arr_airport_code AS airport_code FROM pg.silver.fact_lh_flights WHERE arr_airport_code IS NOT NULL
-            )
-            SELECT a.airport_code, r.airport_name, r.city, r.country
-            FROM all_airports a
-            LEFT JOIN ref_airports r USING (airport_code);
-        """)
-
-        # 3. gold.dim_lh_aircraft (GROUP BY: aircraft_code egyedi legyen a PK miatt)
-        conn.execute("""
-            CREATE OR REPLACE TABLE pg.gold.dim_lh_aircraft AS
-            SELECT
-                equipment__aircraft_code AS aircraft_code,
-                CASE
-                    WHEN equipment__aircraft_code LIKE '32%' THEN 'Airbus A320 Family'
-                    WHEN equipment__aircraft_code LIKE '35%' THEN 'Airbus A350'
-                    WHEN equipment__aircraft_code LIKE '38%' THEN 'Airbus A380'
-                    WHEN equipment__aircraft_code LIKE '74%' THEN 'Boeing 747'
-                    WHEN equipment__aircraft_code LIKE '78%' THEN 'Boeing 787'
-                    ELSE 'Other'
-                END AS aircraft_family,
-                MIN(operating_carrier__airline_id) AS carrier_code
-            FROM pg.silver.fact_lh_flights
-            WHERE equipment__aircraft_code IS NOT NULL
-            GROUP BY equipment__aircraft_code;
-        """)
-
-        # 4. gold.dim_lh_date
-        conn.execute("""
-            CREATE OR REPLACE TABLE pg.gold.dim_lh_date AS
-            WITH bounds AS (
-                SELECT MIN(dep_sch_ts::DATE) AS min_date, MAX(dep_sch_ts::DATE) + INTERVAL '1 year' AS max_date
-                FROM pg.silver.fact_lh_flights
-            ),
-            date_range AS (
-                SELECT CAST(unnest(generate_series(min_date, max_date, INTERVAL '1 day')) AS DATE) AS date_val
-                FROM bounds
-            )
-            SELECT date_val AS date_id, EXTRACT(YEAR FROM date_val) AS year, EXTRACT(MONTH FROM date_val) AS month,
-                EXTRACT(DAY FROM date_val) AS day, EXTRACT(isodow FROM date_val) AS day_of_week,
-                dayname(date_val) AS day_name, monthname(date_val) AS month_name,
-                CASE WHEN EXTRACT(isodow FROM date_val) IN (6, 7) THEN TRUE ELSE FALSE END AS is_weekend
-            FROM date_range;
-        """)
-        print("Gold réteg sikeresen frissítve a Postgres-ben!")
-    finally:
-        conn.close()  # elengedi a Postgres táblákat az indexeléshez
-
-    # Postgres indexelés (a CREATE OR REPLACE TABLE minden constraint-et törölt, így újra létrehozhatók)
-    with sql_engine.begin() as pg_conn:  # begin() = automatikus commit
-        pg_conn.execute(text("ALTER TABLE gold.dim_lh_date ADD PRIMARY KEY (date_id);"))
-        pg_conn.execute(text("ALTER TABLE gold.dim_lh_airports ADD PRIMARY KEY (airport_code);"))
-        pg_conn.execute(text("ALTER TABLE gold.dim_lh_aircraft ADD PRIMARY KEY (aircraft_code);"))
-
-        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_date ON gold.fact_lh_flights (flight_date_id);"))
-        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_dep_air ON gold.fact_lh_flights (dep_airport_code);"))
-        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_arr_air ON gold.fact_lh_flights (arr_airport_code);"))
-        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_aircraft ON gold.fact_lh_flights (equipment__aircraft_code);"))
+        c.execute(text(AIRPORT_MISSING_SQL))
+        c.execute(text(AIRCRAFT_SQL))
+        c.execute(text(DATE_SQL))
+    print("Gold réteg sikeresen frissítve a Postgres-ben!")
