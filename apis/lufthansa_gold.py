@@ -1,13 +1,14 @@
 import duckdb
+from sqlalchemy import create_engine, text
+
+# Az indexeléshez szükségünk lesz a Postgres engine-re
+DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
+sql_engine = create_engine(DB_CONFIG)
 
 def run_gold_transform_duckdb():
     conn = duckdb.connect()
     conn.execute("INSTALL postgres; LOAD postgres;")
-    conn.execute("""
-        ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' 
-        AS pg (TYPE POSTGRES);
-    """)
-    
+    conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")
     conn.execute("CREATE SCHEMA IF NOT EXISTS pg.gold;")
     
     # ============================================================
@@ -16,13 +17,7 @@ def run_gold_transform_duckdb():
     # Megjegyzés: A korábbi kódodban a silver.fact_lh_flights-ot hoztuk létre, azt használjuk alapként!
     conn.execute("""
         CREATE OR REPLACE TABLE pg.gold.fact_flights AS
-        SELECT
-            flight_key,
-            route_key,
-            dep_airport_code,
-            arr_airport_code,
-            equipment__aircraft_code,
-            dep_sch_ts::DATE AS flight_date_id,  -- Kapcsolat a dim_date-hez
+        SELECT flight_key, route_key, dep_airport_code, arr_airport_code, equipment__aircraft_code, dep_sch_ts::DATE AS flight_date_id,  -- dim_date-hez
             
             -- DuckDB-ben a date_diff('minute', start, end) sokkal tisztább, mint az EPOCH-os osztás!
             COALESCE(date_diff('minute', dep_sch_ts, dep_act_ts), 0) AS dep_delay_min,
@@ -32,11 +27,7 @@ def run_gold_transform_duckdb():
             CASE WHEN status__code = 'ON' THEN 1 ELSE 0 END AS is_ontime,
             CASE WHEN status__code = 'DL' THEN 1 ELSE 0 END AS is_delayed,
             
-            dep_sch_ts,
-            dep_act_ts,
-            arr_sch_ts,
-            arr_act_ts,
-            _ingested_at
+            dep_sch_ts, dep_act_ts, arr_sch_ts, arr_act_ts, _ingested_at
         FROM pg.silver.fact_lh_flights
         WHERE dep_sch_ts IS NOT NULL AND arr_sch_ts IS NOT NULL;
     """)
@@ -86,24 +77,15 @@ def run_gold_transform_duckdb():
     conn.execute("""
         CREATE OR REPLACE TABLE pg.gold.dim_date AS
         WITH bounds AS (
-            SELECT 
-                MIN(dep_sch_ts::DATE) AS min_date,
-                MAX(dep_sch_ts::DATE) + INTERVAL '1 year' AS max_date
+            SELECT MIN(dep_sch_ts::DATE) AS min_date, MAX(dep_sch_ts::DATE) + INTERVAL '1 year' AS max_date
             FROM pg.silver.fact_lh_flights
         ),
         date_range AS (
             SELECT CAST(generate_series(min_date, max_date, INTERVAL '1 day') AS DATE) AS date_val
             FROM bounds
         )
-        SELECT
-            date_val AS date_id,
-            EXTRACT(YEAR FROM date_val) AS year,
-            EXTRACT(MONTH FROM date_val) AS month,
-            EXTRACT(DAY FROM date_val) AS day,
-            -- DuckDB-ben az isodow 1-7-ig adja vissza (hétfő=1, vasárnap=7)
-            EXTRACT(isodow FROM date_val) AS day_of_week,
-            dayname(date_val) AS day_name,
-            monthname(date_val) AS month_name,
+        SELECT date_val AS date_id, EXTRACT(YEAR FROM date_val) AS year, EXTRACT(MONTH FROM date_val) AS month, EXTRACT(DAY FROM date_val) AS day,
+            EXTRACT(isodow FROM date_val) AS day_of_week, dayname(date_val) AS day_name, monthname(date_val) AS month_name,
             CASE 
                 WHEN EXTRACT(isodow FROM date_val) IN (6, 7) THEN TRUE 
                 ELSE FALSE 
