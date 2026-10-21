@@ -16,7 +16,7 @@ def run_gold_transformation():
     # ============================================================
     # Megjegyzés: A korábbi kódodban a silver.fact_lh_flights-ot hoztuk létre, azt használjuk alapként!
     conn.execute("""
-        CREATE OR REPLACE TABLE pg.gold.fact_flights AS
+        CREATE OR REPLACE TABLE pg.gold.fact_lh_flights AS
         SELECT flight_key, route_key, dep_airport_code, arr_airport_code, equipment__aircraft_code, dep_sch_ts::DATE AS flight_date_id,  -- dim_date-hez
             
             -- DuckDB-ben a date_diff('minute', start, end) sokkal tisztább, mint az EPOCH-os osztás!
@@ -36,7 +36,7 @@ def run_gold_transformation():
     # 2. gold.dim_airports (FIZIKAI TÁBLA)
     # ============================================================
     conn.execute("""
-        CREATE OR REPLACE TABLE pg.gold.dim_airports AS
+        CREATE OR REPLACE TABLE pg.gold.dim_lh_airports AS
         WITH all_airports AS (
             SELECT dep_airport_code AS airport_code FROM pg.silver.fact_lh_flights WHERE dep_airport_code IS NOT NULL
             UNION
@@ -54,7 +54,7 @@ def run_gold_transformation():
     # 3. gold.dim_aircraft (FIZIKAI TÁBLA)
     # ============================================================
     conn.execute("""
-        CREATE OR REPLACE TABLE pg.gold.dim_aircraft AS
+        CREATE OR REPLACE TABLE pg.gold.dim_lh_aircraft AS
         SELECT DISTINCT
             equipment__aircraft_code AS aircraft_code,
             CASE 
@@ -75,7 +75,7 @@ def run_gold_transformation():
     # ============================================================
     # A DuckDB a range() függvénnyel generál sorozatokat, a dayname() és monthname() beépített!
     conn.execute("""
-        CREATE OR REPLACE TABLE pg.gold.dim_date AS
+        CREATE OR REPLACE TABLE pg.gold.dim_lh_date AS
         WITH bounds AS (
             SELECT MIN(dep_sch_ts::DATE) AS min_date, MAX(dep_sch_ts::DATE) + INTERVAL '1 year' AS max_date
             FROM pg.silver.fact_lh_flights
@@ -99,13 +99,13 @@ def run_gold_transformation():
     # 2. POSTGRES INDEXELÉS (Közvetlenül a Gold frissítése után!)
     with sql_engine.connect() as pg_conn:
         # Elsődleges kulcsok (A korábbi indexeket le kell dobni, vagy cserélni, mert a CREATE OR REPLACE TABLE törli a constraint-eket)
-        pg_conn.execute(text("ALTER TABLE gold.dim_date ADD PRIMARY KEY (date_id);"))
-        pg_conn.execute(text("ALTER TABLE gold.dim_airports ADD PRIMARY KEY (airport_code);"))
-        pg_conn.execute(text("ALTER TABLE gold.dim_aircraft ADD PRIMARY KEY (aircraft_code);"))
+        pg_conn.execute(text("ALTER TABLE gold.dim_lh_date ADD PRIMARY KEY (date_id);"))
+        pg_conn.execute(text("ALTER TABLE gold.dim_lh_airports ADD PRIMARY KEY (airport_code);"))
+        pg_conn.execute(text("ALTER TABLE gold.dim_lh_aircraft ADD PRIMARY KEY (aircraft_code);"))
         
         # Idegen kulcs indexek a DirectQuery-hez
-        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_date ON gold.fact_flights (flight_date_id);"))
-        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_dep_air ON gold.fact_flights (dep_airport_code);"))
-        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_arr_air ON gold.fact_flights (arr_airport_code);"))
-        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_aircraft ON gold.fact_flights (equipment__aircraft_code);"))
+        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_date ON gold.fact_lh_flights (flight_date_id);"))
+        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_dep_air ON gold.fact_lh_flights (dep_airport_code);"))
+        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_arr_air ON gold.fact_lh_flights (arr_airport_code);"))
+        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_aircraft ON gold.fact_lh_flights (equipment__aircraft_code);"))
         pg_conn.commit() # Psycopg-nál fontos a commit!
