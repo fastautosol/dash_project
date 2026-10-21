@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, text
 DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
 sql_engine = create_engine(DB_CONFIG)
 
-def run_gold_transform_duckdb():
+def run_gold_transform():
     conn = duckdb.connect()
     conn.execute("INSTALL postgres; LOAD postgres;")
     conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")
