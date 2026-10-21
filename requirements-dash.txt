@@ -6,6 +6,7 @@ gunicorn
 dash
 dash-bootstrap-components
 pandas
+duckdb
 pandas-ta-classic
 ccxt
 SQLAlchemy
