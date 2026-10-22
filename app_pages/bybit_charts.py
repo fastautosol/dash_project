@@ -129,7 +129,8 @@ layout = dbc.Container(
 )
 def load_all_charts(_, n, indicators):
     # 1. Egyetlen szupergyors bináris adatátvitel DuckDB-vel -> Azonnal Polars DataFrame lesz (.pl())
-    all_data_pl = pl.from_arrow(duck_conn.execute("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").fetch_arrow_table())    
+            
+    all_data_pl = duck_conn.sql("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").pl()
     if all_data_pl.height == 0:
         return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
         
