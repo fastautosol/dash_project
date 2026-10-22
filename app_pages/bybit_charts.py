@@ -75,7 +75,7 @@ def process_symbol_candles(df_symbol):
 # REGISTER PAGE & LAYOUT
 # ─────────────────────────────────────────────────────────────
 
-dash.register_page(__name__, path="/", name="Bybit LWCharts", order=0, assets_folder="app_assets")
+dash.register_page(__name__, path="/", name="Bybit Charts", order=0, assets_folder="app_assets")
 
 layout = dbc.Container(
     [
