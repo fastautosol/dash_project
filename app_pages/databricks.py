@@ -47,7 +47,7 @@ except Exception as _sdk_err:
 # =================================================
 # DASH PAGE
 # =================================================
-dash.register_page(__name__, path="/databricks", name="Databricks", order=5)
+dash.register_page(__name__, path="/databricks", name="Databricks", order=7)
 
 # =================================================
 # STYLES
