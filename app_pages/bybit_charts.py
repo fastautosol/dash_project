@@ -1,4 +1,4 @@
-# 2026.10.22 Polars + DuckDB Optimized Multi-Charts
+# 2026.10.22 18.00 Polars + DuckDB Optimized Multi-Charts
 import polars as pl
 import duckdb
 import dash
@@ -10,8 +10,11 @@ duck_conn = duckdb.connect()
 duck_conn.execute("INSTALL postgres; LOAD postgres;")
 duck_conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")
 
-SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", "COMP/USDT", "LINK/USDT", "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT",
-          "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
+SYMBOLS = [ "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", 
+            "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", 
+            "COMP/USDT", "LINK/USDT", "NEAR/USDT", "AAVE/USDT", "LTC/USDT", 
+            "ICP/USDT", "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", 
+            "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT" ]
 
 CARD_STYLE = {
     "backgroundColor": "#111111",
@@ -86,7 +89,7 @@ layout = dbc.Container(
     html.Div([html.H2("Crypto Multi Charts (Polars Engine)", className="text-light fw-bold mb-0")], className="mb-4"),
     html.Div(id="page-load-trigger", style={"display": "none"}),
     html.Div(id="lwc-render-trigger", style={"display": "none"}),
-    dcc.Interval(id="lwc-timer", interval=15_000, n_intervals=0),
+    dcc.Interval(id="lwc-timer", interval=30_000, n_intervals=0),
     dcc.Store(id="lwc-store"),
 
     html.Div(
@@ -126,17 +129,11 @@ layout = dbc.Container(
 )
 def load_all_charts(_, n, indicators):
     # 1. Egyetlen szupergyors bináris adatátvitel DuckDB-vel -> Azonnal Polars DataFrame lesz (.pl())
-    all_data_pl = duck_conn.execute("""
-        SELECT symbol, timestamp, open, high, low, close, volume 
-        FROM pg.bybit_data.bybit_candles
-    """).pl()
-    
+    all_data_pl = pl.from_arrow(duck_conn.execute("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").fetch_arrow_table())    
     if all_data_pl.height == 0:
         return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
         
-    result = {}
-    
-    # 2. A memóriában lévő Polars táblát szűrjük le villámgyorsan szimbólumonként
+    result = {}  
     for sym in SYMBOLS:
         df_symbol = all_data_pl.filter(pl.col("symbol") == sym)
         result[sym] = process_symbol_candles_polars(df_symbol)
