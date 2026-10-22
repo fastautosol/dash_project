@@ -13,7 +13,7 @@ DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
 sql_engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True, pool_recycle=1800,      
     connect_args={'connect_timeout': 5, 'keepalives': 1, 'keepalives_idle': 30, 'keepalives_interval': 10, 'keepalives_count': 5})
 
-dash.register_page(__name__, icon="fa-solid fa-plane", name="Lufthansa Flight", order=5)
+dash.register_page(__name__, icon="fa-solid fa-plane", name="Lufthansa Flight", order=3)
 
 # ---- Glass Card ----
 CARD_STYLE = {
