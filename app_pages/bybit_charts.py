@@ -5,15 +5,22 @@ import dash
 from dash import html, dcc, Input, Output, callback, clientside_callback
 import dash_bootstrap_components as dbc
 
-# connectorx kell hozzá: pip install connectorx
-PG_URI = os.getenv("PG_URI", "postgresql://sql_admin:sql_pass@postgresql:5432/n8n")
+from sqlalchemy import create_engine
+
+# SQLAlchemy + psycopg (már a projekt része), nincs szükség extra csomagra
+SQL_URI = os.getenv("PG_SQLALCHEMY_URI", "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n")
+engine = create_engine(SQL_URI, pool_pre_ping=True)
 
 SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", "COMP/USDT", "LINK/USDT", "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT",
           "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
 
 # Csak a megjelenített szimbólumokat kérjük le (konstans lista, nem felhasználói input)
 _SYMBOL_LIST_SQL = ", ".join(f"'{s}'" for s in SYMBOLS)
-CANDLES_QUERY = f"SELECT symbol, timestamp, open, high, low, close, volume FROM bybit_data.bybit_candles WHERE symbol IN ({_SYMBOL_LIST_SQL})"
+CANDLES_QUERY = f"""
+    SELECT symbol, timestamp, open, high, low, close, volume
+    FROM bybit_data.bybit_candles
+    WHERE symbol IN ({_SYMBOL_LIST_SQL})
+"""
 
 CARD_STYLE = {
     "backgroundColor": "#111111",
@@ -130,7 +137,7 @@ layout = dbc.Container(
     Input("lwc-timer", "n_intervals"),   # az indikátor-választó nem kell ide, csak a kliens oldalon számít
     prevent_initial_call=False)
 def load_all_charts(_, n):
-    df = pl.read_database_uri(CANDLES_QUERY, PG_URI, engine="connectorx")
+    df = pl.read_database(CANDLES_QUERY, engine, infer_schema_length=None)
     if df.height == 0:
         return {s: {"candles": [], "indicators": []} for s in SYMBOLS}
     return build_payload(compute_indicators(df))
