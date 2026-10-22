@@ -13,7 +13,7 @@ DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
 sql_engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True, pool_recycle=1800,      
     connect_args={'connect_timeout': 5, 'keepalives': 1, 'keepalives_idle': 30, 'keepalives_interval': 10, 'keepalives_count': 5})
 
-dash.register_page(__name__, icon="fa-solid fa-chart-line", name="CRM Serper", order=4)
+dash.register_page(__name__, icon="fa-solid fa-chart-line", name="CRM Serper", order=1)
 
 # ---- Glass Card ----
 CARD_STYLE = { "background": "rgba(255, 255, 255, 0.03)", "backdrop-filter": "blur(10px)",
