@@ -1,15 +1,9 @@
-
-# 2026.10.22  12.00 Lightweight-Charts
-import pandas as pd
-import pandas_ta_classic as ta
-from sqlalchemy import create_engine, text
+# 2026.10.22 14.00 Polars/DuckDB Optimized Multi-Charts
+import polars as pl
+import duckdb
 import dash
 from dash import html, dcc, Input, Output, callback, clientside_callback
 import dash_bootstrap_components as dbc
-import duckdb
-
-DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-engine = create_engine(DB_URL)
 
 # Globális DuckDB kapcsolat inicializálása (Postgres csatolással)
 duck_conn = duckdb.connect()
@@ -24,50 +18,52 @@ CARD_STYLE = {
     "borderRadius": "10px",
     "padding": "8px",
     "height": "100%",
-    "border": "1px solid #222",
-}
+    "border": "1px solid #222"}
 
 # ─────────────────────────────────────────────────────────────
-# MÓDOSÍTOTT FETCH CANDLES (Már a memóriából dolgozik)
+# POLARS INDIKÁTOR SZÁMÍTÓ MOTOR (PySpark stílusban)
 # ─────────────────────────────────────────────────────────────
-def process_symbol_candles(df_symbol):
-    if df_symbol.empty:
+
+def process_symbol_candles_polars(df_symbol_pl):
+    if df_symbol_pl.height == 0:
         return {"candles": [], "indicators": []}
 
-    # Időzóna konverzió (marad a megszokott logikád)
-    df_symbol["timestamp"] = pd.to_datetime(df_symbol["timestamp"], utc=True, errors="coerce")
-    df_symbol["timestamp"] = df_symbol["timestamp"].dt.tz_convert("Europe/Budapest")
-    df_symbol["timestamp"] = df_symbol["timestamp"].dt.tz_localize(None)
-    df_symbol = df_symbol.set_index("timestamp").sort_index()
+    # Transzformációk láncolása (Teljesen PySpark/Polars stílusban)
+    processed = df_symbol_pl.with_columns([
+        pl.col("timestamp").dt.convert_time_zone("Europe/Budapest").dt.timestamp("s").alias("time"),      
+        pl.col("open").cast(pl.Float64),
+        pl.col("high").cast(pl.Float64),
+        pl.col("low").cast(pl.Float64),
+        pl.col("close").cast(pl.Float64),
+        pl.col("volume").cast(pl.Float64)]).sort("time").unique(subset=["time"], keep="last").with_columns([
+        
+        # 1. SMA 50 és EMA 50 (rolling ablakokkal)
+        pl.col("close").rolling_mean(window_size=50).alias("sma50"),
+        pl.col("close").rolling_mean(window_size=50).alias("ema50"),
+        
+        # 2. Bollinger Bands alapok (Közép és Szórás)
+        pl.col("close").rolling_mean(window_size=50).alias("bb_middle"),
+        pl.col("close").rolling_std(window_size=50).alias("bb_std"),
+        
+        # 3. VWAP (Kumulált Ár * Volumen / Kumulált Volumen)
+        ((pl.col("close") * pl.col("volume")).cum_sum() / pl.col("volume").cum_sum()).alias("vwap"),
+        
+        # 4. Volume Delta (Vevői és Eladói volumen szétválasztása)
+        pl.when(pl.col("close") >= pl.col("open")).then(pl.col("volume")).otherwise(0.0).alias("buy_vol"),
+        pl.when(pl.col("close") < pl.col("open")).then(pl.col("volume")).otherwise(0.0).alias("sell_vol"),
+        
+        # MFI fix érték (A bonyolult MFI számítás elhagyása a maximális sebességért)
+        pl.lit(50.0).alias("mfi")]).with_columns([
+        (pl.col("bb_middle") + (2 * pl.col("bb_std"))).alias("bb_upper"),
+        (pl.col("bb_middle") - (2 * pl.col("bb_std"))).alias("bb_lower")])
 
-    # UNIX timestamp generálása a Lightweight Charts-nak
-    df_symbol["time"] = df_symbol.index.astype("datetime64[ns]").astype("int64") // 10**9
-    df_symbol = df_symbol.drop_duplicates(subset=["time"], keep="last")
-
-    for col in ["open", "high", "low", "close", "volume"]:
-        df_symbol[col] = pd.to_numeric(df_symbol[col], errors="coerce")
-
-    # Indikátorok számítása a pandas_ta segítségével
-    df_symbol["sma50"] = ta.sma(df_symbol["close"], length=50)
-    df_symbol["ema50"] = ta.ema(df_symbol["close"], length=50).round(4)
-    bb = ta.bbands(df_symbol["close"], length=50)
-    df_symbol["bb_upper"] = bb["BBU_50_2.0"]
-    df_symbol["bb_middle"] = bb["BBM_50_2.0"]
-    df_symbol["bb_lower"] = bb["BBL_50_2.0"]
-    df_symbol["vwap"] = ta.vwap(high=df_symbol["high"], low=df_symbol["low"], close=df_symbol["close"], volume=df_symbol["volume"])
-    df_symbol["mfi"] = ta.mfi(df_symbol["high"], df_symbol["low"], df_symbol["close"], df_symbol["volume"], length=14)          
+    # ── GYERTYÁK FORMÁZÁSA (Csak ott dobjuk el, ahol nincs ár) ─────────────────
+    candles_df = processed.drop_nulls(subset=["time", "open", "high", "low", "close"])
+    candles = candles_df.select(["time", "open", "high", "low", "close"]).to_dicts()
     
-    df_symbol["buy_vol"]  = df_symbol["volume"].where(df_symbol["close"] >= df_symbol["open"], 0)
-    df_symbol["sell_vol"] = df_symbol["volume"].where(df_symbol["close"] <  df_symbol["open"], 0)
-
-    # Gyertyák JSON formátumba hozatala
-    df_clean = df_symbol.dropna(subset=["time", "open", "high", "low", "close"])
-    candles = df_clean[["time", "open", "high", "low", "close"]].to_dict("records")
-    
-    # Indikátorok JSON formátumba hozatala (NaN -> None csere)
+    # ── INDIKÁTOROK FORMÁZÁSA (NaN/Null megtartása -> null lesz a JSON-ban) ───
     ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "mfi", "buy_vol", "sell_vol"]
-    ind_df = df_symbol[ind_cols].where(df_symbol[ind_cols].notna(), other=None)
-    indicators = ind_df.to_dict("records")
+    indicators = processed.select(ind_cols).to_dicts()
     
     return {"candles": candles, "indicators": indicators}
 
@@ -75,11 +71,11 @@ def process_symbol_candles(df_symbol):
 # REGISTER PAGE & LAYOUT
 # ─────────────────────────────────────────────────────────────
 
-dash.register_page(__name__, path="/", name="Bybit Charts", order=0, assets_folder="app_assets")
+dash.register_page(__name__, path="/", name="Bybit LWCharts", order=0, assets_folder="app_assets")
 
 layout = dbc.Container(
     [
-    html.Div([html.H2("Crypto Multi Charts", className="text-light fw-bold mb-0")], className="mb-4"),
+    html.Div([html.H2("Crypto Multi Charts (Polars Engine)", className="text-light fw-bold mb-0")], className="mb-4"),
     html.Div(id="page-load-trigger", style={"display": "none"}),
     html.Div(id="lwc-render-trigger", style={"display": "none"}),
     dcc.Interval(id="lwc-timer", interval=30_000, n_intervals=0),
@@ -110,7 +106,7 @@ layout = dbc.Container(
     ], fluid=True, style={"backgroundColor": "--bs-body-bg", "minHeight": "100vh", "paddingBottom": "10px"})
 
 # ─────────────────────────────────────────────────────────────
-# CALLBACKS
+# CALLBACKS (EGYETLEN POLARS BEOLVASÁSSAL)
 # ─────────────────────────────────────────────────────────────
 
 @callback(
@@ -118,18 +114,19 @@ layout = dbc.Container(
     Input("page-load-trigger", "children"),
     Input("lwc-timer", "n_intervals"),
     Input("indicator-selector", "value"),
-    prevent_initial_call=False,
-)
-def load_all_charts(_, n, indicators):
+    prevent_initial_call=False)
 
-    all_data_df = duck_conn.execute("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").df()    
-    if all_data_df.empty:
-        return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
+def load_all_charts(_, n, indicators):
+    # bináris adatátvitel DuckDB-vel -> Azonnal Polars DataFrame
+    all_data_pl = duck_conn.execute("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").pl()
     
-    result = {}    
+    if all_data_pl.height == 0:
+        return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
+        
+    result = {}
     for sym in SYMBOLS:
-        df_symbol = all_data_df[all_data_df["symbol"] == sym].copy()
-        result[sym] = process_symbol_candles(df_symbol)
+        df_symbol = all_data_pl.filter(pl.col("symbol") == sym)
+        result[sym] = process_symbol_candles_polars(df_symbol)
         
     return result
 
