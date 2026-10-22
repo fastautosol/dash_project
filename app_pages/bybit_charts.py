@@ -47,7 +47,7 @@ def process_symbol_candles_polars(df_symbol_pl):
         
         # 1. SMA 50 és EMA 50 (rolling ablakokkal)
         pl.col("close").rolling_mean(window_size=50).alias("sma50"),
-        pl.col("close").ewm_mean(span=50, adjust=False).over(sym).alias("ema50"),
+        pl.col("close").ewm_mean(span=50, adjust=False).alias("ema50"),
         
         # 2. Bollinger Bands alapok (Közép és Szórás)
         pl.col("close").rolling_mean(window_size=50).alias("bb_middle"),
