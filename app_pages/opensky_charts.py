@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, text
 
 log = logging.getLogger(__name__)
 
-dash.register_page(__name__, path="/flight-radar", name="OpenSky Radar", icon="fas fa-plane-departure")
+dash.register_page(__name__, path="/flight-radar", name="OpenSky Radar", icon="fas fa-plane-departure", order=4)
 
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 engine = create_engine(DB_URL, pool_pre_ping=True)
