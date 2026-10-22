@@ -6,8 +6,9 @@ gunicorn
 dash
 dash-bootstrap-components
 pandas
-duckdb
 pandas-ta-classic
+duckdb
+polars
 ccxt
 SQLAlchemy
 psycopg[binary]
