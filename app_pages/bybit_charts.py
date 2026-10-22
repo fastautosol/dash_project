@@ -52,6 +52,8 @@ def process_symbol_candles_polars(df_symbol_pl):
         # 2. Bollinger Bands alapok (Közép és Szórás)
         pl.col("close").rolling_mean(window_size=50).alias("bb_middle"),
         pl.col("close").rolling_std(window_size=50).alias("bb_std"),
+        pl.col("high").rolling_max(window_size=50).alias("dc_upper"),
+        pl.col("low").rolling_min(window_size=50).alias("dc_lower"),
         
         # 3. VWAP (Kumulált Ár * Volumen / Kumulált Volumen)
         ((pl.col("close") * pl.col("volume")).cum_sum() / pl.col("volume").cum_sum()).alias("vwap"),
@@ -63,6 +65,7 @@ def process_symbol_candles_polars(df_symbol_pl):
         # Bollinger alsó és felső sávok kiszámítása a már kész adatokból
         (pl.col("bb_middle") + (2 * pl.col("bb_std"))).alias("bb_upper"),
         (pl.col("bb_middle") - (2 * pl.col("bb_std"))).alias("bb_lower"),
+        ((pl.col("dc_upper") + pl.col("dc_lower")) / 2).alias("dc_middle"),
     ])
 
     # ── GYERTYÁK FORMÁZÁSA (Csak ott dobjuk el, ahol nincs ár) ─────────────────
@@ -70,7 +73,7 @@ def process_symbol_candles_polars(df_symbol_pl):
     candles = candles_df.select(["time", "open", "high", "low", "close"]).to_dicts()
     
     # ── INDIKÁTOROK FORMÁZÁSA (NaN/Null megtartása -> null lesz a JSON-ban) ───
-    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "buy_vol", "sell_vol"]
+    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "dc_upper", "dc_middle", "dc_lower", "vwap", "buy_vol", "sell_vol"]
     indicators = processed.select(ind_cols).to_dicts()
     
     return {"candles": candles, "indicators": indicators}
@@ -96,6 +99,7 @@ layout = dbc.Container(
                 {"label": " SMA50", "value": "sma50"},
                 {"label": " EMA50",  "value": "ema50"},
                 {"label": " BB50",   "value": "bb50"},
+                {"label": " DC50", "value": "dc50"},
                 {"label": " VWAP",   "value": "vwap"},
                 {"label": " Volume Δ", "value": "volume_delta"},  
             ], value=["ema50"], inline=True, switch=True, className="text-light",
