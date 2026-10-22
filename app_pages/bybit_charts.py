@@ -59,9 +59,6 @@ def process_symbol_candles_polars(df_symbol_pl):
         # 4. Volume Delta (Vevői és Eladói volumen szétválasztása)
         pl.when(pl.col("close") >= pl.col("open")).then(pl.col("volume")).otherwise(0.0).alias("buy_vol"),
         pl.when(pl.col("close") < pl.col("open")).then(pl.col("volume")).otherwise(0.0).alias("sell_vol"),
-        
-        # MFI fix érték (A bonyolult MFI számítás elhagyása a maximális sebességért)
-        pl.lit(50.0).alias("mfi")
     ]).with_columns([
         # Bollinger alsó és felső sávok kiszámítása a már kész adatokból
         (pl.col("bb_middle") + (2 * pl.col("bb_std"))).alias("bb_upper"),
@@ -73,7 +70,7 @@ def process_symbol_candles_polars(df_symbol_pl):
     candles = candles_df.select(["time", "open", "high", "low", "close"]).to_dicts()
     
     # ── INDIKÁTOROK FORMÁZÁSA (NaN/Null megtartása -> null lesz a JSON-ban) ───
-    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "mfi", "buy_vol", "sell_vol"]
+    ind_cols = ["time", "sma50", "ema50", "bb_upper", "bb_middle", "bb_lower", "vwap", "buy_vol", "sell_vol"]
     indicators = processed.select(ind_cols).to_dicts()
     
     return {"candles": candles, "indicators": indicators}
@@ -101,7 +98,6 @@ layout = dbc.Container(
                 {"label": " BB50",   "value": "bb50"},
                 {"label": " VWAP",   "value": "vwap"},
                 {"label": " Volume Δ", "value": "volume_delta"},  
-                {"label": " MFI", "value": "mfi"},  
             ], value=["ema50"], inline=True, switch=True, className="text-light",
             input_checked_style={"backgroundColor": "#198754", "borderColor": "#198754"}),
         ], style={"padding": "10px 0px 15px 0px", "borderBottom": "1px solid #222", "marginBottom": "10px"}),
