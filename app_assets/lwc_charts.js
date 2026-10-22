@@ -1,5 +1,4 @@
-
-// 2026.06.15  18.00
+// 2026.10.22  18.00
 
 window.LWCharts = function(data, selectedIndicators) {
 
@@ -11,6 +10,7 @@ window.LWCharts = function(data, selectedIndicators) {
     }
 
     if (!data) {console.error("No chart data"); return "No data";}
+    selectedIndicators = selectedIndicators || [];
     const symbols = Object.keys(data);
     if (!window.lwcCharts) { window.lwcCharts = {};}
 
@@ -100,6 +100,19 @@ window.LWCharts = function(data, selectedIndicators) {
             }
 
             // -------------------------------------------------
+            // DONCHIAN CHANNEL 50  (felső / középső / alsó)
+            // -------------------------------------------------
+
+            if (selectedIndicators.includes("dc50")) {
+                const dcUpperSeries  = chart.addSeries(LightweightCharts.LineSeries, {color:"#ab47bc", lineWidth:1, priceLineVisible:false, lastValueVisible:false});
+                const dcMiddleSeries = chart.addSeries(LightweightCharts.LineSeries, {color:"#888888", lineWidth:1, lineStyle:2, priceLineVisible:false, lastValueVisible:false});
+                const dcLowerSeries  = chart.addSeries(LightweightCharts.LineSeries, {color:"#ab47bc", lineWidth:1, priceLineVisible:false, lastValueVisible:false});
+                dcUpperSeries.setData(indicators.filter(x => x.dc_upper != null).map(x => ({time: x.time, value: x.dc_upper})));
+                dcMiddleSeries.setData(indicators.filter(x => x.dc_middle != null).map(x => ({time: x.time, value: x.dc_middle})));
+                dcLowerSeries.setData(indicators.filter(x => x.dc_lower != null).map(x => ({time: x.time, value: x.dc_lower})));
+            }
+
+            // -------------------------------------------------
             // VWAP
             // -------------------------------------------------
 
@@ -146,50 +159,10 @@ window.LWCharts = function(data, selectedIndicators) {
             }
 
             // -------------------------------------------------
-            // MFI  (Money Flow Index, overbought/oversold lines)
-            // -------------------------------------------------
-            
-            if (selectedIndicators.includes("mfi")) {
-            
-                chart.addPane({ height: 55 });   // creates pane index 2
-                //   (or index 1 if volume_delta is NOT selected — addPane() is only called
-                //    when that block runs, so the pane index depends on render order)
-            
-                const mfiPane = selectedIndicators.includes("volume_delta") ? 2 : 1;
-            
-                const mfiSeries = chart.addSeries(
-                    LightweightCharts.LineSeries,
-                    { color: "#ce93d8", lineWidth: 1,
-                      priceLineVisible: false, lastValueVisible: false },
-                    mfiPane
-                            );
-            
-                // Overbought (80) and oversold (20) reference lines
-                const obSeries = chart.addSeries(
-                    LightweightCharts.LineSeries,
-                    { color: "#ef5350", lineWidth: 1, lineStyle: 2,
-                      priceLineVisible: false, lastValueVisible: false },
-                    mfiPane
-                );
-                const osSeries = chart.addSeries(
-                    LightweightCharts.LineSeries,
-                    { color: "#26a69a", lineWidth: 1, lineStyle: 2,
-                      priceLineVisible: false, lastValueVisible: false },
-                    mfiPane
-                );
-            
-                const mfiPoints = indicators.filter(x => x.mfi != null);
-                mfiSeries.setData(mfiPoints.map(x => ({ time: x.time, value: x.mfi   })));
-                obSeries.setData( mfiPoints.map(x => ({ time: x.time, value: 80      })));
-                osSeries.setData( mfiPoints.map(x => ({ time: x.time, value: 20      })));
-            }
-
-            // -------------------------------------------------
             // FINALIZE
             // -------------------------------------------------
 
             //chart.timeScale().fitContent();
-            //chart.timeScale().setVisibleLogicalRange({from: data.length - 200, to: data.length})
             window.lwcCharts[safeId] = chart;
             console.log("Chart OK:", symbol);
 
