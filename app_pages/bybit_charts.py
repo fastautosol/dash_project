@@ -1,5 +1,5 @@
 
-# 2026.10.22  8.00 Lightweight-Charts
+# 2026.10.22  12.00 Lightweight-Charts
 import pandas as pd
 import pandas_ta_classic as ta
 from sqlalchemy import create_engine, text
@@ -82,7 +82,7 @@ layout = dbc.Container(
     html.Div([html.H2("Crypto Multi Charts", className="text-light fw-bold mb-0")], className="mb-4"),
     html.Div(id="page-load-trigger", style={"display": "none"}),
     html.Div(id="lwc-render-trigger", style={"display": "none"}),
-    dcc.Interval(id="lwc-timer", interval=15_000, n_intervals=0),
+    dcc.Interval(id="lwc-timer", interval=30_000, n_intervals=0),
     dcc.Store(id="lwc-store"),
 
     html.Div(
