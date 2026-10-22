@@ -57,7 +57,7 @@ window.LWCharts = function(data, selectedIndicators) {
                 grid: { vertLines: { color: "#222222" }, horzLines: { color: "#222222" }},
                 crosshair: { mode: 1},
                 rightPriceScale: {borderColor: "#444"},
-                timeScale: {barSpacing: 3, rightOffset: 5, borderColor: "#444", timeVisible: true, secondsVisible: false}
+                timeScale: {barSpacing: 2, rightOffset: 3, borderColor: "#444", timeVisible: true, secondsVisible: false}
             });
 
             // -------------------------------------------------
