@@ -133,10 +133,12 @@ def load_all_charts(_, n, indicators):
     all_data_pl = duck_conn.sql("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").pl()
     if all_data_pl.height == 0:
         return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
-        
-    result = {}  
+                        
+    parts = all_data_pl.partition_by("symbol", as_dict=True)
+    result = {}
     for sym in SYMBOLS:
-        df_symbol = all_data_pl.filter(pl.col("symbol") == sym)
+        #df_symbol = all_data_pl.filter(pl.col("symbol") == sym)
+        df_symbol = parts.get((sym,), all_data_pl.clear())
         result[sym] = process_symbol_candles_polars(df_symbol)
         
     return result
