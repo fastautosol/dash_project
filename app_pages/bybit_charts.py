@@ -10,11 +10,11 @@ duck_conn = duckdb.connect()
 duck_conn.execute("INSTALL postgres; LOAD postgres;")
 duck_conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")
 
-SYMBOLS = [ "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", 
-            "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", 
-            "COMP/USDT", "LINK/USDT", "NEAR/USDT", "AAVE/USDT", "LTC/USDT", 
-            "ICP/USDT", "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", 
-            "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT" ]
+MAX_CANDLES = 300
+
+SYMBOLS = [ "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "AVAX/USDT", "HYPE/USDT", "BCH/USDT", "XRP/USDT", "SUI/USDT", "ZEN/USDT", 
+            "COMP/USDT", "LINK/USDT", "NEAR/USDT", "AAVE/USDT", "LTC/USDT",  "ICP/USDT", 
+           "AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT", "COINX/USDT", "CRCLX/USDT", "HOODX/USDT", "GOOGLX/USDT" ]
 
 CARD_STYLE = {
     "backgroundColor": "#111111",
@@ -34,16 +34,13 @@ def process_symbol_candles_polars(df_symbol_pl):
 
     # Transzformációk láncolása (Teljesen PySpark/Polars stílusban)
     processed = df_symbol_pl.with_columns([
-        # Időzóna átrakása Budapest időre, majd UNIX timestamp (másodperc) generálása
         pl.col("timestamp").dt.convert_time_zone("Europe/Budapest").dt.epoch("s").alias("time"),
-        
-        # Típusok kényszerítése numerikusra a biztonság kedvéért
         pl.col("open").cast(pl.Float64),
         pl.col("high").cast(pl.Float64),
         pl.col("low").cast(pl.Float64),
         pl.col("close").cast(pl.Float64),
         pl.col("volume").cast(pl.Float64),
-    ]).sort("time").unique(subset=["time"], keep="last").with_columns([
+    ]).sort("time").unique(subset=["time"], keep="last", maintain_order=True).tail(MAX_CANDLES).with_columns([
         
         # 1. SMA 50 és EMA 50 (rolling ablakokkal)
         pl.col("close").rolling_mean(window_size=50).alias("sma50"),
