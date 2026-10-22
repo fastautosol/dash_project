@@ -10,7 +10,7 @@ import requests
 DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
 sql_engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True)
 
-dash.register_page(__name__, icon="fa-solid fa-shopping-bag", name="CRM Shopify", order=3)
+dash.register_page(__name__, icon="fa-solid fa-shopping-bag", name="CRM Shopify", order=2)
 
 N8N_WEBHOOK = "https://n8n.petrosofteu.cloud/webhook/rag-query"
 
