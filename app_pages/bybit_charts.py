@@ -35,7 +35,7 @@ def process_symbol_candles_polars(df_symbol_pl):
     # Transzformációk láncolása (Teljesen PySpark/Polars stílusban)
     processed = df_symbol_pl.with_columns([
         # Időzóna átrakása Budapest időre, majd UNIX timestamp (másodperc) generálása
-        pl.col("timestamp").dt.convert_time_zone("Europe/Budapest").dt.timestamp("s").alias("time"),
+        pl.col("timestamp").dt.convert_time_zone("Europe/Budapest").dt.epoch("s").alias("time"),
         
         # Típusok kényszerítése numerikusra a biztonság kedvéért
         pl.col("open").cast(pl.Float64),
