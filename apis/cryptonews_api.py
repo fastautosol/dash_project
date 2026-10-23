@@ -68,20 +68,14 @@ TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "")
 TWITTER_LAST_TWEETS_URL = "https://api.twitterapi.io/twitter/user/last_tweets"
 
 # Szűkített, crypto-központú lista. Felülírható: TWITTER_ACCOUNTS="A,B,C" környezeti változóval.
-DEFAULT_TWITTER_ACCOUNTS = [
-    "VitalikButerin", "cz_binance", "Binance", "Solana",
-    "Pentosh1", "GCRClassic", "Cobie", "Ansem",
-    "MilesDeutscher", "BenjaminCowen", "glassnode", "AltcoinSherpa"]
-# Kivéve (ide visszavehetők): "KobeissiLetter" (fizetős, nem jön), "ElonMusk" (nem crypto-specifikus),
-# "SolyTrading", "MacnBTC", "ColdBloodedShill", "IncomeSharks", "crypto_rand", "SatoshiFlipper"
+DEFAULT_TWITTER_ACCOUNTS = ["VitalikButerin", "cz_binance", "Binance", "Solana", "Pentosh1", "GCRClassic", "Cobie", "Ansem", "MilesDeutscher", "BenjaminCowen", "glassnode", "AltcoinSherpa"]
 TWITTER_ACCOUNTS = [a.strip() for a in os.getenv("TWITTER_ACCOUNTS", "").split(",") if a.strip()] or DEFAULT_TWITTER_ACCOUNTS
 
-TWEETS_PER_ACCOUNT = int(os.getenv("TWEETS_PER_ACCOUNT", "5"))
-TWITTER_REQUEST_DELAY_SEC = float(os.getenv("TWITTER_REQUEST_DELAY_SEC", "5.5"))     # ingyenes csomag: ~1 kérés / 5 mp
-TWITTER_MIN_INTERVAL_HOURS = float(os.getenv("TWITTER_MIN_INTERVAL_HOURS", "3"))     # ennél gyakrabban nem hív Twittert
-SKIP_REPLIES_AND_RETWEETS = os.getenv("TWITTER_SKIP_REPLIES_RT", "true").lower() == "true"
-# A fiókok már crypto-központúak, ezért a tweetekre alapból NINCS kulcsszószűrés
-TWITTER_KEYWORD_FILTER = os.getenv("TWITTER_KEYWORD_FILTER", "false").lower() == "true"
+TWEETS_PER_ACCOUNT =  5
+TWITTER_REQUEST_DELAY_SEC = 5.5    # ingyenes csomag: ~1 kérés / 5 mp
+TWITTER_MIN_INTERVAL_HOURS = 3    # ennél gyakrabban nem hív Twittert
+SKIP_REPLIES_AND_RETWEETS =  "true"
+TWITTER_KEYWORD_FILTER = "false"
 
 # A közös tábla oszloptípusai: így az oszlopok akkor is létrejönnek, ha az első betöltésben csak NULL van bennük
 CRYPTONEWS_COLUMNS = {
