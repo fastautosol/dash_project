@@ -64,7 +64,7 @@ KEYWORD_RE = re.compile(
 
 # ---- Twitter (twitterapi.io) ----
 # A kulcs CSAK környezeti változóból jön (Coolify secret), a kódban nincs alapértelmezett érték.
-TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "")
+TWITTER_API_KEY = os.getenv("TWITTER_API_KEY", "new1_62292ead9a31403a8625219d85e689ee")
 TWITTER_LAST_TWEETS_URL = "https://api.twitterapi.io/twitter/user/last_tweets"
 
 # Szűkített, crypto-központú lista. Felülírható: TWITTER_ACCOUNTS="A,B,C" környezeti változóval.
