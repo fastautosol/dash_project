@@ -1,7 +1,7 @@
 # 2026.10.23  cryptonews_api.py  -  Crucix (OSINT) + Twitter egyetlen bronze.cryptonews táblába
 #
 # Bronze tábla (egyetlen):
-#   bronze.cryptonews     közös hírtábla: Crucix (RSS, GDELT, Telegram) + Twitter posztok
+#   bronze.cryptonews     közös hírtábla: Crucix (RSS, GDELT, Telegram) + Twitter szöveges posztok
 #                         provider = 'crucix' | 'twitter'; kind = rss | gdelt | telegram | tweet
 #
 # Endpointok (a router prefixét a main.py-ban kell megadni, pl. /cryptonews):
@@ -46,8 +46,8 @@ engine = create_engine(DB_URL, pool_pre_ping=True)
 
 REQUEST_TIMEOUT = 30
 
-# A pipeline neve a korábbi Crucix pipeline neve maradt (a dlt állapotát megtartja).
-PIPELINE_NAME = "crucix_osint_pipeline"
+# Külön DLT pipeline-név, hogy ne ütközzön a különálló crucix_api.py állapotával.
+PIPELINE_NAME = "cryptonews_unified_pipeline"
 DATASET_NAME = "bronze"
 
 # ---- Crucix ----
@@ -71,13 +71,13 @@ TWITTER_LAST_TWEETS_URL = "https://api.twitterapi.io/twitter/user/last_tweets"
 DEFAULT_TWITTER_ACCOUNTS = ["VitalikButerin", "cz_binance", "Binance", "Solana", "Pentosh1", "GCRClassic", "Cobie", "Ansem", "MilesDeutscher", "BenjaminCowen", "glassnode", "AltcoinSherpa"]
 TWITTER_ACCOUNTS = [a.strip() for a in os.getenv("TWITTER_ACCOUNTS", "").split(",") if a.strip()] or DEFAULT_TWITTER_ACCOUNTS
 
-TWEETS_PER_ACCOUNT =  5
+TWEETS_PER_ACCOUNT = 5
 TWITTER_REQUEST_DELAY_SEC = 5.5    # ingyenes csomag: ~1 kérés / 5 mp
 TWITTER_MIN_INTERVAL_HOURS = 3    # ennél gyakrabban nem hív Twittert
-SKIP_REPLIES_AND_RETWEETS =  "true"
-TWITTER_KEYWORD_FILTER = "false"
+SKIP_REPLIES_AND_RETWEETS = os.getenv("SKIP_REPLIES_AND_RETWEETS", "true").lower() in ("1", "true", "yes", "on")
+TWITTER_KEYWORD_FILTER = os.getenv("TWITTER_KEYWORD_FILTER", "false").lower() in ("1", "true", "yes", "on")
 
-# A közös tábla oszloptípusai: így az oszlopok akkor is létrejönnek, ha az első betöltésben csak NULL van bennük
+# A közös szöveges hírtábla oszloptípusai
 CRYPTONEWS_COLUMNS = {
     "urgent": {"data_type": "bool"},
     "published_at": {"data_type": "timestamp"},
@@ -100,8 +100,6 @@ class RunRequest(BaseModel):
     # max_items és filter_keywords a Crucix hírekre/Telegramra vonatkozik
     max_items: int = Field(default=500, ge=1, le=5000)
     filter_keywords: bool = True
-    # True: a minimum-intervallumot figyelmen kívül hagyja (kézi teszthez)
-    force_twitter: bool = False
 
 
 # --------------------------------------------------
@@ -179,45 +177,65 @@ def crucix_get() -> Any:
 # --------------------------------------------------
 
 def extract_feed_items(data: Any) -> list[dict]:
-    """newsFeed (RSS + GDELT) és Telegram posztok egységes rekordlistává."""
-
+    """Crucix RSS/GDELT feedek és Telegram-posztok normalizálása."""
     if not isinstance(data, dict) or not data:
         return []
 
     items: list[dict] = []
 
-    # Telegram elemeket a tg blokkból vesszük (teljes szöveggel), a newsFeed-ből kihagyjuk
+    # A jelenlegi Crucix API newsFeed struktúrája.
     for n in data.get("newsFeed") or []:
         if not isinstance(n, dict) or n.get("type") == "telegram":
             continue
         items.append({
             "kind": n.get("type") or "news",
-            "title": n.get("headline"),
-            "content": None,
+            "title": n.get("headline") or n.get("title"),
+            "content": n.get("content") or n.get("description"),
             "source": n.get("source"),
             "region": n.get("region"),
             "url": n.get("url"),
             "urgent": bool(n.get("urgent")),
-            "published_at": _to_iso(n.get("timestamp")),
+            "published_at": _to_iso(n.get("timestamp") or n.get("published_at")),
             "raw": n,
         })
 
     tg = data.get("tg") or {}
-    for key, urgent in (("urgent", True), ("topPosts", False)):
-        for p in tg.get(key) or []:
-            if not isinstance(p, dict):
-                continue
-            items.append({
-                "kind": "telegram",
-                "title": (p.get("text") or "")[:120],
-                "content": p.get("text"),
-                "source": p.get("channel"),
-                "region": "OSINT",
-                "url": None,
-                "urgent": urgent,
-                "published_at": _to_iso(p.get("date")),
-                "raw": p,
-            })
+    if isinstance(tg, dict):
+        for key, urgent in (("urgent", True), ("topPosts", False)):
+            for post in tg.get(key) or []:
+                if not isinstance(post, dict):
+                    continue
+                body = post.get("text") or post.get("content") or ""
+                items.append({
+                    "kind": "telegram",
+                    "title": body[:120],
+                    "content": body,
+                    "source": post.get("channel") or post.get("source"),
+                    "region": "OSINT",
+                    "url": post.get("url"),
+                    "urgent": urgent,
+                    "published_at": _to_iso(post.get("date") or post.get("timestamp")),
+                    "raw": post,
+                })
+
+    # Kompatibilitás: ha a Crucix közvetlenül osint_feeds-szerű tömböt ad vissza.
+    # A logika nem feltételezi, hogy ez létezik; a hivatalos feedforrás továbbra is newsFeed/tg.
+    direct_feeds = data.get("osint_feeds") or data.get("feeds") or []
+    for n in direct_feeds:
+        if not isinstance(n, dict):
+            continue
+        title = n.get("title") or n.get("headline") or n.get("name")
+        items.append({
+            "kind": n.get("kind") or n.get("type") or "news",
+            "title": title,
+            "content": n.get("content") or n.get("description") or n.get("summary"),
+            "source": n.get("source"),
+            "region": n.get("region"),
+            "url": n.get("url") or n.get("link"),
+            "urgent": bool(n.get("urgent")),
+            "published_at": _to_iso(n.get("published_at") or n.get("timestamp") or n.get("published")),
+            "raw": n,
+        })
 
     return items
 
@@ -272,10 +290,13 @@ def run_crucix_pipeline(max_items: int = 500, filter_keywords: bool = True):
         data = crucix_get()
         fetched_at = datetime.now(timezone.utc).isoformat()
         rows = build_crucix_news_rows(data, fetched_at, max_items, filter_keywords)
-        logger.info("Crucix: %d sor a bronze.cryptonews táblába", len(rows))
+        logger.info("Crucix: %d szöveges feed/Telegram hír a bronze.cryptonews táblába", len(rows))
 
         if not rows:
-            logger.warning("Crucix: nincs mentendő adat (az első sweep 30-60 mp-ig tarthat, vagy nincs kulcsszó-találat)")
+            logger.warning(
+                "Crucix: 0 szöveges hír. Ellenőrizd a /preview?filter_keywords=false végpontot, "
+                "a newsFeed/tg/osint_feeds JSON-kulcsokat és a CRYPTO_KEYWORDS listát."
+            )
             return {"rows": 0, "load_info": None}
 
         load_info = get_pipeline().run(cryptonews_resource(rows))
@@ -400,7 +421,7 @@ def fetch_twitter_rows() -> list[dict]:
                     "retweet_count": tweet.get("retweetCount"),
                     "reply_count": tweet.get("replyCount"),
                     "view_count": tweet.get("viewCount"),
-                    "fetched_at": fetched_at,
+                                                                            "fetched_at": fetched_at,
                     "raw_data": tweet,
                 })
                 kept += 1
@@ -411,16 +432,15 @@ def fetch_twitter_rows() -> list[dict]:
     return rows
 
 
-def run_twitter_pipeline(force: bool = False) -> dict:
+def run_twitter_pipeline() -> dict:
     if not TWITTER_API_KEY:
         logger.warning("Twitter: hiányzik a TWITTER_API_KEY környezeti változó, kihagyva")
         return {"status": "no_api_key"}
 
-    if not force:
-        next_allowed = twitter_next_allowed()
-        if next_allowed and datetime.now(timezone.utc) < next_allowed:
-            logger.info("Twitter: kihagyva, a következő lekérés ekkor engedélyezett: %s", next_allowed.isoformat())
-            return {"status": "skipped_recent", "next_allowed": next_allowed.isoformat()}
+    next_allowed = twitter_next_allowed()
+    if next_allowed and datetime.now(timezone.utc) < next_allowed:
+        logger.info("Twitter: kihagyva, a következő lekérés ekkor engedélyezett: %s", next_allowed.isoformat())
+        return {"status": "skipped_recent", "next_allowed": next_allowed.isoformat()}
 
     rows = fetch_twitter_rows()
     if not rows:
@@ -447,7 +467,7 @@ def run_sources_background(request: RunRequest):
 
     if "twitter" in request.sources:
         try:
-            run_twitter_pipeline(force=request.force_twitter)
+            run_twitter_pipeline()
         except Exception:
             logger.exception("Twitter pipeline hiba")
 
@@ -461,8 +481,7 @@ async def trigger_cryptonews_pipeline(request: RunRequest, background_tasks: Bac
         "message": "Cryptonews pipeline elindítva a háttérben",
         "sources": request.sources,
         "filter_keywords": request.filter_keywords,
-        "twitter_min_interval_hours": TWITTER_MIN_INTERVAL_HOURS,
-        "force_twitter": request.force_twitter}
+        "twitter_min_interval_hours": TWITTER_MIN_INTERVAL_HOURS}
 
 
 # --------------------------------------------------
@@ -506,3 +525,4 @@ async def cryptonews_preview(limit: int = 10, filter_keywords: bool = True):
     return {
         "rows": {"cryptonews": len(news)},
         "cryptonews": [{k: v for k, v in r.items() if k != "raw_data"} for r in news[:limit]]}
+
