@@ -1,4 +1,4 @@
-# 2026.10.19  18.00
+# 2026.10.23  17.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -18,6 +18,7 @@ import apis.opensky_api as opensky_api
 import apis.crucix_api as crucix_api
 import apis.twitter_api as twitter_api
 import apis.eia_api as eia_api
+import apis.cryptonews_api as cryptonews_api
 
 # ----- 1. Initialize Dash -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="app_pages", assets_folder="app_assets", suppress_callback_exceptions=True,
@@ -84,6 +85,7 @@ server.include_router(opensky_api.router,       prefix="/api/opensky",       tag
 server.include_router(crucix_api.router,        prefix="/api/crucix",        tags=["Crucix"])
 server.include_router(twitter_api.router,       prefix="/api/twitter",       tags=["Twitter"])
 server.include_router(eia_api.router,           prefix="/api/eia",           tags=["EIA Energy"])
+server.include_router(cryptonews_api.router,    prefix="/api/cryptonews",    tags=["Crypto News"])
 
 # ----- 5. Health endpoint -----
 @server.get("/health")
