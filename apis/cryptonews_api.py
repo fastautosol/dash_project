@@ -23,7 +23,7 @@ import requests
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
-from cryptonews_silver import run_silver_transformation
+from apis.cryptonews_silver import run_silver_transformation
 
 logger = logging.getLogger("cryptonews_api")
 router = APIRouter()
