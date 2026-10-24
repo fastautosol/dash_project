@@ -11,6 +11,7 @@ def run_silver_transformation():
         conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")   
         conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver;") 
 
+        # 1. FACT FLIGHTS
         conn.execute("""
             CREATE OR REPLACE TABLE pg.silver.fact_lh_flights AS
             SELECT 
@@ -28,7 +29,7 @@ def run_silver_transformation():
                 departure__terminal__name AS dep_terminal,
                 departure__terminal__gate AS dep_gate,
 
-                -- Departure actual timestamp (DuckDB-Postgres kompatibilis TIMESTAMP-re alakítás)
+                -- Departure actual timestamp
                 CASE
                     WHEN departure__actual__date IS NOT NULL AND departure__actual__time IS NOT NULL
                     THEN (departure__actual__date::TEXT || ' ' || departure__actual__time::TEXT)::TIMESTAMP
@@ -74,7 +75,7 @@ def run_silver_transformation():
               AND departure__scheduled__date IS NOT NULL;
         """)
 
-        # JAVÍTOTT BLOKK: Az új DuckDB lambda szintaxissal (lambda x: ...)
+        # 2. LH SCHEDULE (Idő-tisztítással javított verzió)
         conn.execute("""
             CREATE OR REPLACE TABLE pg.silver.lh_schedule AS
             SELECT
@@ -99,24 +100,23 @@ def run_silver_transformation():
                 service_type,
                 operating::BOOLEAN AS is_operating,
                 
-                -- Idők kényszerítése TIME típusra
-                departure_time_utc::TIME AS departure_time_utc,
-                arrival_time_utc::TIME AS arrival_time_utc,
-                departure_time_lt::TIME AS departure_time_lt,
-                arrival_time_lt::TIME AS arrival_time_lt,
+                -- JAVÍTOTT IDŐ-KEZELÉS: Levágjuk a '+1d' jellegű végződéseket a biztonságos TIME konverzióhoz
+                regexp_replace(departure_time_utc, '\\+.*', '')::TIME AS departure_time_utc,
+                regexp_replace(arrival_time_utc, '\\+.*', '')::TIME AS arrival_time_utc,
+                regexp_replace(departure_time_lt, '\\+.*', '')::TIME AS departure_time_lt,
+                regexp_replace(arrival_time_lt, '\\+.*', '')::TIME AS arrival_time_lt,
                 
                 departure_terminal,
                 arrival_terminal,
                 marketing_flights,
         
-                -- >>> JAVÍTOTT LAMBDA SZINTAXIS <<<
-                -- Pl. ID 106 = Elérhető Foglalási Osztályok
+                -- Elérhető Foglalási Osztályok (Lambda x)
                 CAST(json_extract(
                     list_filter(CAST(data_elements_raw AS JSON[]), lambda x: json_extract_string(x, '$.id') = '106')[1], 
                     '$.value'
                 ) AS VARCHAR) AS booking_classes,
                 
-                -- Pl. ID 505 = Elektronikus Jegy jelző
+                -- Elektronikus Jegy jelző
                 CAST(json_extract(
                     list_filter(CAST(data_elements_raw AS JSON[]), lambda x: json_extract_string(x, '$.id') = '505')[1], 
                     '$.value'
