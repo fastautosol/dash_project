@@ -13,7 +13,7 @@ def run_silver_transformation():
 
         conn.execute("""
             CREATE OR REPLACE TABLE pg.silver.fact_lh_flights AS
-            SELECT
+            SELECT 
                 flight_key,
                 route_key,
                 status__code,
@@ -73,6 +73,59 @@ def run_silver_transformation():
               AND flight_key IS NOT NULL
               AND departure__scheduled__date IS NOT NULL;
         """)
+
+        # Helyezd el a silver script végrehajtó blokkjába (a fact_lh_flights CREATE után)
+        conn.execute("""
+            CREATE OR REPLACE TABLE pg.silver.lh_schedule AS
+            SELECT
+                flight_key,
+                airline,
+                flight_number,
+                flight_suffix,
+                operating_carrier,
+                origin,
+                destination,
+                route_key,
+                sequence_number,
+                
+                -- Dátumok kényszerítése típusra
+                schedule_start_date::DATE AS schedule_start_date,
+                schedule_end_date::DATE AS schedule_end_date,
+                days_of_operation,
+        
+                aircraft_type,
+                aircraft_configuration,
+                registration,
+                service_type,
+                operating::BOOLEAN AS is_operating,
+                
+                -- Idők kényszerítése TIME típusra
+                departure_time_utc::TIME AS departure_time_utc,
+                arrival_time_utc::TIME AS arrival_time_utc,
+                departure_time_lt::TIME AS departure_time_lt,
+                arrival_time_lt::TIME AS arrival_time_lt,
+                
+                departure_terminal,
+                arrival_terminal,
+                marketing_flights,
+        
+                -- >>> ÉRTÉKES JAVAK KINYERÉSE A data_elements_raw JSON-BÓL DuckDB-VEL <<<
+                -- Pl. ID 106 = Elérhető Foglalási Osztályok (Célzott karakterláncként)
+                CAST(json_extract(
+                    list_filter(CAST(data_elements_raw AS JSON[]), x -> json_extract_string(x, '$.id') = '106')[1], 
+                    '$.value'
+                ) AS VARCHAR) AS booking_classes,
+                
+                -- Pl. ID 505 = Elektronikus Jegy jelző
+                CAST(json_extract(
+                    list_filter(CAST(data_elements_raw AS JSON[]), x -> json_extract_string(x, '$.id') = '505')[1], 
+                    '$.value'
+                ) AS VARCHAR) AS e_ticket_indicator,
+        
+                _ingested_at
+            FROM pg.bronze.lh_schedule;
+        """)
+
 
         print("Silver réteg sikeresen frissítve a Postgres-ben!")
 
