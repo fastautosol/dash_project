@@ -83,7 +83,7 @@ dash.register_page(__name__, path="/", name="Bybit Charts", order=0, assets_fold
 
 layout = dbc.Container(
     [
-    html.Div([html.H2("Crypto Multi Charts (Polars Engine)", className="text-light fw-bold mb-0")], className="mb-4"),
+    html.Div([html.H2("Crypto Multi Charts", className="text-light fw-bold mb-0")], className="mb-4"),
     html.Div(id="page-load-trigger", style={"display": "none"}),
     html.Div(id="lwc-render-trigger", style={"display": "none"}),
     dcc.Interval(id="lwc-timer", interval=30_000, n_intervals=0),
