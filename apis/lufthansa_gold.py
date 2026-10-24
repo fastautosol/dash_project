@@ -90,6 +90,28 @@ def run_gold_transformation():
                 CASE WHEN EXTRACT(isodow FROM date_val) IN (6, 7) THEN TRUE ELSE FALSE END AS is_weekend
             FROM date_range;
         """)
+
+        conn.execute("""
+            CREATE OR REPLACE TABLE pg.gold.dim_lh_schedule AS
+            SELECT
+                flight_key AS schedule_id, -- Egyedi PK a csatlakozáshoz
+                airline,
+                flight_number,
+                origin AS dep_airport_code,
+                destination AS arr_airport_code,
+                route_key,
+                schedule_start_date AS flight_date_id, -- Dátumdimenzió kapcsolat
+                days_of_operation,
+                aircraft_type,
+                aircraft_configuration,
+                booking_classes,
+                departure_terminal,
+                arrival_terminal,
+                marketing_flights,
+                _ingested_at
+            FROM pg.silver.lh_schedule;
+        """)
+        
         print("Gold réteg sikeresen frissítve a Postgres-ben!")
     finally:
         conn.close()  # elengedi a Postgres táblákat az indexeléshez
@@ -99,6 +121,7 @@ def run_gold_transformation():
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_date ADD PRIMARY KEY (date_id);"))
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_airports ADD PRIMARY KEY (airport_code);"))
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_aircraft ADD PRIMARY KEY (aircraft_code);"))
+        pg_conn.execute(text("ALTER TABLE gold.dim_lh_schedule ADD PRIMARY KEY (schedule_id);"))
 
         # Ezek az indexek megmaradtak, mert a csillagséma (Star Schema) kapcsolatok felépítését gyorsítják a beolvasáskor
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_date ON gold.fact_lh_flights (flight_date_id);"))
