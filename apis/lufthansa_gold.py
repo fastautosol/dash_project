@@ -1,3 +1,4 @@
+# 2026.10.24  18.00
 import duckdb
 from sqlalchemy import create_engine, text
 from apis.lufthansa_airports import AIRPORTS
@@ -13,22 +14,29 @@ def run_gold_transformation():
         conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")
         conn.execute("CREATE SCHEMA IF NOT EXISTS pg.gold;")
 
-        # 1. gold.fact_lh_flights
+        # 1. gold.fact_lh_flights (Fizikai számított oszlop DuckDB szinten előkészítve)
         conn.execute("""
             CREATE OR REPLACE TABLE pg.gold.fact_lh_flights AS
-            SELECT flight_key, route_key, dep_airport_code, arr_airport_code, equipment__aircraft_code,
-                dep_sch_ts::DATE AS flight_date_id,
+            WITH calculated_delays AS (
+                SELECT flight_key, route_key, dep_airport_code, arr_airport_code, equipment__aircraft_code,
+                    dep_sch_ts::DATE AS flight_date_id,
 
-                COALESCE(date_diff('minute', dep_sch_ts, dep_act_ts), 0) AS dep_delay_min,
-                COALESCE(date_diff('minute', arr_sch_ts, arr_act_ts), 0) AS arr_delay_min,
+                    COALESCE(date_diff('minute', dep_sch_ts, dep_act_ts), 0) AS dep_delay_min,
+                    COALESCE(date_diff('minute', arr_sch_ts, arr_act_ts), 0) AS arr_delay_min,
 
-                CASE WHEN status__code = 'LD' THEN 1 ELSE 0 END AS is_landed,
-                CASE WHEN status__code = 'ON' THEN 1 ELSE 0 END AS is_ontime,
-                CASE WHEN status__code = 'DL' THEN 1 ELSE 0 END AS is_delayed,
+                    CASE WHEN status__code = 'LD' THEN 1 ELSE 0 END AS is_landed,
+                    CASE WHEN status__code = 'ON' THEN 1 ELSE 0 END AS is_ontime,
+                    CASE WHEN status__code = 'DL' THEN 1 ELSE 0 END AS is_delayed,
 
-                dep_sch_ts, dep_act_ts, arr_sch_ts, arr_act_ts, _ingested_at
-            FROM pg.silver.fact_lh_flights
-            WHERE dep_sch_ts IS NOT NULL AND arr_sch_ts IS NOT NULL;
+                    dep_sch_ts, dep_act_ts, arr_sch_ts, arr_act_ts, _ingested_at
+                FROM pg.silver.fact_lh_flights
+                WHERE dep_sch_ts IS NOT NULL AND arr_sch_ts IS NOT NULL
+            )
+            SELECT 
+                *,
+                -- A Power BI Import számára fizikai oszlopként mentve (0 extra CPU terhelés lekérdezéskor)
+                (dep_delay_min + arr_delay_min) AS total_delay_min
+            FROM calculated_delays;
         """)
 
         # 2. gold.dim_lh_airports (név/város/ország a statikus AIRPORTS referenciából)
@@ -86,13 +94,15 @@ def run_gold_transformation():
     finally:
         conn.close()  # elengedi a Postgres táblákat az indexeléshez
 
-    # Postgres indexelés (a CREATE OR REPLACE TABLE minden constraint-et törölt, így újra létrehozhatók)
+    # Postgres indexelés (Elsődleges kulcsok és alapvető idegen kulcs indexek a modellezéshez)
     with sql_engine.begin() as pg_conn:  # begin() = automatikus commit
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_date ADD PRIMARY KEY (date_id);"))
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_airports ADD PRIMARY KEY (airport_code);"))
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_aircraft ADD PRIMARY KEY (aircraft_code);"))
 
+        # Ezek az indexek megmaradtak, mert a csillagséma (Star Schema) kapcsolatok felépítését gyorsítják a beolvasáskor
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_date ON gold.fact_lh_flights (flight_date_id);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_dep_air ON gold.fact_lh_flights (dep_airport_code);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_arr_air ON gold.fact_lh_flights (arr_airport_code);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_aircraft ON gold.fact_lh_flights (equipment__aircraft_code);"))
+
