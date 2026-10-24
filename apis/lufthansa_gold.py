@@ -48,6 +48,10 @@ def run_gold_transformation():
                 SELECT dep_airport_code AS airport_code FROM pg.silver.fact_lh_flights WHERE dep_airport_code IS NOT NULL
                 UNION
                 SELECT arr_airport_code AS airport_code FROM pg.silver.fact_lh_flights WHERE arr_airport_code IS NOT NULL
+                UNION
+                SELECT dep_airport_code AS airport_code FROM pg.silver.lh_schedule WHERE dep_airport_code IS NOT NULL
+                UNION
+                SELECT arr_airport_code AS airport_code FROM pg.silver.lh_schedule WHERE arr_airport_code IS NOT NULL    
             )
             SELECT a.airport_code, r.airport_name, r.city, r.country
             FROM all_airports a
