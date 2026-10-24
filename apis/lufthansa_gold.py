@@ -90,13 +90,14 @@ def run_gold_transformation():
         conn.execute("""
             CREATE OR REPLACE TABLE pg.gold.dim_lh_airports AS
             WITH all_airports AS (
-                SELECT dep_airport_code AS airport_code FROM pg.silver.fact_lh_flights WHERE dep_airport_code IS NOT NULL
+                SELECT dep_airport_code AS airport_code FROM pg.gold.fact_lh_flights WHERE dep_airport_code IS NOT NULL
                 UNION
-                SELECT arr_airport_code AS airport_code FROM pg.silver.fact_lh_flights WHERE arr_airport_code IS NOT NULL
+                SELECT arr_airport_code AS airport_code FROM pg.gold.fact_lh_flights WHERE arr_airport_code IS NOT NULL
                 UNION
-                SELECT dep_airport_code AS airport_code FROM pg.silver.lh_schedule WHERE dep_airport_code IS NOT NULL
+                -- Itt a pg.gold.dim_lh_schedule táblát olvassuk, amiben már a tiszta oszlopnevek vannak!
+                SELECT dep_airport_code AS airport_code FROM pg.gold.dim_lh_schedule WHERE dep_airport_code IS NOT NULL
                 UNION
-                SELECT arr_airport_code AS airport_code FROM pg.silver.lh_schedule WHERE arr_airport_code IS NOT NULL
+                SELECT arr_airport_code AS airport_code FROM pg.gold.dim_lh_schedule WHERE arr_airport_code IS NOT NULL
             )
             SELECT a.airport_code, r.airport_name, r.city, r.country
             FROM all_airports a
