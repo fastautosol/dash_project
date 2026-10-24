@@ -8,7 +8,7 @@ def run_silver_transformation():
     try:
         conn.execute("INSTALL postgres; LOAD postgres;")
         conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")   
-        conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver")
+        conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver;") # Pontosvessző kitéve
 
         conn.execute("""
             CREATE OR REPLACE TABLE pg.silver.fact_lh_flights AS
@@ -27,21 +27,17 @@ def run_silver_transformation():
                 departure__terminal__name AS dep_terminal,
                 departure__terminal__gate AS dep_gate,
 
-                -- Departure actual timestamp
+                -- Departure actual timestamp (DuckDB-Postgres kompatibilis TIMESTAMP-re alakítás)
                 CASE
-                    WHEN departure__actual__date IS NOT NULL
-                     AND departure__actual__time IS NOT NULL
-                    THEN departure__actual__date::DATE
-                         + departure__actual__time::TIME
+                    WHEN departure__actual__date IS NOT NULL AND departure__actual__time IS NOT NULL
+                    THEN (departure__actual__date::TEXT || ' ' || departure__actual__time::TEXT)::TIMESTAMP
                     ELSE NULL
                 END AS dep_act_ts,
 
                 -- Departure scheduled timestamp
                 CASE
-                    WHEN departure__scheduled__date IS NOT NULL
-                     AND departure__scheduled__time IS NOT NULL
-                    THEN departure__scheduled__date::DATE
-                         + departure__scheduled__time::TIME
+                    WHEN departure__scheduled__date IS NOT NULL AND departure__scheduled__time IS NOT NULL
+                    THEN (departure__scheduled__date::TEXT || ' ' || departure__scheduled__time::TEXT)::TIMESTAMP
                     ELSE NULL
                 END AS dep_sch_ts,
 
@@ -53,19 +49,15 @@ def run_silver_transformation():
 
                 -- Arrival actual timestamp
                 CASE
-                    WHEN arrival__actual__date IS NOT NULL
-                     AND arrival__actual__time IS NOT NULL
-                    THEN arrival__actual__date::DATE
-                         + arrival__actual__time::TIME
+                    WHEN arrival__actual__date IS NOT NULL AND arrival__actual__time IS NOT NULL
+                    THEN (arrival__actual__date::TEXT || ' ' || arrival__actual__time::TEXT)::TIMESTAMP
                     ELSE NULL
                 END AS arr_act_ts,
 
                 -- Arrival scheduled timestamp
                 CASE
-                    WHEN arrival__scheduled__date IS NOT NULL
-                     AND arrival__scheduled__time IS NOT NULL
-                    THEN arrival__scheduled__date::DATE
-                         + arrival__scheduled__time::TIME
+                    WHEN arrival__scheduled__date IS NOT NULL AND arrival__scheduled__time IS NOT NULL
+                    THEN (arrival__scheduled__date::TEXT || ' ' || arrival__scheduled__time::TEXT)::TIMESTAMP
                     ELSE NULL
                 END AS arr_sch_ts,
 
@@ -78,9 +70,10 @@ def run_silver_transformation():
 
             WHERE route_key IS NOT NULL
               AND flight_key IS NOT NULL
-              AND departure__scheduled__date IS NOT NULL
+              AND departure__scheduled__date IS NOT NULL;
         """)
 
+        print("Silver réteg sikeresen frissítve a Postgres-ben!")
 
     except Exception as exc:
         print(f"Silver Table error: {exc}")
@@ -88,3 +81,4 @@ def run_silver_transformation():
 
     finally:
         conn.close()
+
