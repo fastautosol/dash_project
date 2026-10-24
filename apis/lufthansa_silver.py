@@ -9,7 +9,7 @@ def run_silver_transformation():
     try:
         conn.execute("INSTALL postgres; LOAD postgres;")
         conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")   
-        conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver;") # Pontosvessző kitéve
+        conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver;") 
 
         conn.execute("""
             CREATE OR REPLACE TABLE pg.silver.fact_lh_flights AS
@@ -74,7 +74,7 @@ def run_silver_transformation():
               AND departure__scheduled__date IS NOT NULL;
         """)
 
-        # Helyezd el a silver script végrehajtó blokkjába (a fact_lh_flights CREATE után)
+        # JAVÍTOTT BLOKK: Az új DuckDB lambda szintaxissal (lambda x: ...)
         conn.execute("""
             CREATE OR REPLACE TABLE pg.silver.lh_schedule AS
             SELECT
@@ -109,23 +109,22 @@ def run_silver_transformation():
                 arrival_terminal,
                 marketing_flights,
         
-                -- >>> ÉRTÉKES JAVAK KINYERÉSE A data_elements_raw JSON-BÓL DuckDB-VEL <<<
-                -- Pl. ID 106 = Elérhető Foglalási Osztályok (Célzott karakterláncként)
+                -- >>> JAVÍTOTT LAMBDA SZINTAXIS <<<
+                -- Pl. ID 106 = Elérhető Foglalási Osztályok
                 CAST(json_extract(
-                    list_filter(CAST(data_elements_raw AS JSON[]), x -> json_extract_string(x, '$.id') = '106')[1], 
+                    list_filter(CAST(data_elements_raw AS JSON[]), lambda x: json_extract_string(x, '$.id') = '106')[1], 
                     '$.value'
                 ) AS VARCHAR) AS booking_classes,
                 
                 -- Pl. ID 505 = Elektronikus Jegy jelző
                 CAST(json_extract(
-                    list_filter(CAST(data_elements_raw AS JSON[]), x -> json_extract_string(x, '$.id') = '505')[1], 
+                    list_filter(CAST(data_elements_raw AS JSON[]), lambda x: json_extract_string(x, '$.id') = '505')[1], 
                     '$.value'
                 ) AS VARCHAR) AS e_ticket_indicator,
         
                 _ingested_at
             FROM pg.bronze.lh_schedule;
         """)
-
 
         print("Silver réteg sikeresen frissítve a Postgres-ben!")
 
