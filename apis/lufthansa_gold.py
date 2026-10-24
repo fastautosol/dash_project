@@ -91,27 +91,51 @@ def run_gold_transformation():
             FROM date_range;
         """)
 
+        # 5. gold.dim_lh_schedule (ÚJ MENETRENDI DIMENZIÓTÁBLA)
         conn.execute("""
             CREATE OR REPLACE TABLE pg.gold.dim_lh_schedule AS
             SELECT
-                flight_key AS schedule_id, -- Egyedi PK a csatlakozáshoz
+                flight_key AS schedule_id, -- Egyedi PK a Power BI modellhez
                 airline,
                 flight_number,
+                flight_suffix,
+                operating_carrier,
                 origin AS dep_airport_code,
                 destination AS arr_airport_code,
                 route_key,
-                schedule_start_date AS flight_date_id, -- Dátumdimenzió kapcsolat
+                sequence_number,
+                
+                -- Idő dimenzióhoz csatolható dátum ID
+                schedule_start_date AS flight_date_id, 
+                schedule_end_date,
                 days_of_operation,
+                
                 aircraft_type,
                 aircraft_configuration,
-                booking_classes,
+                registration,
+                service_type,
+                is_operating,
+                
+                departure_time_utc,
+                arrival_time_utc,
+                departure_time_lt,
+                arrival_time_lt,
+                
                 departure_terminal,
                 arrival_terminal,
                 marketing_flights,
+                
+                -- A Silver rétegben kinyert értékes JSON mezők
+                booking_classes,
+                e_ticket_indicator,
+                
+                -- Egyedi kompozit üzleti kulcs, ha a menetrendet és a járat tényadatot össze akarod kötni
+                (airline || '_' || flight_number || '_' || schedule_start_date::TEXT) AS business_flight_key,
+                
                 _ingested_at
             FROM pg.silver.lh_schedule;
         """)
-        
+     
         print("Gold réteg sikeresen frissítve a Postgres-ben!")
     finally:
         conn.close()  # elengedi a Postgres táblákat az indexeléshez
@@ -128,4 +152,6 @@ def run_gold_transformation():
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_dep_air ON gold.fact_lh_flights (dep_airport_code);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_arr_air ON gold.fact_lh_flights (arr_airport_code);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_aircraft ON gold.fact_lh_flights (equipment__aircraft_code);"))
+        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_sched_date ON gold.dim_lh_schedule (flight_date_id);"))
+        pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_sched_route ON gold.dim_lh_schedule (route_key);"))
 
