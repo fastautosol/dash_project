@@ -15,6 +15,7 @@ def run_gold_transformation():
         conn.execute("CREATE SCHEMA IF NOT EXISTS pg.gold;")
 
         # 1. gold.fact_lh_flights
+                # 1. gold.fact_lh_flights (JAVÍTOTT, repülési szabvány szerinti pontosság-számítással)
         conn.execute("""
             CREATE OR REPLACE TABLE pg.gold.fact_lh_flights AS
             WITH calculated_delays AS (
@@ -25,19 +26,22 @@ def run_gold_transformation():
                     COALESCE(date_diff('minute', arr_sch_ts, arr_act_ts), 0) AS arr_delay_min,
 
                     CASE WHEN status__code = 'LD' THEN 1 ELSE 0 END AS is_landed,
-                    CASE WHEN status__code = 'ON' THEN 1 ELSE 0 END AS is_ontime,
-                    CASE WHEN status__code = 'DL' THEN 1 ELSE 0 END AS is_delayed,
 
                     dep_sch_ts, dep_act_ts, arr_sch_ts, arr_act_ts, _ingested_at
                 FROM pg.silver.fact_lh_flights
                 WHERE dep_sch_ts IS NOT NULL AND arr_sch_ts IS NOT NULL
-            )
+            ),
+            final_metrics AS (SELECT  *, (dep_delay_min + arr_delay_min) AS total_delay_min FROM calculated_delays)
             SELECT 
                 *,
-                -- Fizikai oszlopként mentve, hogy ne terhelje a Postgres CPU-t a Power BI Import során
-                (dep_delay_min + arr_delay_min) AS total_delay_min
-            FROM calculated_delays;
+                -- PONTOSSÁG: Ha az indulási ÉS érkezési késés is 15 percen belül volt (Nemzetközi turnus szabvány)
+                CASE WHEN dep_delay_min <= 15 AND arr_delay_min <= 15 THEN 1 ELSE 0 END AS is_ontime,
+                
+                -- KÉSÉS: Ha akár az indulás, akár az érkezés több mint 15 percet csúszott
+                CASE WHEN dep_delay_min > 15 OR arr_delay_min > 15 THEN 1 ELSE 0 END AS is_delayed
+            FROM final_metrics;
         """)
+
 
         # 2. gold.dim_lh_schedule (ÚJ MENETRENDI DIMENZIÓTÁBLA)
         conn.execute("""
