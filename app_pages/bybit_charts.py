@@ -220,10 +220,13 @@ layout = dbc.Container(
     prevent_initial_call=False,
 )
 def load_all_charts(_, n, indicators):
-    with get_duck_connection() as conn:
+    conn = get_duck_connection()
+    try:
         all_data_pl = conn.execute(
             "SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles"
         ).pl()
+    finally:
+        conn.close()
         
     if all_data_pl.height == 0:
         return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
@@ -246,8 +249,11 @@ def load_news(_, sort_mode):
     sort_mode = sort_mode if sort_mode in NEWS_ORDER else "latest"
     try:
         sql = NEWS_SQL.format(hours=NEWS_HOURS, order=NEWS_ORDER[sort_mode], limit=NEWS_LIMIT)
-        with get_duck_connection() as conn:
+        conn = get_duck_connection()
+        try:
             rows = conn.execute(sql).pl().to_dicts()
+        finally:
+            conn.close()
     except Exception:
         logger.exception("Hírek betöltése sikertelen")
         return html.Div("A hírek átmenetileg nem elérhetők.", className="text-muted small")
