@@ -1,4 +1,4 @@
-# 2026.10.23  cryptonews_api.py  -  Crucix (OSINT) + Twitter egyetlen bronze.cryptonews táblába
+# 2026.10.26  cryptonews_api.py  -  Crucix (OSINT) + Twitter egyetlen bronze.cryptonews táblába
 #
 # Bronze tábla (egyetlen):
 #   bronze.cryptonews     közös hírtábla: Crucix (RSS, GDELT, Telegram) + Twitter posztok
