@@ -217,10 +217,9 @@ layout = dbc.Container(
 def load_all_charts(_, n, indicators):
     conn = get_duck_connection()
     try:
-        # JAVÍTÁS: .pl() helyett az Arrow interfészen keresztül töltjük be Polars-ba
-        all_data_pl = pl.from_arrow(conn.execute(
+        all_data_pl = pl.from_arrow(conn.sql(
             "SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles"
-        ).fetch_arrow_table())
+        ).arrow())
     finally:
         conn.close()
 
@@ -245,8 +244,7 @@ def load_news(_, sort_mode):
         sql = NEWS_SQL.format(hours=NEWS_HOURS, order=NEWS_ORDER[sort_mode], limit=NEWS_LIMIT)
         conn = get_duck_connection()
         try:
-            # JAVÍTÁS: .pl() helyett az Arrow interfészen keresztül töltjük be Polars-ba
-            rows = pl.from_arrow(conn.execute(sql).fetch_arrow_table()).to_dicts()
+            rows = pl.from_arrow(conn.sql(sql).arrow()).to_dicts()
         finally:
             conn.close()
     except Exception:
