@@ -41,8 +41,7 @@ DB_CONFIG = {
     "connect_timeout": 15}
 
 DB_URL = os.getenv(
-    "DB_URL",
-    f"postgresql://{DB_CONFIG['username']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}")
+    "DB_URL", f"postgresql://{DB_CONFIG['username']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}")
 engine = create_engine(DB_URL, pool_pre_ping=True)
 
 REQUEST_TIMEOUT = 30
@@ -155,15 +154,11 @@ def is_relevant(item: dict) -> bool:
 
 
 def get_pipeline():
-    return dlt.pipeline(
-        pipeline_name=PIPELINE_NAME,
-        destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-        dataset_name=DATASET_NAME)
+    return dlt.pipeline(pipeline_name=PIPELINE_NAME, destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name=DATASET_NAME)
 
 
 def cryptonews_resource(rows: list[dict]):
-    return dlt.resource(rows, name="cryptonews", write_disposition="merge",
-                        primary_key="record_id", columns=CRYPTONEWS_COLUMNS)
+    return dlt.resource(rows, name="cryptonews", write_disposition="merge", primary_key="record_id", columns=CRYPTONEWS_COLUMNS)
 
 
 # --------------------------------------------------
