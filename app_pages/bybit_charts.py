@@ -220,7 +220,7 @@ layout = dbc.Container(
 )
 def load_all_charts(_, n, indicators):
     # 1. Egyetlen szupergyors bináris adatátvitel DuckDB-vel -> Azonnal Polars DataFrame lesz (.pl())
-    all_data_pl = duck_conn.cursor().execute(
+    all_data_pl = duck_conn.sql(
         "SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").pl()
     if all_data_pl.height == 0:
         return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
@@ -243,7 +243,7 @@ def load_news(_, sort_mode):
     sort_mode = sort_mode if sort_mode in NEWS_ORDER else "latest"
     try:
         sql = NEWS_SQL.format(hours=NEWS_HOURS, order=NEWS_ORDER[sort_mode], limit=NEWS_LIMIT)
-        rows = duck_conn.cursor().execute(sql).pl().to_dicts()
+        rows = duck_conn.sql(sql).pl().to_dicts()
     except Exception:
         # pl. a silver tábla újraépítése közben pillanatnyilag nem létezik
         logger.exception("Hírek betöltése sikertelen")
