@@ -86,7 +86,7 @@ CRYPTONEWS_COLUMNS = {
     "retweet_count": {"data_type": "bigint"},
     "reply_count": {"data_type": "bigint"},
     "view_count": {"data_type": "bigint"},
-    "raw_data": {"data_type": "json"}},
+    "raw_data": {"data_type": "json"},
     "region": {"data_type": "text"},
     "external_id": {"data_type": "text"},
     "url": {"data_type": "text"},
