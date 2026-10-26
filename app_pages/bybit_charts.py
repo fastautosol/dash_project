@@ -143,10 +143,7 @@ def _news_item(r, sort_mode):
         style={"borderLeft": f"3px solid {accent}", "padding": "4px 8px", "marginBottom": "8px",
                "backgroundColor": "#161616", "borderRadius": "4px"})
 
-# ─────────────────────────────────────────────────────────────
-# REGISTER PAGE & LAYOUT
-# ─────────────────────────────────────────────────────────────
-dash.register_page(__name__, path="/", name="Bybit Charts", order=0, assets_folder="app_assets")
+# ----- LAYOUT ------
 
 charts_grid = dbc.Row(
     [
@@ -155,8 +152,7 @@ charts_grid = dbc.Row(
             html.Div(id=f"chart-{sym.replace('/', '-')}", style={"width": "100%", "height": "140px"}),
         ], style=CARD_STYLE), xs=12, sm=6, md=4, lg=4, xl=4)     # 3 oszlop
         for sym in SYMBOLS
-    ], className="g-3 mb-3"
-)
+    ], className="g-3 mb-3")
 
 news_panel = html.Div(
     [
@@ -169,9 +165,7 @@ news_panel = html.Div(
         html.Div(id="news-panel", style={"overflowY": "auto", "flex": "1"}),
         dcc.Interval(id="news-timer", interval=60_000, n_intervals=0),
     ],
-    style={**CARD_STYLE, "position": "sticky", "top": "10px", "height": "calc(100vh - 20px)",
-           "display": "flex", "flexDirection": "column"}
-)
+    style={**CARD_STYLE, "position": "sticky", "top": "10px", "height": "calc(100vh - 20px)", "display": "flex", "flexDirection": "column"})
 
 layout = dbc.Container(
     [
@@ -267,3 +261,7 @@ clientside_callback(
     Input("lwc-store", "data"),
     Input("indicator-selector", "value"),
 )
+
+
+# ----- REGISTER PAGE -----
+dash.register_page(__name__, path="/", name="Bybit Charts", order=0, assets_folder="app_assets")
