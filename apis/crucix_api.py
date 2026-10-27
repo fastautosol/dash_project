@@ -11,6 +11,7 @@ import dlt
 import requests
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
+from apis.osint_silver import run_osint_silver_transformation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
