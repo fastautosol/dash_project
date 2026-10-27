@@ -1,10 +1,4 @@
-"""
-Crucix OSINT ingestion -> PostgreSQL bronze.osint_feeds
-
-Only imports the Crucix newsFeed (RSS/GDELT) and Telegram OSINT items.
-Markets, metals, energy and air-hotspot data are intentionally excluded.
-"""
-
+# 2026.10.27 Crucix OSINT
 import hashlib
 import logging
 import os
@@ -25,10 +19,7 @@ router = APIRouter()
 # Configuration
 # ---------------------------------------------------------------------
 
-CRUCIX_API_URL = os.getenv(
-    "CRUCIX_API_URL",
-    "http://crucix:3117/api/data",
-)
+CRUCIX_API_URL = os.getenv("CRUCIX_API_URL", "http://crucix:3117/api/data")
 REQUEST_TIMEOUT = 30
 
 DB_CONFIG = {
@@ -37,31 +28,32 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "n8n"),
     "username": os.getenv("DB_USER", "sql_admin"),
     "password": os.getenv("DB_PASSWORD", "sql_pass"),
-    "connect_timeout": 15,
-}
+    "connect_timeout": 15}
 
 # Crucix dashboard typically exposes up to 50 news items and 50 Telegram/feed items.
 MAX_NEWS_ITEMS = 50
 MAX_TELEGRAM_ITEMS = 50
 
+OSINT_COLUMNS = {
+    "raw_data": {"data_type": "json"},
+    "published_at": {"data_type": "timestamp"},
+    "fetched_at": {"data_type": "timestamp"},
+    "urgent": {"data_type": "bool"},
+    "region": {"data_type": "text"},
+    "content": {"data_type": "text"},
+    "url": {"data_type": "text"},
+}
+
 CRYPTO_KEYWORDS = [
     "crypto", "bitcoin", "btc", "eth", "ethereum", "sol", "sui",
     "meme", "defi", "rwa", "tokenization", "fed", "federal reserve",
     "inflation", "interest rate", "treasury", "financial market",
-    "stock market", "oil price",
-]
-KEYWORD_RE = re.compile(
-    r"\b(?:" + "|".join(re.escape(word) for word in CRYPTO_KEYWORDS) + r")\b",
-    re.IGNORECASE,
-)
-
+    "stock market", "oil price"]
+KEYWORD_RE = re.compile(r"\b(?:" + "|".join(re.escape(word) for word in CRYPTO_KEYWORDS) + r")\b", re.IGNORECASE)
 
 class CrucixRequest(BaseModel):
-    # Kept for compatibility with existing API callers. The cap is applied
-    # independently to news and Telegram items, so the total can be up to 100.
-    max_items: int = Field(default=50, ge=1, le=5000)
+    max_items: int = Field(default=50, ge=1, le=500)
     filter_keywords: bool = False
-
 
 # ---------------------------------------------------------------------
 # Crucix API and helpers
@@ -69,11 +61,7 @@ class CrucixRequest(BaseModel):
 
 def crucix_get() -> Any:
     """Fetch the current Crucix /api/data payload."""
-    response = requests.get(
-        CRUCIX_API_URL,
-        timeout=REQUEST_TIMEOUT,
-        headers={"Accept": "application/json"},
-    )
+    response = requests.get(CRUCIX_API_URL, timeout=REQUEST_TIMEOUT, headers={"Accept": "application/json"})
     response.raise_for_status()
     return response.json()
 
@@ -240,27 +228,15 @@ def run_crucix_pipeline(
 
         pipeline = dlt.pipeline(
             pipeline_name="crucix_osint_pipeline",
-            destination=destination or dlt.destinations.postgres(
-                credentials=DB_CONFIG
-            ),
-            dataset_name="bronze",
-        )
+            destination=destination or dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze")
 
-        resource = dlt.resource(
-            feed_rows,
-            name="osint_feeds",
-            write_disposition="merge",
-            primary_key="record_id",
-            columns={"raw_data": {"data_type": "json"}},
-        )
+        resource = dlt.resource(feed_rows, name="osint_feeds", write_disposition="merge", primary_key="record_id", columns=OSINT_COLUMNS)
+
 
         load_info = pipeline.run(resource)
         logger.info("Crucix DLT pipeline sikeres: %s", load_info)
 
-        return {
-            "counts": counts,
-            "load_info": str(load_info),
-        }
+        return {"counts": counts, "load_info": str(load_info)}
 
     except Exception:
         logger.exception("Crucix pipeline hiba")
@@ -269,12 +245,15 @@ def run_crucix_pipeline(
 
 def run_pipeline_background(max_items: int, filter_keywords: bool) -> None:
     try:
-        run_crucix_pipeline(
-            max_items=max_items,
-            filter_keywords=filter_keywords,
-        )
+        run_crucix_pipeline(max_items=max_items, filter_keywords=filter_keywords)
     except Exception:
         # The full exception has already been logged by run_crucix_pipeline.
+        pass
+        
+    try:
+        run_osint_silver_transformation()
+    except Exception:
+        # A silver hibát a run_osint_silver_transformation már logolta.
         pass
 
 
@@ -283,15 +262,8 @@ def run_pipeline_background(max_items: int, filter_keywords: bool) -> None:
 # ---------------------------------------------------------------------
 
 @router.post("/run")
-async def trigger_crucix_pipeline(
-    request: CrucixRequest,
-    background_tasks: BackgroundTasks,
-):
-    background_tasks.add_task(
-        run_pipeline_background,
-        request.max_items,
-        request.filter_keywords,
-    )
+async def trigger_crucix_pipeline(request: CrucixRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(run_pipeline_background, request.max_items, request.filter_keywords)
     return {
         "status": "accepted",
         "message": "Crucix news/feed pipeline elindítva a háttérben",
@@ -306,12 +278,7 @@ async def crucix_health():
     try:
         data = crucix_get()
         fetched_at = datetime.now(timezone.utc).isoformat()
-        rows = build_feed_rows(
-            data,
-            fetched_at,
-            max_items=MAX_NEWS_ITEMS,
-            filter_keywords=False,
-        )
+        rows = build_feed_rows(data, fetched_at, max_items=MAX_NEWS_ITEMS, filter_keywords=False)
         news_count = sum(1 for row in rows if row["kind"] != "telegram")
         telegram_count = sum(1 for row in rows if row["kind"] == "telegram")
 
@@ -319,18 +286,12 @@ async def crucix_health():
             "status": "ok",
             "crucix_api_url": CRUCIX_API_URL,
             "response_type": type(data).__name__,
-            "rows": {
-                "osint_feeds": len(rows),
-                "news": news_count,
-                "telegram_feed_items": telegram_count,
-            },
+            "rows": {"osint_feeds": len(rows), "news": news_count, "telegram_feed_items": telegram_count},
         }
+        
     except Exception as exc:
         logger.exception("Crucix API nem érhető el")
-        raise HTTPException(
-            status_code=502,
-            detail=f"Crucix API hiba ({CRUCIX_API_URL}): {exc}",
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"Crucix API hiba ({CRUCIX_API_URL}): {exc}") from exc
 
 
 @router.get("/preview")
