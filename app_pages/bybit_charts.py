@@ -1,4 +1,4 @@
-# 2026.10.26 Polars + DuckDB Multi-Charts + Crypto News panel (silver.cryptonews)
+# 2026.10.28 Polars + DuckDB Multi-Charts + Crypto News panel (silver.cryptonews)
 import logging
 import polars as pl
 import duckdb
@@ -12,16 +12,13 @@ MAX_CANDLES = 300
 # Hírpanel beállítások
 NEWS_HOURS = 48       # ennyi órára visszamenőleg mutat híreket
 NEWS_LIMIT = 40       # legfeljebb ennyi hír
-NEWS_ORDER = {        # a rendezés fix, a felhasználói érték csak kulcs
-    "latest": "ts DESC",
-    "top": "importance_score DESC, ts DESC",
-}
+NEWS_ORDER = {"latest": "ts DESC", "top": "importance_score DESC, ts DESC"}
 
 NEWS_SQL = """
-SELECT provider, kind, source, title, url, urgent, importance_score, like_count, view_count,
+SELECT kind, source, title, url, urgent, importance_score, region,
 strftime(COALESCE(published_at, fetched_at) AT TIME ZONE 'Europe/Budapest', '%m.%d %H:%M') AS ts_local,
 COALESCE(published_at, fetched_at) AS ts
-FROM pg.silver.cryptonews
+FROM pg.silver.osint_feeds
 WHERE COALESCE(published_at, fetched_at) >= now() - INTERVAL '{hours} hours'
 ORDER BY {order}
 LIMIT {limit}
@@ -102,41 +99,26 @@ def _safe_url(url):
     """Csak http(s) linket engedünk (javascript: stb. ne kerülhessen href-be)."""
     return url if isinstance(url, str) and url.startswith(("http://", "https://")) else None
 
-def _short_num(n):
-    if n is None:
-        return None
-    n = int(n)
-    if n >= 1_000_000:
-        return f"{n / 1_000_000:.1f}M"
-    if n >= 1_000:
-        return f"{n / 1_000:.1f}k"
-    return str(n)
-
 def _news_item(r, sort_mode):
-    is_twitter = r["provider"] == "twitter"
-    source = r["source"] or r["provider"]
-    if is_twitter:
-        source = f"@{source}"
-    accent = "#ef5350" if r["urgent"] else ("#42a5f5" if is_twitter else "#26a69a")
-    
+    source = r["source"] or r["kind"]
+    accent = "#ef5350" if r["urgent"] else ("#ffb300" if r["region"] == "OSINT" else "#26a69a")
+
     meta = [
         html.Span(source, className="text-success"),
         html.Span(r["ts_local"] or "", className="text-muted"),
+        html.Span(r["kind"], className="text-info"),
     ]
     if r["urgent"]:
         meta.append(dbc.Badge("URGENT", color="danger", className="ms-1"))
-    if is_twitter and (r["like_count"] or r["view_count"]):
-        meta.append(html.Span(f"♥ {_short_num(r['like_count']) or 0} · 👁 {_short_num(r['view_count']) or 0}",
-                              className="text-muted"))
     if sort_mode == "top":
         meta.append(html.Span(f"★ {r['importance_score']}", className="text-warning"))
-        
+
     title = (r["title"] or "").strip()
     url = _safe_url(r["url"])
     title_el = (html.A(title, href=url, target="_blank", rel="noopener noreferrer",
                        className="text-light text-decoration-none")
                 if url else html.Span(title, className="text-light"))
-                
+
     return html.Div(
         [html.Div(meta, className="d-flex flex-wrap gap-2 small mb-1", style={"fontFamily": "monospace"}),
          html.Div(title_el, style={"fontSize": "0.85rem", "lineHeight": "1.25"})],
@@ -261,7 +243,6 @@ clientside_callback(
     Input("lwc-store", "data"),
     Input("indicator-selector", "value"),
 )
-
 
 # ----- REGISTER PAGE -----
 dash.register_page(__name__, path="/", name="Bybit Charts", order=0, assets_folder="app_assets")
