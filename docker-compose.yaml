@@ -151,7 +151,6 @@ services:
       DB_NAME: ${POSTGRES_DB:-n8n}
       DB_USER: ${SERVICE_USER_POSTGRES}
       DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
-      # ÚJ: Crucix elérése a közös Docker hálózaton (a service/alias neve: crucix)
       CRUCIX_API_URL: http://crucix:3117/api/data
       PYTHONUNBUFFERED: "1"
       TZ: ${TZ:-Europe/Berlin}
