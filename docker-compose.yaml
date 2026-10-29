@@ -139,6 +139,13 @@ services:
     expose:
       - "8000"
     volumes:
+      - ./app.py:/app/app.py
+      - ./home.py:/app/home.py
+      - ./apis:/app/apis
+      - ./app_pages:/app/app_pages
+  
+      - ./app_assets:/app/app_assets
+   
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       APP_MODULE: app:server
