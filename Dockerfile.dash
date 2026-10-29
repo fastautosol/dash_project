@@ -3,13 +3,6 @@ FROM python:3.14.1-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV APP_MODULE=app:server \
-       UVICORN_WORKERS=1 \
-       TZ=Europe/Budapest \
-       DB_HOST=postgresql \
-       DB_PORT=5432 \
-       DB_NAME=n8n \
-       CRUCIX_API_URL=http://crucix:3117/api/data
 
 WORKDIR /app
 
