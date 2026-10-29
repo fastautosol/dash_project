@@ -100,6 +100,13 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    volumes:
+      - ./apis:/app/apis
+      - ./app_pages:/app/app_pages
+      - ./app_assets:/app/app_assets
+      - ./model_pages:/app/model_pages
+      - ./model_assets:/app/model_assets
+      - ./home.py:/app/home.py
     environment:
       APP_MODULE: home:server
       DB_HOST: postgresql
@@ -140,8 +147,12 @@ services:
       - "8000"
     volumes:
       - ./apis:/app/apis
-      - ./app_pages:/app/app_pages  
-      - ./app_assets:/app/app_assets   
+      - ./app_pages:/app/app_pages
+      - ./app_assets:/app/app_assets
+      - ./model_pages:/app/model_pages
+      - ./model_assets:/app/model_assets
+      - ./app.py:/app/app.py
+      - ./home.py:/app/home.py
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       APP_MODULE: app:server
