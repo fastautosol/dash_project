@@ -1,4 +1,4 @@
-# 2026.10.19 18.00 EIA
+# 2026.10.29 18.00 EIA
 import os
 import time
 import logging
@@ -19,7 +19,8 @@ BASE = "https://api.eia.gov/v2"
 PAGE = 500
 
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
-DEFAULT_RESPONDENTS = ("CISO,ERCO,PJM,MISO").split(",")
+#DEFAULT_RESPONDENTS = ("CISO,ERCO,PJM,MISO").split(",")
+DEFAULT_RESPONDENTS = ("CISO,ERCO,PJM,MISO,SWPP,SOCO,DUK,TVA,FPL,FPC,TEC,NYIS,ISNE,AZPS,SRP,TEPC,NEVP,PGE,PACW,PACE,BPAT").split(",")
 DEFAULT_TIMEZONE = os.getenv("EIA_TIMEZONE", "Eastern").split(",")
 
 session = requests.Session()
