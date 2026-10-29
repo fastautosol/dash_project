@@ -139,7 +139,6 @@ services:
     expose:
       - "8000"
     volumes:
-      - ./app.py:/app/app.py
       - ./apis:/app/apis
       - ./app_pages:/app/app_pages  
       - ./app_assets:/app/app_assets   
