@@ -26,3 +26,4 @@ databricks-sdk
 databricks-sql-connector
 bs4
 youtube-transcript-api
+gridstatus
