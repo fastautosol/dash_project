@@ -1,9 +1,8 @@
-# 2026.10.29 18.00 EIA
+# 2026.10.30 14.00 EIA
 import os
 import time
 import logging
 from datetime import date, timedelta
-
 import dlt
 import requests
 from fastapi import APIRouter, BackgroundTasks
@@ -18,23 +17,25 @@ EIA_KEY = os.getenv("EIA_API_KEY", "YNAIaZXieTAUvQjk3JhfehqZW44ucqOzF9jutPhB")
 BASE = "https://api.eia.gov/v2"
 PAGE = 500
 
-DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
-#DEFAULT_RESPONDENTS = ("CISO,ERCO,PJM,MISO").split(",")
+DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 25}
 DEFAULT_RESPONDENTS = ("CISO,ERCO,PJM,MISO,SWPP,SOCO,DUK,TVA,FPL,FPC,TEC,NYIS,ISNE,AZPS,SRP,TEPC,NEVP,PGE,PACW,PACE,BPAT").split(",")
 DEFAULT_TIMEZONE = os.getenv("EIA_TIMEZONE", "Eastern").split(",")
 
 session = requests.Session()
-session.mount("https://", HTTPAdapter(max_retries=Retry(
-    total=5, connect=5, read=5, backoff_factor=3,
-    status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"])))
+session.mount("https://", HTTPAdapter(max_retries=Retry(total=5, connect=5, read=5, backoff_factor=3, status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"])))
 
-# route, kulcs, adatoszlopok, fix facetek, uses_respondent = a route tamogatja a respondent/timezone szurot
 ENDPOINTS = {
     "eia_petroleum_spot": dict(route="petroleum/pri/spt", pk=["period", "series"], data=["value"]),
     "eia_natgas_futures": dict(route="natural-gas/pri/fut", pk=["period", "series"], data=["value"]),
     "eia_elec_daily_region": dict(route="electricity/rto/daily-region-data", pk=["period", "respondent", "type", "timezone"], data=["value"], uses_respondent=True),
     "eia_elec_daily_fuel_type": dict(route="electricity/rto/daily-fuel-type-data", pk=["period", "respondent", "fueltype", "timezone"], data=["value"], uses_respondent=True),
-    "eia_nuclear_outages": dict(route="nuclear-outages/us-nuclear-outages", pk=["period"], data=["capacity", "outage", "percentOutage"])}
+    "eia_nuclear_outages": dict(route="nuclear-outages/us-nuclear-outages", pk=["period"], data=["capacity", "outage", "percentOutage"]),
+    "eia_elec_daily_demand": dict(route="electricity/rto/daily-region-data", pk=["period", "respondent", "timezone"], data=["value"], uses_respondent=True, frequency="daily"),    
+    "eia_elec_hourly_demand": dict(route="electricity/rto/region-data",  pk=["period", "respondent", "timezone"], data=["value"], uses_respondent=True, frequency="hourly"),    
+    "eia_elec_wholesale_prices_daily": dict(route="electricity/wholesale/data", pk=["period", "price-node", "market"], data=["price"], frequency="daily"),
+    "eia_elec_wholesale_prices_hourly": dict(route="electricity/wholesale/data", pk=["period", "price-node", "market"], data=["price"], frequency="hourly")
+}
+
 
 def build_facets(cfg: dict, respondents: list[str], timezone: list[str]) -> dict:
     facets = dict(cfg.get("facets", {}))
@@ -46,9 +47,9 @@ def build_facets(cfg: dict, respondents: list[str], timezone: list[str]) -> dict
 
 def eia_fetch(cfg: dict, facets: dict, start: str, end: str):
     offset = 0
+    freq = cfg.get("frequency", "daily")  # Dinamikus frekvencia kezelés
     while True:
-        params = [("api_key", EIA_KEY), ("frequency", "daily"), ("start", start), ("end", end),
-                  ("sort[0][column]", "period"), ("sort[0][direction]", "asc"), ("offset", offset), ("length", PAGE)]
+        params = [("api_key", EIA_KEY), ("frequency", freq), ("start", start), ("end", end), ("sort[0][column]", "period"), ("sort[0][direction]", "asc"), ("offset", offset), ("length", PAGE)]
         params += [(f"data[{i}]", c) for i, c in enumerate(cfg["data"])]
         for facet, values in facets.items():
             params += [(f"facets[{facet}][]", v) for v in values]
