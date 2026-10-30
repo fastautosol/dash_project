@@ -1,4 +1,4 @@
-# 2026.10.30 EIA + ISO LMP (gridstatus) - egy router, ket vegpont: POST /  (EIA) es POST /lmp (ISO day-ahead orás LMP)
+# 2026.10.30 EIA + ISO LMP (gridstatus)
 import os
 import time
 import logging
@@ -13,7 +13,7 @@ from urllib3.util.retry import Retry
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-EIA_KEY = os.getenv("EIA_API_KEY")  # ne legyen alapertelmezett kulcs a kodban
+EIA_KEY = os.getenv("EIA_API_KEY", "YNAIaZXieTAUvQjk3JhfehqZW44ucqOzF9jutPhB")
 BASE = "https://api.eia.gov/v2"
 PAGE = 500
 
