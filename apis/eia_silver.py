@@ -66,6 +66,13 @@ def _has_column(conn, schema: str, table: str, column: str) -> bool:
     return n > 0
 
 
+def _column_type(conn, schema: str, table: str, column: str) -> str:
+    row = conn.execute(
+        "SELECT data_type FROM information_schema.columns WHERE table_catalog = 'pg' AND table_schema = ? AND table_name = ? AND column_name = ?",
+        [schema, table, column],).fetchone()
+    return row[0].upper() if row else ""
+
+
 def build_dim_respondent(conn):
     conn.execute("CREATE OR REPLACE TEMP TABLE _resp_static (respondent_code VARCHAR, region VARCHAR, operator_type VARCHAR, "
                  "iso_code VARCHAR, is_core BOOLEAN, tz VARCHAR, datacenter_market VARCHAR)")
@@ -73,7 +80,8 @@ def build_dim_respondent(conn):
 
     # hivatalos nev a bronze-bol (ha van respondent_name oszlop), kulonben a kod marad nev
     if _has_column(conn, "bronze", "eia_elec_hourly_demand", "respondent_name"):
-        names_sql = ("SELECT respondent, any_value(respondent_name) AS respondent_name FROM pg.bronze.eia_elec_hourly_demand GROUP BY respondent")
+        names_sql = ("SELECT respondent, any_value(respondent_name) AS respondent_name "
+                     "FROM pg.bronze.eia_elec_hourly_demand GROUP BY respondent")
     else:
         logger.warning("bronze.eia_elec_hourly_demand: nincs respondent_name oszlop, a nev a kod lesz")
         names_sql = "SELECT CAST(NULL AS VARCHAR) AS respondent, CAST(NULL AS VARCHAR) AS respondent_name WHERE FALSE"
@@ -109,11 +117,18 @@ def build_demand_lmp_hourly(conn):
     # a ghg oszlop csak a frissitett betoltes utan letezik a bronze-ban
     ghg_expr = "AVG(ghg)" if _has_column(conn, "bronze", "iso_lmp_hourly", "ghg") else "CAST(NULL AS DOUBLE)"
 
+    # a dlt a period oszlopot idobelyegkent (timestamptz) is felismerheti; szoveg eseten 'YYYY-MM-DDTHH' (UTC)
+    if "TIMESTAMP" in _column_type(conn, "bronze", "eia_elec_hourly_demand", "period"):
+        ts_expr = "CAST(period AS TIMESTAMPTZ)"
+    else:
+        ts_expr = "strptime(CAST(period AS VARCHAR), '%Y-%m-%dT%H') AT TIME ZONE 'UTC'"
+
     conn.execute(f"""
         CREATE OR REPLACE TABLE pg.silver.demand_lmp_hourly AS
         WITH demand AS (
-            -- period: 'YYYY-MM-DDTHH' (UTC)
-            SELECT (strptime(CAST(period AS VARCHAR), '%Y-%m-%dT%H') AT TIME ZONE 'UTC') AS ts, respondent, value AS demand_mwh
+            SELECT ({ts_expr}) AS ts,
+                   respondent,
+                   value AS demand_mwh
             FROM pg.bronze.eia_elec_hourly_demand
             WHERE "type" = 'D'
         ),
