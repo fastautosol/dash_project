@@ -232,6 +232,5 @@ async def trigger_hourly(request: HourlyRequest, background_tasks: BackgroundTas
 @router.post("/daily")
 async def trigger_daily(request: DailyRequest, background_tasks: BackgroundTasks):
     names = [t for t in (request.tables or DAILY_EIA) if t in DAILY_EIA]
-    ignored = [t for t in (request.tables or []) if t not in DAILY_EIA]
     background_tasks.add_task(run_daily_job, request.days_back, request.tables, request.respondents, request.timezone)
-    return {"status": "success", "message": "daily EIA gathering in background", "tables": names, "ignored": ignored}
+    return {"status": "success", "message": "daily EIA gathering in background", "tables": names}
