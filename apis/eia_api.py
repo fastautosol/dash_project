@@ -1,4 +1,4 @@
-# 2026.10.31 9.00 EIA + ISO LMP - POST /hourly & /daily
+# 2026.10.31 10.00 EIA + ISO LMP - POST /hourly & /daily
 import os
 import time
 import logging
@@ -117,14 +117,11 @@ LMP_MARKET = "DAY_AHEAD_HOURLY"
 # pass_locations: a get_lmp kapja-e a helyszinlistat (CAISO-nal kotelezo), kulonben utolag szurunk
 ISO_LMP = {
     "CAISO": dict(cls="CAISO", respondent="CISO", pass_locations=True, locations=["TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND"]),
-    "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None),
-    # kesobb: "ERCOT" (ingyenes regisztracio + kornyezeti valtozok kellenek), "PJM", "ISONE"
-}
+    "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None)}
 DEFAULT_ISOS = os.getenv("LMP_ISOS", "CAISO,NYISO").split(",")
 
 
 def normalize_lmp(df, iso: str, cfg: dict) -> list[dict]:
-    """gridstatus DataFrame -> egyseges sorok (snake_case oszlopok, ido UTC-ben)."""
     import pandas as pd
 
     if df is None or len(df) == 0:
@@ -234,5 +231,7 @@ async def trigger_hourly(request: HourlyRequest, background_tasks: BackgroundTas
 
 @router.post("/daily")
 async def trigger_daily(request: DailyRequest, background_tasks: BackgroundTasks):
+    names = [t for t in (request.tables or DAILY_EIA) if t in DAILY_EIA]
+    ignored = [t for t in (request.tables or []) if t not in DAILY_EIA]
     background_tasks.add_task(run_daily_job, request.days_back, request.tables, request.respondents, request.timezone)
-    return {"status": "success", "message": "daily EIA gathering in background", "tables": DAILY_EIA}
+    return {"status": "success", "message": "daily EIA gathering in background", "tables": names, "ignored": ignored}
