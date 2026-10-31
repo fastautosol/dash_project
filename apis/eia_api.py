@@ -116,8 +116,11 @@ LMP_MARKET = "DAY_AHEAD_HOURLY"
 # cls: gridstatus osztaly; respondent: megfelelo EIA respondent (osszekapcsolashoz);
 # pass_locations: a get_lmp kapja-e a helyszinlistat (CAISO-nal kotelezo), kulonben utolag szurunk
 ISO_LMP = {
-    "CAISO": dict(cls="CAISO", respondent="CISO", pass_locations=True, locations=["TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND"]),
-    "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None)}
+    "CAISO": dict(cls="CAISO", respondent="CISO", pass_locations=True,
+                  locations=["TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND"]),
+    "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None),
+    # kesobb: "ERCOT" (ingyenes regisztracio + kornyezeti valtozok kellenek), "PJM", "ISONE"
+}
 DEFAULT_ISOS = os.getenv("LMP_ISOS", "CAISO,NYISO").split(",")
 
 
@@ -142,13 +145,18 @@ def normalize_lmp(df, iso: str, cfg: dict) -> list[dict]:
     for col in ("lmp", "energy", "congestion", "loss"):
         out[col] = pd.to_numeric(df[col], errors="coerce") if col in df.columns else None
 
+    # CAISO uvegházgáz-komponens: a nyers oszlop neve verziotol fuggoen "ghg" vagy "mghg" lehet
+    ghg_col = next((c for c in ("ghg", "mghg") if c in df.columns), None)
+    out["ghg"] = pd.to_numeric(df[ghg_col], errors="coerce") if ghg_col else None
+    if iso == "CAISO" and ghg_col is None:
+        logger.warning("LMP CAISO: nincs ghg oszlop a gridstatus kimenetben, oszlopok: %s", list(df.columns))
+
     out = out.drop_duplicates(subset=LMP_PK, keep="last")
     out = out.astype(object).where(out.notna(), None)
     return out.to_dict("records")
 
 
 def fetch_iso_lmp(iso: str, cfg: dict, start: str, end: str, locations: list[str] | None):
-    # lazy import: ha a gridstatus nem telepitheto/inkompatibilis, az EIA vegpontok ettol meg mukodnek
     import gridstatus as gs
     import pandas as pd
 
@@ -194,6 +202,7 @@ def run_lmp_pipeline(days_back: int, isos: list[str] | None, locations: dict[str
             logger.exception("LMP %s hiba: %s", iso, e)
 
 
+# ------------------------------------------------------------ vegpontok -----------------------------------------------------------------
 class HourlyRequest(BaseModel):
     days_back: int = 3                                  # 3 oranként futtatva ez bőven elég
     respondents: list[str] | None = None                # None = DEFAULT_RESPONDENTS
