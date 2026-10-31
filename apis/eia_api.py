@@ -19,10 +19,7 @@ BASE = "https://api.eia.gov/v2"
 PAGE = 500
 
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 25}
-DEFAULT_RESPONDENTS = os.getenv(
-    "EIA_RESPONDENTS",
-    "CISO,ERCO,PJM,MISO,SWPP,SOCO,DUK,TVA,FPL,FPC,TEC,NYIS,ISNE,AZPS,SRP,TEPC,NEVP,PGE,PACW,PACE,BPAT",
-).split(",")
+DEFAULT_RESPONDENTS = os.getenv("EIA_RESPONDENTS", "CISO,ERCO,PJM,MISO,SWPP,SOCO,DUK,TVA,FPL,FPC,TEC,NYIS,ISNE,AZPS,SRP,TEPC,NEVP,PGE,PACW,PACE,BPAT").split(",")
 DEFAULT_TIMEZONE = os.getenv("EIA_TIMEZONE", "Eastern").split(",")
 
 session = requests.Session()
@@ -104,7 +101,6 @@ def run_eia_pipeline(pipeline_name: str, names: list[str], days_back: int, respo
         cfg = ENDPOINTS[name]
         try:
             facets = build_facets(cfg, respondents, timezone)
-            # kulon pipeline_name a hourly/daily utemezeseknek, hogy a dlt allapota ne utkozzon
             pipeline = dlt.pipeline(pipeline_name=pipeline_name, destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze")
             info = pipeline.run(make_resource(name, cfg, facets, start, end))
             logger.info("EIA %s kesz: %s", name, info)
@@ -120,8 +116,7 @@ LMP_MARKET = "DAY_AHEAD_HOURLY"
 # cls: gridstatus osztaly; respondent: megfelelo EIA respondent (osszekapcsolashoz);
 # pass_locations: a get_lmp kapja-e a helyszinlistat (CAISO-nal kotelezo), kulonben utolag szurunk
 ISO_LMP = {
-    "CAISO": dict(cls="CAISO", respondent="CISO", pass_locations=True,
-                  locations=["TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND"]),
+    "CAISO": dict(cls="CAISO", respondent="CISO", pass_locations=True, locations=["TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND"]),
     "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None),
     # kesobb: "ERCOT" (ingyenes regisztracio + kornyezeti valtozok kellenek), "PJM", "ISONE"
 }
@@ -202,7 +197,6 @@ def run_lmp_pipeline(days_back: int, isos: list[str] | None, locations: dict[str
             logger.exception("LMP %s hiba: %s", iso, e)
 
 
-# ------------------------------------------------------------ vegpontok -----------------------------------------------------------------
 class HourlyRequest(BaseModel):
     days_back: int = 3                                  # 3 oranként futtatva ez bőven elég
     respondents: list[str] | None = None                # None = DEFAULT_RESPONDENTS
