@@ -55,11 +55,7 @@ FUELTYPES = [
 ]
 
 # referencia helyszin ISO-nkent: ennek az arat kapja a ref_lmp oszlop (az atlag mellett). Szabadon cserelheto.
-REF_LOCATIONS = [
-    ("CAISO", "TH_NP15_GEN-APND"),
-    ("NYISO", "N.Y.C."),
-]
-
+REF_LOCATIONS = [ ("CAISO", "TH_NP15_GEN-APND"), ("NYISO", "N.Y.C.")]
 
 def _has_column(conn, schema: str, table: str, column: str) -> bool:
     n = conn.execute(
@@ -77,8 +73,7 @@ def build_dim_respondent(conn):
 
     # hivatalos nev a bronze-bol (ha van respondent_name oszlop), kulonben a kod marad nev
     if _has_column(conn, "bronze", "eia_elec_hourly_demand", "respondent_name"):
-        names_sql = ("SELECT respondent, any_value(respondent_name) AS respondent_name "
-                     "FROM pg.bronze.eia_elec_hourly_demand GROUP BY respondent")
+        names_sql = ("SELECT respondent, any_value(respondent_name) AS respondent_name FROM pg.bronze.eia_elec_hourly_demand GROUP BY respondent")
     else:
         logger.warning("bronze.eia_elec_hourly_demand: nincs respondent_name oszlop, a nev a kod lesz")
         names_sql = "SELECT CAST(NULL AS VARCHAR) AS respondent, CAST(NULL AS VARCHAR) AS respondent_name WHERE FALSE"
@@ -118,9 +113,7 @@ def build_demand_lmp_hourly(conn):
         CREATE OR REPLACE TABLE pg.silver.demand_lmp_hourly AS
         WITH demand AS (
             -- period: 'YYYY-MM-DDTHH' (UTC)
-            SELECT (strptime(CAST(period AS VARCHAR), '%Y-%m-%dT%H') AT TIME ZONE 'UTC') AS ts,
-                   respondent,
-                   value AS demand_mwh
+            SELECT (strptime(CAST(period AS VARCHAR), '%Y-%m-%dT%H') AT TIME ZONE 'UTC') AS ts, respondent, value AS demand_mwh
             FROM pg.bronze.eia_elec_hourly_demand
             WHERE "type" = 'D'
         ),
