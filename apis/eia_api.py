@@ -1,4 +1,4 @@
-# 2026.10.30 EIA + ISO LMP - kulon vegpontok: POST /hourly (orás, pl. 3 óránként) es POST /daily (naponta)
+# 2026.10.31 9.00 EIA + ISO LMP - POST /hourly & /daily
 import os
 import time
 import logging
