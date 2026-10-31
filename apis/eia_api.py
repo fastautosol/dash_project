@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from apis.eia_silver import run_eia_silver_transformation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -116,11 +117,8 @@ LMP_MARKET = "DAY_AHEAD_HOURLY"
 # cls: gridstatus osztaly; respondent: megfelelo EIA respondent (osszekapcsolashoz);
 # pass_locations: a get_lmp kapja-e a helyszinlistat (CAISO-nal kotelezo), kulonben utolag szurunk
 ISO_LMP = {
-    "CAISO": dict(cls="CAISO", respondent="CISO", pass_locations=True,
-                  locations=["TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND"]),
-    "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None),
-    # kesobb: "ERCOT" (ingyenes regisztracio + kornyezeti valtozok kellenek), "PJM", "ISONE"
-}
+    "CAISO": dict(cls="CAISO", respondent="CISO", pass_locations=True, locations=["TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND"]),
+    "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None)}
 DEFAULT_ISOS = os.getenv("LMP_ISOS", "CAISO,NYISO").split(",")
 
 
@@ -202,7 +200,6 @@ def run_lmp_pipeline(days_back: int, isos: list[str] | None, locations: dict[str
             logger.exception("LMP %s hiba: %s", iso, e)
 
 
-# ------------------------------------------------------------ vegpontok -----------------------------------------------------------------
 class HourlyRequest(BaseModel):
     days_back: int = 3                                  # 3 oranként futtatva ez bőven elég
     respondents: list[str] | None = None                # None = DEFAULT_RESPONDENTS
@@ -221,6 +218,10 @@ class DailyRequest(BaseModel):
 def run_hourly_job(days_back: int, respondents, timezone, isos, locations):
     run_eia_pipeline("eia_hourly", HOURLY_EIA, days_back, respondents, timezone)
     run_lmp_pipeline(days_back, isos, locations)
+    try:
+        run_eia_silver_transformation()   # dim_respondent, dim_fueltype, demand_lmp_hourly
+    except Exception as e:
+        logger.exception("EIA silver hiba: %s", e)
 
 
 def run_daily_job(days_back: int, tables: list[str] | None, respondents, timezone):
