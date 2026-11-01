@@ -5,15 +5,12 @@ import dash_bootstrap_components as dbc
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
-import asyncio
-from contextlib import asynccontextmanager
 
 import apis.crm_shopify_api as crm_shopify_api
 import apis.lufthansa_api as lufthansa_api
 import apis.serper_places_api as serper_places
 import apis.youtube_api as youtube_api
 import apis.tmdb_api as tmdb_api
-import apis.tmdb_mcp as tmdb_mcp
 import apis.opensky_api as opensky_api
 import apis.crucix_api as crucix_api
 import apis.twitter_api as twitter_api
@@ -64,16 +61,8 @@ app.layout = html.Div([
     }),
 ])
 
-# ----- 3. FastAPI app with Lifespan for the TMDB MCP server -----
-mcp_app = tmdb_mcp.mcp_asgi_app()  
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with tmdb_mcp.mcp.session_manager.run():
-        yield
-
-server = FastAPI(title="Dash Demo App", lifespan=lifespan)
-server.mount("/tmdb", mcp_app) # https://app.fastautosol.com/tmdb/mcp  (HTTP Streamable)
+server = FastAPI(title="Dash Demo App")
 
 # ----- 4. API routers -----
 server.include_router(crm_shopify_api.router,   prefix="/api/crm_shopify",   tags=["CRM Shopify"])
