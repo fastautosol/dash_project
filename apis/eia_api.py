@@ -219,7 +219,7 @@ def run_hourly_job(days_back: int, respondents, timezone, isos, locations):
     run_eia_pipeline("eia_hourly", HOURLY_EIA, days_back, respondents, timezone)
     run_lmp_pipeline(days_back, isos, locations)
     try:
-        run_eia_silver_transformation()   # dim_respondent, dim_fueltype, demand_lmp_hourly
+        run_eia_silver_transformation(parts=("hourly"))
     except Exception as e:
         logger.exception("EIA silver hiba: %s", e)
 
@@ -231,6 +231,10 @@ def run_daily_job(days_back: int, tables: list[str] | None, respondents, timezon
         logger.warning("/daily: ezek nem napi tablak, kihagyva (hasznald a /hourly vegpontot): %s", ignored)
     if names:
         run_eia_pipeline("eia_daily", names, days_back, respondents, timezone)
+        try:
+            run_eia_silver_transformation(parts=("daily"))
+        except Exception as e:
+            logger.exception("EIA silver hiba: %s", e)
 
 
 @router.post("/hourly")
