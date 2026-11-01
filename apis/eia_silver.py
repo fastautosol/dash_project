@@ -55,7 +55,11 @@ FUELTYPES = [
 ]
 
 # referencia helyszin ISO-nkent: ennek az arat kapja a ref_lmp oszlop (az atlag mellett). Szabadon cserelheto.
-REF_LOCATIONS = [ ("CAISO", "TH_NP15_GEN-APND"), ("NYISO", "N.Y.C.")]
+REF_LOCATIONS = [
+    ("CAISO", "TH_NP15_GEN-APND"),
+    ("NYISO", "N.Y.C."),
+]
+
 
 def _has_column(conn, schema: str, table: str, column: str) -> bool:
     n = conn.execute(
@@ -68,8 +72,10 @@ def _has_column(conn, schema: str, table: str, column: str) -> bool:
 
 def _column_type(conn, schema: str, table: str, column: str) -> str:
     row = conn.execute(
-        "SELECT data_type FROM information_schema.columns WHERE table_catalog = 'pg' AND table_schema = ? AND table_name = ? AND column_name = ?",
-        [schema, table, column],).fetchone()
+        "SELECT data_type FROM information_schema.columns "
+        "WHERE table_catalog = 'pg' AND table_schema = ? AND table_name = ? AND column_name = ?",
+        [schema, table, column],
+    ).fetchone()
     return row[0].upper() if row else ""
 
 
@@ -192,6 +198,83 @@ def build_demand_lmp_hourly(conn):
     """)
 
 
+def build_grid_daily(conn):
+    """Napi respondent-szintu merleg: a D, DF, NG, TI tipusok oszlopokba forgatva + elorejelzesi hiba."""
+    conn.execute("""
+        CREATE OR REPLACE TABLE pg.silver.grid_daily AS
+        WITH pivoted AS (
+            SELECT CAST(period AS DATE) AS day,
+                   respondent,
+                   "timezone",
+                   MAX(value) FILTER (WHERE "type" = 'D')  AS demand_mwh,
+                   MAX(value) FILTER (WHERE "type" = 'DF') AS forecast_mwh,
+                   MAX(value) FILTER (WHERE "type" = 'NG') AS net_generation_mwh,
+                   MAX(value) FILTER (WHERE "type" = 'TI') AS interchange_mwh
+            FROM pg.bronze.eia_elec_daily_region
+            GROUP BY 1, 2, 3
+        )
+        SELECT
+            day,
+            respondent,
+            "timezone",
+            demand_mwh,
+            forecast_mwh,
+            net_generation_mwh,
+            interchange_mwh,
+            -- elorejelzesi hiba: tenyleges - elorejelzes (pozitiv = alulbecsult elorejelzes)
+            demand_mwh - forecast_mwh AS forecast_error_mwh,
+            (demand_mwh - forecast_mwh) / NULLIF(demand_mwh, 0) * 100 AS forecast_error_pct,
+            ABS(demand_mwh - forecast_mwh) / NULLIF(demand_mwh, 0) * 100 AS forecast_abs_error_pct,
+            -- merleg-azonossagbol szamolt nettó export (pozitiv = exportal), az EIA elojel-konvenciojatol fuggetlenul
+            net_generation_mwh - demand_mwh AS net_export_mwh,
+            (demand_mwh IS NOT NULL AND forecast_mwh IS NOT NULL
+             AND net_generation_mwh IS NOT NULL AND interchange_mwh IS NOT NULL) AS is_complete
+        FROM pivoted
+        ORDER BY respondent, day;
+    """)
+
+
+def build_generation_mix_daily(conn):
+    """Napi termelesi mix (hosszu formatum, fueltype soronkent) + reszarany a taroloktol eltekintve."""
+    conn.execute("""
+        CREATE OR REPLACE TABLE pg.silver.generation_mix_daily AS
+        WITH src AS (
+            SELECT CAST(period AS DATE) AS day,
+                   respondent,
+                   "timezone",
+                   fueltype AS fueltype_code,
+                   value AS generation_mwh
+            FROM pg.bronze.eia_elec_daily_fuel_type
+        ),
+        enriched AS (
+            SELECT s.day, s.respondent, s."timezone", s.fueltype_code,
+                   COALESCE(f.fueltype_name, s.fueltype_code) AS fueltype_name,
+                   COALESCE(f.fuel_group, 'Unmapped') AS fuel_group,
+                   f.is_renewable,
+                   f.is_carbon_free,
+                   COALESCE(f.sort_order, 99) AS sort_order,
+                   s.generation_mwh
+            FROM src s
+            LEFT JOIN pg.silver.dim_fueltype f ON f.fueltype_code = s.fueltype_code
+        ),
+        totals AS (
+            SELECT *,
+                   -- a tarolok (BAT, PS, ...) lehetnek negativak toltes kozben, ezert kihagyjuk a reszarany nevezojebol
+                   SUM(CASE WHEN fuel_group <> 'Storage' THEN generation_mwh END)
+                       OVER (PARTITION BY day, respondent, "timezone") AS total_ex_storage_mwh
+            FROM enriched
+        )
+        SELECT day, respondent, "timezone",
+               fueltype_code, fueltype_name, fuel_group, is_renewable, is_carbon_free, sort_order,
+               generation_mwh,
+               total_ex_storage_mwh,
+               CASE WHEN fuel_group <> 'Storage'
+                    THEN generation_mwh / NULLIF(total_ex_storage_mwh, 0) * 100 END AS share_pct
+        FROM totals
+        ORDER BY respondent, day, sort_order;
+    """)
+
+
 def _check_unmapped(conn):
     """Figyelmeztet, ha a bronze-ban van olyan respondent vagy fueltype kod, ami nincs a dimenziotablaban."""
     checks = [
@@ -212,7 +295,8 @@ def _check_unmapped(conn):
             logger.warning("Ellenorzes kihagyva (%s): %s", src, exc)
 
 
-def run_eia_silver_transformation(conn=None):
+def run_eia_silver_transformation(conn=None, parts=("hourly", "daily")):
+    """parts: 'hourly' -> demand_lmp_hourly; 'daily' -> grid_daily + generation_mix_daily. A dimenziok mindig frissulnek."""
     own_conn = conn is None
     if own_conn:
         conn = duckdb.connect()
@@ -228,13 +312,23 @@ def run_eia_silver_transformation(conn=None):
         build_dim_respondent(conn)
         build_dim_fueltype(conn)
 
-        # 3. kozos orás tabla: fogyasztas + LMP
-        build_demand_lmp_hourly(conn)
+        counts = {}
 
-        n = conn.execute("SELECT COUNT(*) FROM pg.silver.demand_lmp_hourly").fetchone()[0]
-        logger.info("EIA silver kesz: dim_respondent=%s, dim_fueltype=%s, demand_lmp_hourly=%s sor",
+        # 3. kozos orás tabla: fogyasztas + LMP
+        if "hourly" in parts:
+            build_demand_lmp_hourly(conn)
+            counts["demand_lmp_hourly"] = conn.execute("SELECT COUNT(*) FROM pg.silver.demand_lmp_hourly").fetchone()[0]
+
+        # 4-5. napi tablak: merleg + elorejelzesi hiba, termelesi mix
+        if "daily" in parts:
+            build_grid_daily(conn)
+            counts["grid_daily"] = conn.execute("SELECT COUNT(*) FROM pg.silver.grid_daily").fetchone()[0]
+            build_generation_mix_daily(conn)
+            counts["generation_mix_daily"] = conn.execute("SELECT COUNT(*) FROM pg.silver.generation_mix_daily").fetchone()[0]
+
+        logger.info("EIA silver kesz (%s): dim_respondent=%s, dim_fueltype=%s, sorok: %s", ",".join(parts),
                     conn.execute("SELECT COUNT(*) FROM pg.silver.dim_respondent").fetchone()[0],
-                    conn.execute("SELECT COUNT(*) FROM pg.silver.dim_fueltype").fetchone()[0], n)
+                    conn.execute("SELECT COUNT(*) FROM pg.silver.dim_fueltype").fetchone()[0], counts)
         _check_unmapped(conn)
         print("EIA silver réteg sikeresen frissítve a Postgres-ben!")
 
