@@ -1,13 +1,4 @@
-
-# bybit_signal_api.py
-# Bybit market scanner -> DLT -> PostgreSQL
-# 5-minute market snapshots
-#
-# Install:
-# pip install ccxt "dlt[postgres]"
-#
-# Run:
-# python bybit_signal_api.py
+# 2026.11.02  15.00 (5-minute market snapshots)
 
 import asyncio
 import logging
@@ -16,7 +7,6 @@ import os
 import time
 
 from datetime import datetime, UTC
-
 import ccxt.async_support as ccxt
 import dlt
 
@@ -25,12 +15,7 @@ import dlt
 # 1. LOGGING
 # ============================================================
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S"
-)
-
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 log = logging.getLogger("bybit_signal_api")
 
 
@@ -105,74 +90,38 @@ def calculate_change(current, previous) -> float:
 
 
 def get_max_leverage(market: dict) -> float:
-    """Maximális leverage lekérése a Bybit market adataiból."""
 
     info = market.get("info", {}) or {}
-
     leverage_filter = info.get("leverageFilter", {}) or {}
-
-    max_leverage = safe_float(
-        leverage_filter.get("maxLeverage")
-    )
+    max_leverage = safe_float(leverage_filter.get("maxLeverage"))
 
     if max_leverage <= 0:
         limits = market.get("limits", {}) or {}
         leverage_limits = limits.get("leverage", {}) or {}
 
-        max_leverage = safe_float(
-            leverage_limits.get("max")
-        )
+        max_leverage = safe_float(leverage_limits.get("max"))
 
     return max_leverage
 
 
 def is_usdt_linear_swap(market: dict) -> bool:
-    """Csak aktív USDT linear perpetual/swap piacokat engedünk."""
-
-    return (
-        market.get("active") is not False
-        and market.get("swap") is True
-        and market.get("linear") is True
-        and market.get("quote") == "USDT"
-        and market.get("settle") == "USDT"
-    )
+    return (market.get("active") is not False and market.get("swap") is True and market.get("linear") is True and market.get("quote") == "USDT" and market.get("settle") == "USDT")
 
 
 # ============================================================
 # 4. MARKET SCANNER
 # ============================================================
 
-async def fetch_symbol_snapshot(
-    exchange,
-    symbol: str,
-    market: dict,
-    ticker: dict,
-    snapshot_at: datetime,
-    semaphore: asyncio.Semaphore,
-):
-    """
-    Egy coin OHLCV adatainak lekérése és market snapshot építése.
-    """
+async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dict, snapshot_at: datetime, semaphore: asyncio.Semaphore):
 
     try:
         info = ticker.get("info", {}) or {}
-
-        # ----------------------------------------------------
-        # TICKER DATA
-        # ----------------------------------------------------
-
-        price = safe_float(
-            ticker.get("last"),
-            safe_float(info.get("lastPrice"))
-        )
+        price = safe_float(ticker.get("last"), safe_float(info.get("lastPrice")))
 
         if price <= 0:
             return None
 
-        turnover24h = safe_float(
-            info.get("turnover24h"),
-            safe_float(ticker.get("quoteVolume"))
-        )
+        turnover24h = safe_float(info.get("turnover24h"), safe_float(ticker.get("quoteVolume")))
 
         if turnover24h < MIN_TURNOVER:
             return None
