@@ -182,29 +182,15 @@ async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dic
 
 
 async def run_bybit_scan(exchange, semaphore: asyncio.Semaphore):
-    """
-    Teljes Bybit linear market scan.
-    """
 
-    # Load markets once; reload only if not available.
     if not exchange.markets:
         await exchange.load_markets()
-
     markets = exchange.markets
 
     log.info("[SCAN] Fetching Bybit linear tickers...")
-
-    tickers = await exchange.fetch_tickers(
-        params={"category": "linear"}
-    )
-
+    tickers = await exchange.fetch_tickers(params={"category": "linear"})
     snapshot_at = datetime.now(UTC)
-
     candidates = []
-
-    # --------------------------------------------------------
-    # MARKET FILTERING
-    # --------------------------------------------------------
 
     for symbol, market in markets.items():
 
@@ -212,50 +198,22 @@ async def run_bybit_scan(exchange, semaphore: asyncio.Semaphore):
             continue
 
         ticker = tickers.get(symbol)
-
         if not ticker:
             continue
 
-        candidates.append(
-            (symbol, market, ticker)
-        )
+        candidates.append((symbol, market, ticker))
 
-    log.info(
-        "[SCAN] Linear USDT markets found: %s",
-        len(candidates)
-    )
+    log.info("[SCAN] Linear USDT markets found: %s", len(candidates))
 
     # --------------------------------------------------------
     # PARALLEL OHLCV FETCH
     # --------------------------------------------------------
 
-    tasks = [
-        fetch_symbol_snapshot(
-            exchange=exchange,
-            symbol=symbol,
-            market=market,
-            ticker=ticker,
-            snapshot_at=snapshot_at,
-            semaphore=semaphore,
-        )
-        for symbol, market, ticker in candidates
-    ]
-
+    tasks = [fetch_symbol_snapshot( exchange=exchange, symbol=symbol, market=market, ticker=ticker, snapshot_at=snapshot_at, semaphore=semaphore) for symbol, market, ticker in candidates]
     results = await asyncio.gather(*tasks)
-
-    records = [
-        record
-        for record in results
-        if record is not None
-    ]
-
-    log.info(
-        "[SCAN] Snapshot candidates: %s",
-        len(records)
-    )
-
+    records = [record for record in results if record is not None]
+    log.info("[SCAN] Snapshot candidates: %s", len(records))
     return records
-
 
 # ============================================================
 # 5. DLT / POSTGRESQL
@@ -265,47 +223,23 @@ def create_dlt_pipeline():
 
     pipeline = dlt.pipeline(
         pipeline_name=PIPELINE_NAME,
-        destination=dlt.destinations.postgres(
-            credentials=DB_CONFIG
-        ),
-        dataset_name=DATASET_NAME,
-    )
+        destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+        dataset_name=DATASET_NAME)
 
-    log.info(
-        "[DLT] Pipeline initialized: %s.%s",
-        DATASET_NAME,
-        TABLE_NAME
-    )
+    log.info("[DLT] Pipeline initialized: %s.%s", DATASET_NAME, TABLE_NAME)
 
     return pipeline
 
 
-async def save_market_snapshots(
-    pipeline,
-    records: list,
-):
-    """
-    Market snapshots mentése PostgreSQL-be DLT segítségével.
-    """
-
+async def save_market_snapshots(pipeline, records: list):
+ 
     if not records:
         log.info("[DLT] No records to save.")
         return
 
     try:
-        load_info = await asyncio.to_thread(
-            pipeline.run,
-            records,
-            table_name=TABLE_NAME,
-            write_disposition="merge",
-            primary_key=PRIMARY_KEY,
-        )
-
-        log.info(
-            "[DLT] Saved %s market snapshots.",
-            len(records)
-        )
-
+        load_info = await asyncio.to_thread(pipeline.run, records, table_name=TABLE_NAME, write_disposition="merge", primary_key=PRIMARY_KEY)
+        log.info("[DLT] Saved %s market snapshots.", len(records))
         log.debug("[DLT] Load info: %s", load_info)
 
     except Exception:
@@ -317,51 +251,26 @@ async def save_market_snapshots(
 # 6. SCANNER LOOP
 # ============================================================
 
-async def scanner_loop(
-    exchange,
-    pipeline,
-):
-    """
-    Folyamatos scanner.
-    Minden futás után a következő 5 perces időhatárig vár.
-    """
+async def scanner_loop(exchange, pipeline):
 
-    semaphore = asyncio.Semaphore(
-        MAX_CONCURRENT_REQUESTS
-    )
-
-    log.info(
-        "[START] Bybit scanner started. Interval: %s seconds.",
-        POLL_INTERVAL
-    )
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+    log.info("[START] Bybit scanner started. Interval: %s seconds.", POLL_INTERVAL)
 
     while True:
-
         try:
             start_time = time.time()
-
             log.info("=" * 60)
             log.info("[SCAN] Starting market scan...")
 
-            records = await run_bybit_scan(
-                exchange,
-                semaphore
-            )
-
+            records = await run_bybit_scan(exchange, semaphore)
             if records:
-                await save_market_snapshots(
-                    pipeline,
-                    records
-                )
+                await save_market_snapshots(pipeline, records)
             else:
-                log.info(
-                    "[SCAN] No market snapshots matched the filters."
-                )
+                log.info("[SCAN] No market snapshots matched the filters.")
 
             elapsed = time.time() - start_time
 
-            log.info(
-                "[SCAN] Completed in %.2f seconds. Records: %s",
+            log.info("[SCAN] Completed in %.2f seconds. Records: %s",
                 elapsed,
                 len(records)
             )
