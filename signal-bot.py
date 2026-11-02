@@ -38,7 +38,7 @@ MIN_LEV = 25
 MIN_TURNOVER = 1_000_000  # USDT / 24h
 MIN_R24 = 3.0             # %
 MIN_R1 = 0.5              # %
-MAX_CONCURRENT_REQUESTS = 7
+MAX_CONCURRENT_REQUESTS = 5
 OHLCV_LIMIT = 12
 
 PIPELINE_NAME = "bybit_market_snapshots"
@@ -122,6 +122,7 @@ async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dic
 
         # ----------------------- OHLCV DATA ------------------------
         async with semaphore:
+            await asyncio.sleep(0.25)
             ohlcv = await exchange.fetch_ohlcv(symbol, timeframe=TIMEFRAME, limit=OHLCV_LIMIT, params={"category": "linear"})
 
         if not ohlcv:
