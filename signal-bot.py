@@ -170,8 +170,11 @@ async def run_bybit_scan(exchange):
 
     tasks = [fetch_symbol_snapshot(exchange=exchange, symbol=symbol, market=market, ticker=ticker, snapshot_at=snapshot_at) for symbol, market, ticker in candidates]
     results = await asyncio.gather(*tasks)
-    records = [record for record in results if record is not None]
-    log.info("[SCAN] Snapshot candidates: %s", len(records))
+    records = [r for r in results if r is not None]
+    long_count = sum(1 for r in records if r["r24h"] > 0)
+    short_count = sum(1 for r in records if r["r24h"] < 0)    
+    log.info(f"[SCAN] Snapshot candidates: {len(records)} | {long_count} LONG / {short_count} SHORT")
+    
     return records
 
 # ============================================================
@@ -179,14 +182,7 @@ async def run_bybit_scan(exchange):
 # ============================================================
 
 def create_dlt_pipeline():
-
-    pipeline = dlt.pipeline(
-        pipeline_name=PIPELINE_NAME,
-        destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-        dataset_name=DATASET_NAME)
-
-    log.info("[DLT] Pipeline initialized: %s.%s", DATASET_NAME, TABLE_NAME)
-
+    pipeline = dlt.pipeline(pipeline_name=PIPELINE_NAME, destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name=DATASET_NAME)
     return pipeline
 
 
