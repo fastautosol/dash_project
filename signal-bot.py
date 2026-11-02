@@ -220,7 +220,6 @@ def create_dlt_pipeline():
 
 
 async def save_market_snapshots(pipeline, records: list):
- 
     if not records:
         log.info("[DLT] No records to save.")
         return
@@ -229,7 +228,6 @@ async def save_market_snapshots(pipeline, records: list):
         load_info = await asyncio.to_thread(pipeline.run, records, table_name=TABLE_NAME, write_disposition="merge", primary_key=PRIMARY_KEY)
         log.info("[DLT] Saved %s market snapshots.", len(records))
         log.debug("[DLT] Load info: %s", load_info)
-
     except Exception:
         log.exception("[DLT] PostgreSQL write failed.")
         raise
@@ -247,7 +245,7 @@ async def scanner_loop(exchange, pipeline):
     while True:
         try:
             start_time = time.time()
-            log.info("=" * 60)
+            log.info("=" * 45)
 
             records = await run_bybit_scan(exchange, semaphore)
             if records:
