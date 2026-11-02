@@ -1,4 +1,4 @@
-# 2026.11.01 EIA Grid dashboard - US map (opensky_charts stilus) + silver: demand_lmp_hourly, grid_daily, generation_mix_daily
+# 2026.11.02 EIA Grid dashboard - US map (opensky_charts stilus)
 import time
 
 import dash
@@ -156,10 +156,12 @@ def load_map_data() -> pd.DataFrame:
     if _cache["df"] is not None and now - _cache["ts"] < CACHE_SECONDS:
         return _cache["df"].copy()
 
-    dim = q(DIM_SQL)
-    df = dim.merge(q(MAP_SQL, tz=DAILY_TZ), left_on="respondent_code", right_on="respondent", how="left").drop(columns=["respondent"])
-    df = df.merge(q(MIX_SUMMARY_SQL, tz=DAILY_TZ), left_on="respondent_code", right_on="respondent", how="left").drop(columns=["respondent"])
-    df = df.merge(q(LMP_LATEST_SQL), left_on="respondent_code", right_on="respondent", how="left").drop(columns=["respondent"])
+    df = q(DIM_SQL)
+    for sql, params in ((MAP_SQL, dict(tz=DAILY_TZ)), (MIX_SUMMARY_SQL, dict(tz=DAILY_TZ)), (LMP_LATEST_SQL, {})):
+        part = q(sql, **params)
+        if "respondent" not in part.columns:     # ures eredmeny -> csak NaN oszlopok
+            continue
+        df = df.merge(part, left_on="respondent_code", right_on="respondent", how="left").drop(columns=["respondent"])
     for c in ["avg_mw", *MAP_METRICS]:
         df[c] = pd.to_numeric(df.get(c), errors="coerce")
     _cache.update(ts=now, df=df)
