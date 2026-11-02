@@ -88,7 +88,7 @@ def is_usdt_linear_swap(market: dict) -> bool:
 # 4. MARKET SCANNER
 # ============================================================
 
-async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dict, snapshot_at: datetime, semaphore: asyncio.Semaphore):
+async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dict, snapshot_at: datetime):
 
     try:
         info = ticker.get("info", {}) or {}
