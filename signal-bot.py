@@ -1,4 +1,4 @@
-# 2026.11.02  15.00 (5-minute market snapshots)
+# 2026.11.02  16.00 (5-minute market snapshots)
 import asyncio
 import logging
 import math
@@ -269,11 +269,7 @@ async def scanner_loop(exchange, pipeline):
                 log.info("[SCAN] No market snapshots matched the filters.")
 
             elapsed = time.time() - start_time
-
-            log.info("[SCAN] Completed in %.2f seconds. Records: %s",
-                elapsed,
-                len(records)
-            )
+            log.info("[SCAN] Completed in %.2f seconds. Records: %s", elapsed, len(records))
 
         except asyncio.CancelledError:
             log.info("[STOP] Scanner cancellation received.")
@@ -282,19 +278,10 @@ async def scanner_loop(exchange, pipeline):
         except Exception:
             log.exception("[SCAN] Scanner cycle failed.")
 
-        # Wait until the next 5-minute wall-clock boundary.
-        # A slow scan skips missed intervals instead of overlapping.
-        delay = POLL_INTERVAL - (
-            time.time() % POLL_INTERVAL
-        )
-
-        log.info(
-            "[WAIT] Next scan in %.1f seconds.",
-            delay
-        )
+        delay = POLL_INTERVAL - (time.time() % POLL_INTERVAL)
+        log.info("[WAIT] Next scan in %.1f seconds.", delay)
 
         await asyncio.sleep(delay)
-
 
 # ============================================================
 # 7. MAIN
@@ -302,37 +289,23 @@ async def scanner_loop(exchange, pipeline):
 
 async def main():
 
-    exchange = ccxt.bybit({
-        "enableRateLimit": True,
-        "options": {
-            "defaultType": "linear",
-        },
-    })
-
+    exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
     pipeline = create_dlt_pipeline()
 
     try:
-        await scanner_loop(
-            exchange,
-            pipeline
-        )
+        await scanner_loop(exchange, pipeline)
 
     finally:
         log.info("[STOP] Closing Bybit connection...")
-
         await exchange.close()
-
         log.info("[STOP] Bybit connection closed.")
-
 
 # ============================================================
 # 8. ENTRY POINT
 # ============================================================
 
 if __name__ == "__main__":
-
     try:
         asyncio.run(main())
-
     except KeyboardInterrupt:
         log.info("[STOP] Scanner stopped by user.")
