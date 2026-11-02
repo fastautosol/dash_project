@@ -1,4 +1,4 @@
-# 2026.11.02  16.00 (5-minute market snapshots)
+# 2026.11.02  18.00 (5-minute market snapshots)
 import asyncio
 import logging
 import math
@@ -36,7 +36,7 @@ POLL_INTERVAL = 300  # 5 minutes
 
 MIN_LEV = 25
 MIN_TURNOVER = 1_000_000  # USDT / 24h
-MIN_R24 = 5.0             # %
+MIN_R24 = 3.0             # %
 MIN_R1 = 0.5              # %
 MAX_CONCURRENT_REQUESTS = 7
 OHLCV_LIMIT = 12
@@ -65,19 +65,14 @@ def safe_float(value, default=0.0) -> float:
 
 
 def calculate_change(current, previous) -> float:
-    """Százalékos árfolyamváltozás."""
-
     current = safe_float(current)
     previous = safe_float(previous)
-
     if current <= 0 or previous <= 0:
         return 0.0
-
     return (current / previous - 1) * 100
 
 
 def get_max_leverage(market: dict) -> float:
-
     info = market.get("info", {}) or {}
     leverage_filter = info.get("leverageFilter", {}) or {}
     max_leverage = safe_float(leverage_filter.get("maxLeverage"))
@@ -85,7 +80,6 @@ def get_max_leverage(market: dict) -> float:
     if max_leverage <= 0:
         limits = market.get("limits", {}) or {}
         leverage_limits = limits.get("leverage", {}) or {}
-
         max_leverage = safe_float(leverage_limits.get("max"))
 
     return max_leverage
@@ -93,7 +87,6 @@ def get_max_leverage(market: dict) -> float:
 
 def is_usdt_linear_swap(market: dict) -> bool:
     return (market.get("active") is not False and market.get("swap") is True and market.get("linear") is True and market.get("quote") == "USDT" and market.get("settle") == "USDT")
-
 
 # ============================================================
 # 4. MARKET SCANNER
@@ -120,17 +113,14 @@ async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dic
         else:
             r24h = safe_float(info.get("price24hPcnt")) * 100
 
-        if abs(r24h) < MIN_R24 or abs(r1h) < MIN_R1:
+        if abs(r24h) < MIN_R24 and abs(r1h) < MIN_R1:
             return None
 
         max_leverage = get_max_leverage(market)
         if max_leverage < MIN_LEV:
             return None
 
-        # ----------------------------------------------------
-        # OHLCV DATA
-        # ----------------------------------------------------
-
+        # ----------------------- OHLCV DATA ------------------------
         async with semaphore:
             ohlcv = await exchange.fetch_ohlcv(symbol, timeframe=TIMEFRAME, limit=OHLCV_LIMIT, params={"category": "linear"})
 
@@ -167,13 +157,13 @@ async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dic
             "snapshot_at": snapshot_at,
             "price": price,
             "max_leverage": max_leverage,
-            "r5": r5,
-            "r15": r15,
-            "r1h": r1h,
-            "r24h": r24h,
-            "change24": change24,
+            "r5": round(r5, 2),
+            "r15": round(r15, 2),
+            "r1h": round(r1h, 2),
+            "r24h": round(r24h, 2),
+            "change24": round(change24, 2),    
             "turnover24h": turnover24h,
-            "funding": funding,
+            "funding": round(funding, 8),
             "open_interest": open_interest}
 
     except Exception as exc:
