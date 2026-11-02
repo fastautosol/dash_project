@@ -1,4 +1,4 @@
-# 2026.10.31 EIA silver: dim_respondent, dim_fueltype, demand_lmp_hourly (DuckDB -> Postgres, mint a lufthansa_silver)
+# 2026.11.02 8.00 EIA silver: dim_respondent, dim_fueltype, demand_lmp_hourly
 import os
 import logging
 import duckdb
@@ -10,30 +10,31 @@ PG_CONN = os.getenv("PG_CONN", "dbname=n8n user=sql_admin password=sql_pass host
 # --------------------------------------------------------------------------------------------------------------------
 # Statikus torzsadatok. A respondent hivatalos nevet a bronze tablabol vesszuk (respondent_name), igy nem a memoriambol.
 # tz: a respondent fo terhelesi kozpontjanak idozonaja (elemzesi celra, pl. helyi ora szerinti hotermap), nem EIA-hivatalos adat.
-# (code, region, operator_type, iso_code, is_core, tz, datacenter_market)
+# (code, region, operator_type, iso_code, is_core, tz, datacenter_market, lat, lon)
+# lat/lon: reprezentativ pont (terhelesi kozpont / datacenter-piac), NEM a terulet kozepe; terkepes megjeleniteshez, szabadon javithato
 # --------------------------------------------------------------------------------------------------------------------
 RESPONDENTS = [
-    ("CISO", "West",       "ISO/RTO", "CAISO",  True,  "America/Los_Angeles", "Bay Area, Los Angeles"),
-    ("ERCO", "Texas",      "ISO/RTO", "ERCOT",  True,  "America/Chicago",     "Dallas, Austin, San Antonio"),
-    ("PJM",  "Mid-Atlantic", "ISO/RTO", "PJM",  True,  "America/New_York",    "Northern Virginia, Ohio"),
-    ("MISO", "Midwest",    "ISO/RTO", "MISO",   True,  "America/Chicago",     "Iowa, Minnesota"),
-    ("SWPP", "Central",    "ISO/RTO", "SPP",    False, "America/Chicago",     "Oklahoma, Nebraska"),
-    ("SOCO", "Southeast",  "Utility/BA", None,  False, "America/New_York",    "Atlanta"),
-    ("DUK",  "Southeast",  "Utility/BA", None,  False, "America/New_York",    None),
-    ("TVA",  "Southeast",  "Utility/BA", None,  False, "America/Chicago",     None),
-    ("FPL",  "Southeast",  "Utility/BA", None,  False, "America/New_York",    None),
-    ("FPC",  "Southeast",  "Utility/BA", None,  False, "America/New_York",    None),
-    ("TEC",  "Southeast",  "Utility/BA", None,  False, "America/New_York",    None),
-    ("NYIS", "Northeast",  "ISO/RTO", "NYISO",  False, "America/New_York",    None),
-    ("ISNE", "Northeast",  "ISO/RTO", "ISONE",  False, "America/New_York",    None),
-    ("AZPS", "Southwest",  "Utility/BA", None,  False, "America/Phoenix",     "Phoenix"),
-    ("SRP",  "Southwest",  "Utility/BA", None,  False, "America/Phoenix",     "Phoenix"),
-    ("TEPC", "Southwest",  "Utility/BA", None,  False, "America/Phoenix",     None),
-    ("NEVP", "Southwest",  "Utility/BA", None,  False, "America/Los_Angeles", None),
-    ("PGE",  "Northwest",  "Utility/BA", None,  False, "America/Los_Angeles", "Portland (Hillsboro)"),
-    ("PACW", "Northwest",  "Utility/BA", None,  False, "America/Los_Angeles", None),
-    ("PACE", "Northwest",  "Utility/BA", None,  False, "America/Denver",      None),
-    ("BPAT", "Northwest",  "Utility/BA", None,  False, "America/Los_Angeles", None),
+    ("CISO", "West",       "ISO/RTO", "CAISO",  True,  "America/Los_Angeles", "Bay Area, Los Angeles", 37.35, -121.95),
+    ("ERCO", "Texas",      "ISO/RTO", "ERCOT",  True,  "America/Chicago",     "Dallas, Austin, San Antonio", 31.2, -97.3),
+    ("PJM",  "Mid-Atlantic", "ISO/RTO", "PJM",  True,  "America/New_York",    "Northern Virginia, Ohio", 39.0, -77.5),
+    ("MISO", "Midwest",    "ISO/RTO", "MISO",   True,  "America/Chicago",     "Iowa, Minnesota", 42.0, -91.5),
+    ("SWPP", "Central",    "ISO/RTO", "SPP",    False, "America/Chicago",     "Oklahoma, Nebraska", 36.0, -98.5),
+    ("SOCO", "Southeast",  "Utility/BA", None,  False, "America/New_York",    "Atlanta", 33.75, -84.4),
+    ("DUK",  "Southeast",  "Utility/BA", None,  False, "America/New_York",    None, 35.25, -80.85),
+    ("TVA",  "Southeast",  "Utility/BA", None,  False, "America/Chicago",     None, 35.9, -86.6),
+    ("FPL",  "Southeast",  "Utility/BA", None,  False, "America/New_York",    None, 26.9, -80.4),
+    ("FPC",  "Southeast",  "Utility/BA", None,  False, "America/New_York",    None, 28.6, -81.7),
+    ("TEC",  "Southeast",  "Utility/BA", None,  False, "America/New_York",    None, 27.95, -82.46),
+    ("NYIS", "Northeast",  "ISO/RTO", "NYISO",  False, "America/New_York",    None, 41.5, -74.2),
+    ("ISNE", "Northeast",  "ISO/RTO", "ISONE",  False, "America/New_York",    None, 42.2, -71.8),
+    ("AZPS", "Southwest",  "Utility/BA", None,  False, "America/Phoenix",     "Phoenix", 33.55, -112.2),
+    ("SRP",  "Southwest",  "Utility/BA", None,  False, "America/Phoenix",     "Phoenix", 33.35, -111.75),
+    ("TEPC", "Southwest",  "Utility/BA", None,  False, "America/Phoenix",     None, 32.2, -110.95),
+    ("NEVP", "Southwest",  "Utility/BA", None,  False, "America/Los_Angeles", None, 36.17, -115.14),
+    ("PGE",  "Northwest",  "Utility/BA", None,  False, "America/Los_Angeles", "Portland (Hillsboro)", 45.5, -122.7),
+    ("PACW", "Northwest",  "Utility/BA", None,  False, "America/Los_Angeles", None, 42.8, -122.9),
+    ("PACE", "Northwest",  "Utility/BA", None,  False, "America/Denver",      None, 40.75, -111.9),
+    ("BPAT", "Northwest",  "Utility/BA", None,  False, "America/Los_Angeles", None, 46.3, -119.3),
 ]
 
 # EIA-930 fuel type kodok. A nevek sajat cimkek; ismeretlen kodot az ellenorzes jelez a logban.
@@ -81,8 +82,8 @@ def _column_type(conn, schema: str, table: str, column: str) -> str:
 
 def build_dim_respondent(conn):
     conn.execute("CREATE OR REPLACE TEMP TABLE _resp_static (respondent_code VARCHAR, region VARCHAR, operator_type VARCHAR, "
-                 "iso_code VARCHAR, is_core BOOLEAN, tz VARCHAR, datacenter_market VARCHAR)")
-    conn.executemany("INSERT INTO _resp_static VALUES (?, ?, ?, ?, ?, ?, ?)", RESPONDENTS)
+                 "iso_code VARCHAR, is_core BOOLEAN, tz VARCHAR, datacenter_market VARCHAR, lat DOUBLE, lon DOUBLE)")
+    conn.executemany("INSERT INTO _resp_static VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", RESPONDENTS)
 
     # hivatalos nev a bronze-bol (ha van respondent_name oszlop), kulonben a kod marad nev
     if _has_column(conn, "bronze", "eia_elec_hourly_demand", "respondent_name"):
@@ -102,7 +103,9 @@ def build_dim_respondent(conn):
             s.iso_code,
             s.is_core,
             s.tz,
-            s.datacenter_market
+            s.datacenter_market,
+            s.lat,
+            s.lon
         FROM _resp_static s
         LEFT JOIN ({names_sql}) n ON n.respondent = s.respondent_code
         ORDER BY s.respondent_code;
