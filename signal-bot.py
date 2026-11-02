@@ -177,16 +177,14 @@ async def run_bybit_scan(exchange, semaphore: asyncio.Semaphore):
         await exchange.load_markets()
     markets = exchange.markets
 
-    log.info("[SCAN] Fetching Bybit linear tickers...")
+    log.info("[SCAN] Start Fetching Bybit linear tickers...")
     tickers = await exchange.fetch_tickers(params={"category": "linear"})
     snapshot_at = datetime.now(UTC)
     candidates = []
 
     for symbol, market in markets.items():
-
         if not is_usdt_linear_swap(market):
             continue
-
         ticker = tickers.get(symbol)
         if not ticker:
             continue
@@ -250,7 +248,6 @@ async def scanner_loop(exchange, pipeline):
         try:
             start_time = time.time()
             log.info("=" * 60)
-            log.info("[SCAN] Starting market scan...")
 
             records = await run_bybit_scan(exchange, semaphore)
             if records:
