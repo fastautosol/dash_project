@@ -1,5 +1,4 @@
 # 2026.11.02  15.00 (5-minute market snapshots)
-
 import asyncio
 import logging
 import math
@@ -10,14 +9,12 @@ from datetime import datetime, UTC
 import ccxt.async_support as ccxt
 import dlt
 
-
 # ============================================================
 # 1. LOGGING
 # ============================================================
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 log = logging.getLogger("bybit_signal_api")
-
 
 # ============================================================
 # 2. CONFIGURATION
@@ -30,47 +27,37 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "n8n"),
     "username": os.getenv("DB_USER", "sql_admin"),
     "password": os.getenv("DB_PASSWORD", "sql_pass"),
-    "connect_timeout": 15,
-}
+    "connect_timeout": 15}
 
 # Bybit scanner
 TIMEFRAME = "5m"
 TIMEFRAME_MS = 5 * 60 * 1000
-
 POLL_INTERVAL = 300  # 5 minutes
 
 MIN_LEV = 25
 MIN_TURNOVER = 1_000_000  # USDT / 24h
 MIN_R24 = 5.0             # %
 MIN_R1 = 0.5              # %
-
 MAX_CONCURRENT_REQUESTS = 7
 OHLCV_LIMIT = 12
 
-# DLT
 PIPELINE_NAME = "bybit_market_snapshots"
 DATASET_NAME = "bybit_data"
 TABLE_NAME = "market_snapshots"
-
 PRIMARY_KEY = ["symbol", "snapshot_at"]
-
 
 # ============================================================
 # 3. HELPER FUNCTIONS
 # ============================================================
 
 def safe_float(value, default=0.0) -> float:
-    """Biztonságos float konverzió."""
-
     try:
         if value is None:
             return default
-
         result = float(value)
 
         if not math.isfinite(result):
             return default
-
         return result
 
     except (TypeError, ValueError):
@@ -117,45 +104,26 @@ async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dic
     try:
         info = ticker.get("info", {}) or {}
         price = safe_float(ticker.get("last"), safe_float(info.get("lastPrice")))
-
         if price <= 0:
             return None
 
         turnover24h = safe_float(info.get("turnover24h"), safe_float(ticker.get("quoteVolume")))
-
         if turnover24h < MIN_TURNOVER:
             return None
 
-        # 1-hour price change
-        prev_price_1h = safe_float(
-            info.get("prevPrice1h")
-        )
-
+        prev_price_1h = safe_float(info.get("prevPrice1h"))
         r1h = calculate_change(price, prev_price_1h)
-
-        # 24-hour price change
-        prev_price_24h = safe_float(
-            info.get("prevPrice24h")
-        )
+        prev_price_24h = safe_float(info.get("prevPrice24h"))
 
         if prev_price_24h > 0:
             r24h = calculate_change(price, prev_price_24h)
         else:
-            # Bybit price24hPcnt fractional value, e.g. -0.05 = -5%
-            r24h = safe_float(
-                info.get("price24hPcnt")
-            ) * 100
+            r24h = safe_float(info.get("price24hPcnt")) * 100
 
-        # ----------------------------------------------------
-        # FLEXIBLE PRE-FILTER
-        # R24 OR R1 must reach the configured threshold.
-        # ----------------------------------------------------
-
-        if abs(r24h) < MIN_R24 and abs(r1h) < MIN_R1:
+        if abs(r24h) < MIN_R24 or abs(r1h) < MIN_R1:
             return None
 
         max_leverage = get_max_leverage(market)
-
         if max_leverage < MIN_LEV:
             return None
 
@@ -164,26 +132,14 @@ async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dic
         # ----------------------------------------------------
 
         async with semaphore:
-            ohlcv = await exchange.fetch_ohlcv(
-                symbol,
-                timeframe=TIMEFRAME,
-                limit=OHLCV_LIMIT,
-                params={"category": "linear"},
-            )
+            ohlcv = await exchange.fetch_ohlcv(symbol, timeframe=TIMEFRAME, limit=OHLCV_LIMIT, params={"category": "linear"})
 
         if not ohlcv:
             return None
 
         # Only use fully closed candles.
         now_ms = int(time.time() * 1000)
-
-        closed = [
-            candle
-            for candle in ohlcv
-            if candle[0] + TIMEFRAME_MS <= now_ms
-        ]
-
-        # Four closed 5m candles are needed for R15.
+        closed = [candle for candle in ohlcv if candle[0] + TIMEFRAME_MS <= now_ms]
         if len(closed) < 4:
             return None
 
@@ -197,61 +153,35 @@ async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dic
         r5 = calculate_change(close_now, close_5)
         r15 = calculate_change(close_now, close_15)
 
-        # ----------------------------------------------------
-        # ADDITIONAL TICKER DATA
-        # ----------------------------------------------------
-
         change24 = ticker.get("percentage")
-
         if change24 is None:
             change24 = r24h
         else:
             change24 = safe_float(change24)
 
-        funding = safe_float(
-            info.get("fundingRate"),
-            safe_float(ticker.get("fundingRate"))
-        )
-
-        open_interest = safe_float(
-            info.get("openInterest")
-        )
-
-        # ----------------------------------------------------
-        # SNAPSHOT RECORD
-        # ----------------------------------------------------
+        funding = safe_float(info.get("fundingRate"), safe_float(ticker.get("fundingRate")))
+        open_interest = safe_float(info.get("openInterest"))
 
         return {
             "symbol": symbol,
             "snapshot_at": snapshot_at,
-
             "price": price,
             "max_leverage": max_leverage,
-
             "r5": r5,
             "r15": r15,
             "r1h": r1h,
             "r24h": r24h,
             "change24": change24,
-
             "turnover24h": turnover24h,
             "funding": funding,
-            "open_interest": open_interest,
-        }
+            "open_interest": open_interest}
 
     except Exception as exc:
-        log.warning(
-            "[OHLCV] %s fetch failed: %s",
-            symbol,
-            exc
-        )
+        log.warning("[OHLCV] %s fetch failed: %s", symbol, exc)
         return None
 
 
-async def run_bybit_scan(
-    exchange,
-    semaphore: asyncio.Semaphore,
-):
+async def run_bybit_scan(exchange, semaphore: asyncio.Semaphore):
     """
     Teljes Bybit linear market scan.
     """
