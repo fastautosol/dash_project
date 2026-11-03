@@ -64,8 +64,6 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, is_linear: bo
 # TICKER CACHE REFRESH (funding / OI / turnover / 24h change)
 # =========================
 async def refresh_ticker_cache(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) -> None:
-    """Refreshes funding/OI/turnover/vwap data every TICKER_INTERVAL seconds.
-    Uses REST fetch_tickers (cheap, batched) rather than per-candle REST calls."""
     while True:
         try:
             linear_symbols = [to_linear(s) for s in CRYPTO_SYMBOLS]
@@ -74,6 +72,7 @@ async def refresh_ticker_cache(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit)
             linear_tickers = {sym: linear_tickers_raw[to_linear(sym)] for sym in CRYPTO_SYMBOLS if to_linear(sym) in linear_tickers_raw}
             state.ticker_cache = {**linear_tickers, **spot_tickers}
             state.last_ticker_fetch = time.time()
+            log.info(f"[TICKER] Updated {len(spot_tickers+linear_tickers)} SYMBOLS")
         except Exception as e:
             log.warning(f"[TICKER] refresh failed: {e}")
         await asyncio.sleep(TICKER_INTERVAL)
@@ -129,7 +128,6 @@ async def db_writer_loop(pipeline) -> None:
             try:
                 async with state.pipeline_lock:
                     await asyncio.to_thread(pipeline.run, records, table_name="bybit_candles", write_disposition="merge", primary_key=["symbol", "timestamp"])
-                log.info(f"[DB] Upserted {len(records)} enriched candles")
             except Exception as e:
                 log.error(f"[DB] Upsert failed: {e}")
 
