@@ -33,9 +33,7 @@ DB_CONFIG = {
 POLL_INTERVAL = 300  # 5 minutes
 
 MIN_LEV = 25
-MIN_TURNOVER = 1_000_000  # USDT / 24h
-MIN_R24 = 3.0             # %
-MIN_R1 = 0.5              # %
+MIN_TURNOVER = 500_000  #USDT/24h
 
 PIPELINE_NAME = "bybit_market_snapshots"
 DATASET_NAME = "bybit_data"
@@ -109,9 +107,6 @@ async def build_market_snapshot(exchange, symbol: str, market: dict, ticker: dic
         else:
             r24h = safe_float(info.get("price24hPcnt")) * 100
 
-        if abs(r24h) < MIN_R24 and abs(r1h) < MIN_R1:
-            return None
-
         max_leverage = get_max_leverage(market)
         if max_leverage < MIN_LEV:
             return None
@@ -169,7 +164,7 @@ async def run_bybit_scan(exchange):
     records = [r for r in results if r is not None]
     long_count = sum(1 for r in records if r["r24h"] > 0)
     short_count = sum(1 for r in records if r["r24h"] < 0)    
-    log.info(f"[SCAN] Snapshot candidates: {len(records)} | {long_count} LONG / {short_count} SHORT")
+    log.info(f"[SCAN] Snapshot coins: {len(records)} | {long_count} LONG / {short_count} SHORT")
     
     return records
 
