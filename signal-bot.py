@@ -4,7 +4,7 @@ import logging
 import math
 import os
 import time
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 import ccxt.async_support as ccxt
 import dlt
 
@@ -191,6 +191,20 @@ async def save_market_snapshots(pipeline, records: list):
         raise
 
 
+async def cleanup_old_snapshots(pipeline):
+    threshold = datetime.now(UTC) - timedelta(hours=CLEANUP_HOURS)
+    try:
+        def _cleanup():
+            with pipeline.sql_client() as client:
+                tname = client.make_qualified_table_name(TABLE_NAME)
+                client.execute_sql(f"DELETE FROM {tname} WHERE snapshot_at < %s", (threshold,))
+
+        await asyncio.to_thread(_cleanup)
+        log.info(f"[CLEANUP] Removed data older than {CLEANUP_HOURS}h")
+    except Exception as e:
+        log.error(f"[CLEANUP] Failed: {e}")
+
+
 # ============================================================
 # 6. SCANNER LOOP
 # ============================================================
@@ -198,6 +212,7 @@ async def save_market_snapshots(pipeline, records: list):
 async def scanner_loop(exchange, pipeline):
 
     log.info("[START] Bybit scanner started. Interval: %s seconds.", POLL_INTERVAL)
+    last_cleanup = 0.0
 
     while True:
         try:
@@ -209,6 +224,11 @@ async def scanner_loop(exchange, pipeline):
                 await save_market_snapshots(pipeline, records)
             else:
                 log.info("[SCAN] No market snapshots matched the filters.")
+
+            # Hourly Cleanup
+            if start_time - last_cleanup >= CLEANUP_INTERVAL_SECONDS:
+                await cleanup_old_snapshots(pipeline)
+                last_cleanup = start_time
 
             elapsed = time.time() - start_time
             log.info("[SCAN] Completed in %.2f seconds. Records: %s", elapsed, len(records))
