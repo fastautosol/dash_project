@@ -39,7 +39,7 @@ DATASET_NAME = "bybit_data"
 TABLE_NAME = "market_snapshots"
 PRIMARY_KEY = ["symbol", "snapshot_at"]
 
-CLEANUP_HOURS = 120
+CLEANUP_HOURS = 72
 CLEANUP_INTERVAL_SECONDS = 3600  # 1 hour
 
 # ============================================================
