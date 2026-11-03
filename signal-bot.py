@@ -161,7 +161,7 @@ async def run_bybit_scan(exchange):
     tasks = [build_market_snapshot(exchange=exchange, symbol=symbol, market=market, ticker=ticker, snapshot_at=snapshot_at) for symbol, market, ticker in candidates]
     results = await asyncio.gather(*tasks)
     records = [r for r in results if r is not None] 
-    log.info(f"[SCAN] Snapshot candidates: {len(records)}")
+    log.info(f"[SCAN] Snapshot candidates: {len(records)} coins")
     
     return records
 
