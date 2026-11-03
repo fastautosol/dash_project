@@ -6,9 +6,8 @@ from datetime import datetime, UTC, timedelta
 import time
 import logging
 import os
+
 os.environ.setdefault("LOAD__DELETE_COMPLETED_JOBS", "true") # dlt: a lefutott load package-ek törlése, ne halmozódjanak
-
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 log = logging.getLogger(__name__)
 
@@ -19,11 +18,9 @@ DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 CRYPTO_SYMBOLS = [
     "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "ARB/USDT", "ETC/USDT", "COMP/USDT",
-    "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT",  "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT"
-]
+    "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT",  "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT"]
 
 XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT",  "COINX/USDT", "CRCLX/USDT", "METAX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
-
 ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
 
 POLL_INTERVAL = 150       # Seconds between DB upserts
