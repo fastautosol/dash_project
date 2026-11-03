@@ -26,7 +26,7 @@ XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT",  "COIN
 
 ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
 
-POLL_INTERVAL = 75        # Seconds between DB upserts
+POLL_INTERVAL = 150       # Seconds between DB upserts
 TICKER_INTERVAL = 300     # Seconds between ticker cache refreshes (funding/OI/turnover)
 CLEANUP_HOURS = 60        # Hours of data to retain
 
