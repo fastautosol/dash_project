@@ -4,7 +4,6 @@ import logging
 import math
 import os
 import time
-
 from datetime import datetime, UTC
 import ccxt.async_support as ccxt
 import dlt
@@ -161,10 +160,8 @@ async def run_bybit_scan(exchange):
 
     tasks = [build_market_snapshot(exchange=exchange, symbol=symbol, market=market, ticker=ticker, snapshot_at=snapshot_at) for symbol, market, ticker in candidates]
     results = await asyncio.gather(*tasks)
-    records = [r for r in results if r is not None]
-    long_count = sum(1 for r in records if r["r24h"] > 0)
-    short_count = sum(1 for r in records if r["r24h"] < 0)    
-    log.info(f"[SCAN] Snapshot coins: {len(records)} | {long_count} LONG / {short_count} SHORT")
+    records = [r for r in results if r is not None] 
+    log.info(f"[SCAN] Snapshot candidates: {len(records)}")
     
     return records
 
