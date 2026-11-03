@@ -69,7 +69,7 @@ async def refresh_ticker_cache(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit)
             linear_tickers = {sym: linear_tickers_raw[to_linear(sym)] for sym in CRYPTO_SYMBOLS if to_linear(sym) in linear_tickers_raw}
             state.ticker_cache = {**linear_tickers, **spot_tickers}
             state.last_ticker_fetch = time.time()
-            log.info(f"[TICKER] Updated {len(spot_tickers+linear_tickers)} SYMBOLS")
+            log.info(f"[TICKER] Updated {len(spot_tickers) + len(linear_tickers)} SYMBOLS")
         except Exception as e:
             log.warning(f"[TICKER] refresh failed: {e}")
         await asyncio.sleep(TICKER_INTERVAL)
