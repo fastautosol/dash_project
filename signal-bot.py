@@ -1,4 +1,4 @@
-# 2026.11.02  18.00 (5-minute market snapshots)
+# 2026.11.03  18.00 (5-minute market snapshots)
 import asyncio
 import logging
 import math
@@ -88,7 +88,7 @@ def is_usdt_linear_swap(market: dict) -> bool:
 # 4. MARKET SCANNER
 # ============================================================
 
-async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dict, snapshot_at: datetime):
+async def build_market_snapshot(exchange, symbol: str, market: dict, ticker: dict, snapshot_at: datetime):
 
     try:
         info = ticker.get("info", {}) or {}
@@ -138,7 +138,7 @@ async def fetch_symbol_snapshot(exchange, symbol: str, market: dict, ticker: dic
             "open_interest": open_interest}
 
     except Exception as exc:
-        log.warning("[OHLCV] %s fetch failed: %s", symbol, exc)
+        log.warning("[SNAPSHOT] %s fetch failed: %s", symbol, exc)
         return None
 
 
@@ -164,11 +164,7 @@ async def run_bybit_scan(exchange):
 
     log.info("[SCAN] Linear USDT markets found: %s", len(candidates))
 
-    # --------------------------------------------------------
-    # PARALLEL OHLCV FETCH
-    # --------------------------------------------------------
-
-    tasks = [fetch_symbol_snapshot(exchange=exchange, symbol=symbol, market=market, ticker=ticker, snapshot_at=snapshot_at) for symbol, market, ticker in candidates]
+    tasks = [build_market_snapshot(exchange=exchange, symbol=symbol, market=market, ticker=ticker, snapshot_at=snapshot_at) for symbol, market, ticker in candidates]
     results = await asyncio.gather(*tasks)
     records = [r for r in results if r is not None]
     long_count = sum(1 for r in records if r["r24h"] > 0)
