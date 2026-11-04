@@ -5,4 +5,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY requirements-bot.txt .
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-bot.txt
 COPY signal-bot.py .
+COPY apis/signal_silver.py ./apis/signal_silver.py
 COPY candles-bot.py .
