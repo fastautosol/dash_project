@@ -27,11 +27,11 @@ FULL_REFRESH = os.getenv("SILVER_FULL_REFRESH", "0") == "1"
 
 def _build_attach_dsn() -> str:
     return (
-        f"host={os.getenv('DB_HOST', 'postgresql'))} "
-        f"port={os.getenv('DB_PORT', '5432'))} "
-        f"dbname={os.getenv('DB_NAME', 'n8n'))} "
-        f"user={os.getenv('DB_USER', 'sql_admin'))} "
-        f"password={os.getenv('DB_PASSWORD', 'sql_pass'))}"
+        f"host='{os.getenv('DB_HOST', 'postgresql')}'"
+        f"port='{os.getenv('DB_PORT', '5432')}'"
+        f"dbname='{os.getenv('DB_NAME', 'n8n')}'"
+        f"user='{os.getenv('DB_USER', 'sql_admin')}'"
+        f"password='{os.getenv('DB_PASSWORD', 'sql_pass')}'"
     )
 
 # ============================================================
