@@ -149,12 +149,7 @@ def _calculate_momentum(conn) -> int:
     
     conn.execute(f"""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
-        SELECT
-            symbol,
-            snapshot_at,
-            price,
-            max_leverage,
-            turnover24h,
+        SELECT symbol, snapshot_at, price, max_leverage,  turnover24h,
             CASE WHEN LAG(price, {R5_LAG}) OVER w > 0
                  THEN ((price / LAG(price, {R5_LAG}) OVER w) - 1) * 100
                  ELSE NULL
@@ -166,13 +161,7 @@ def _calculate_momentum(conn) -> int:
             CASE WHEN LAG(price, {R30_LAG}) OVER w > 0
                  THEN ((price / LAG(price, {R30_LAG}) OVER w) - 1) * 100
                  ELSE NULL
-            END AS r30,
-            r1h,
-            r24h,
-            change24,
-            funding,
-            open_interest,
-            CURRENT_TIMESTAMP AS transformed_at
+            END AS r30, r1h, r24h, change24, funding, open_interest, CURRENT_TIMESTAMP AS transformed_at
         FROM _silver_source
         WINDOW w AS (PARTITION BY symbol ORDER BY snapshot_at)
     """)
@@ -186,23 +175,15 @@ def _write_silver(conn):
     """Eredmények írása a Silver táblába."""
     if FULL_REFRESH:
         logger.warning("[SILVER] FULL REFRESH: rebuilding the complete table.")
-        conn.execute("""
-            CREATE OR REPLACE TABLE pg.silver.fact_market_snapshots AS
-            SELECT * FROM _silver_output
-        """)
+        conn.execute("CREATE OR REPLACE TABLE pg.silver.fact_market_snapshots AS SELECT * FROM _silver_output")
     else:
         # Csak az új sorokat írjuk (amik a _new_bronze-ban vannak)
         conn.execute("""
-            INSERT INTO pg.silver.fact_market_snapshots (
-                symbol, snapshot_at, price, max_leverage, turnover24h,
-                r5, r15, r30, r1h, r24h, change24, funding, open_interest, transformed_at
-            )
-            SELECT
-                o.symbol, o.snapshot_at, o.price, o.max_leverage, o.turnover24h,
-                o.r5, o.r15, o.r30, o.r1h, o.r24h, o.change24, o.funding, o.open_interest, o.transformed_at
+            INSERT INTO pg.silver.fact_market_snapshots (symbol, snapshot_at, price, max_leverage, turnover24h, r5, r15, r30, r1h, r24h, change24, funding, open_interest, transformed_at)
+            SELECT o.symbol, o.snapshot_at, o.price, o.max_leverage, o.turnover24h, o.r5, o.r15, o.r30, o.r1h, o.r24h, o.change24, o.funding, o.open_interest, o.transformed_at
             FROM _silver_output o
             INNER JOIN _new_bronze n
-                ON o.symbol = n.symbol AND o.snapshot_at = n.snapshot_at
+            ON o.symbol = n.symbol AND o.snapshot_at = n.snapshot_at
         """)
     
     logger.info("[SILVER] Silver table updated.")
@@ -212,10 +193,7 @@ def _write_silver(conn):
 # ============================================================
 def _apply_retention(conn):
     """Régi adatok törlése."""
-    conn.execute(f"""
-        DELETE FROM pg.silver.fact_market_snapshots
-        WHERE snapshot_at < CURRENT_TIMESTAMP - INTERVAL '{RETENTION_DAYS} days'
-    """)
+    conn.execute(f"DELETE FROM pg.silver.fact_market_snapshots WHERE snapshot_at < CURRENT_TIMESTAMP - INTERVAL '{RETENTION_DAYS} days'")
     logger.info("[SILVER] Retention applied: %d days.", RETENTION_DAYS)
 
 # ============================================================
@@ -243,15 +221,7 @@ def _validate_silver(conn) -> dict:
         raise RuntimeError(f"Invalid Silver prices: {invalid_prices}")
     
     # Duplikátumok ellenőrzése
-    duplicates = conn.execute("""
-        SELECT COUNT(*)
-        FROM (
-            SELECT symbol, snapshot_at
-            FROM pg.silver.fact_market_snapshots
-            GROUP BY symbol, snapshot_at
-            HAVING COUNT(*) > 1
-        )
-    """).fetchone()[0]
+    duplicates = conn.execute("SELECT COUNT(*) FROM (SELECT symbol, snapshot_at FROM pg.silver.fact_market_snapshots GROUP BY symbol, snapshot_at HAVING COUNT(*) > 1)").fetchone()[0]
     
     if duplicates > 0:
         raise RuntimeError(f"Duplicate Silver keys found: {duplicates}")
