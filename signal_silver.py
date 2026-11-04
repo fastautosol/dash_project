@@ -53,17 +53,7 @@ def _build_source(conn) -> int:
         logger.info("[SILVER] Building FULL REFRESH source...")
         conn.execute(f"""
             CREATE OR REPLACE TEMP TABLE _silver_source AS
-            SELECT
-                symbol,
-                snapshot_at,
-                price,
-                max_leverage,
-                turnover24h,
-                r1h,
-                r24h,
-                change24,
-                funding,
-                open_interest
+            SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h, r24h, change24, funding, open_interest
             FROM (
                 SELECT
                     NULLIF(TRIM(symbol::VARCHAR), '') AS symbol,
@@ -78,10 +68,7 @@ def _build_source(conn) -> int:
                     TRY_CAST(open_interest AS DOUBLE) AS open_interest,
                     _dlt_load_id,
                     _dlt_id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY symbol, snapshot_at
-                        ORDER BY _dlt_load_id DESC NULLS LAST, _dlt_id DESC NULLS LAST
-                    ) AS rn
+                    ROW_NUMBER() OVER (PARTITION BY symbol, snapshot_at ORDER BY _dlt_load_id DESC NULLS LAST, _dlt_id DESC NULLS LAST) AS rn
                 FROM pg.bybit_data.market_snapshots
                 WHERE TRY_CAST(snapshot_at AS TIMESTAMPTZ) >= CURRENT_TIMESTAMP - INTERVAL '{RETENTION_DAYS} days'
                   AND NULLIF(TRIM(symbol::VARCHAR), '') IS NOT NULL
@@ -99,17 +86,7 @@ def _build_source(conn) -> int:
         # 1. Új Bronze sorok (még nincsenek a Silver-ben)
         conn.execute(f"""
             CREATE OR REPLACE TEMP TABLE _new_bronze AS
-            SELECT
-                symbol,
-                snapshot_at,
-                price,
-                max_leverage,
-                turnover24h,
-                r1h,
-                r24h,
-                change24,
-                funding,
-                open_interest
+            SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h, r24h, change24, funding, open_interest
             FROM (
                 SELECT
                     NULLIF(TRIM(b.symbol::VARCHAR), '') AS symbol,
@@ -124,21 +101,13 @@ def _build_source(conn) -> int:
                     TRY_CAST(b.open_interest AS DOUBLE) AS open_interest,
                     b._dlt_load_id,
                     b._dlt_id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY b.symbol, b.snapshot_at
-                        ORDER BY b._dlt_load_id DESC NULLS LAST, b._dlt_id DESC NULLS LAST
-                    ) AS rn
+                    ROW_NUMBER() OVER (PARTITION BY b.symbol, b.snapshot_at ORDER BY b._dlt_load_id DESC NULLS LAST, b._dlt_id DESC NULLS LAST) AS rn
                 FROM pg.bybit_data.market_snapshots b
                 WHERE TRY_CAST(b.snapshot_at AS TIMESTAMPTZ) >= CURRENT_TIMESTAMP - INTERVAL '{RETENTION_DAYS} days'
                   AND NULLIF(TRIM(b.symbol::VARCHAR), '') IS NOT NULL
                   AND TRY_CAST(b.price AS DOUBLE) > 0
                   AND TRY_CAST(b.snapshot_at AS TIMESTAMPTZ) IS NOT NULL
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM pg.silver.fact_market_snapshots s
-                      WHERE s.symbol = b.symbol
-                        AND s.snapshot_at = TRY_CAST(b.snapshot_at AS TIMESTAMPTZ)
-                  )
+                  AND NOT EXISTS (SELECT 1 FROM pg.silver.fact_market_snapshots s WHERE s.symbol = b.symbol AND s.snapshot_at = TRY_CAST(b.snapshot_at AS TIMESTAMPTZ))
             )
             WHERE rn = 1
         """)
@@ -152,53 +121,18 @@ def _build_source(conn) -> int:
         # 2. Releváns Silver sorok (utolsó N sor symbol-onként)
         conn.execute(f"""
             CREATE OR REPLACE TEMP TABLE _relevant_silver AS
-            SELECT
-                symbol,
-                snapshot_at,
-                price,
-                max_leverage,
-                turnover24h,
-                r1h,
-                r24h,
-                change24,
-                funding,
-                open_interest
-            FROM (
-                SELECT
-                    *,
-                    ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY snapshot_at DESC) AS rn
-                FROM pg.silver.fact_market_snapshots
-            )
+            SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h, r24h, change24, funding, open_interest
+            FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY snapshot_at DESC) AS rn FROM pg.silver.fact_market_snapshots)
             WHERE rn <= {SILVER_LOOKBACK_ROWS}
         """)
         
         # 3. Kombinált forrás: Silver + új Bronze
         conn.execute("""
             CREATE OR REPLACE TEMP TABLE _silver_source AS
-            SELECT
-                symbol,
-                snapshot_at,
-                price,
-                max_leverage,
-                turnover24h,
-                r1h,
-                r24h,
-                change24,
-                funding,
-                open_interest
+            SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h,  r24h, change24, funding, open_interest
             FROM _relevant_silver
             UNION ALL
-            SELECT
-                symbol,
-                snapshot_at,
-                price,
-                max_leverage,
-                turnover24h,
-                r1h,
-                r24h,
-                change24,
-                funding,
-                open_interest
+            SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h, r24h, change24, funding, open_interest
             FROM _new_bronze
         """)
     
