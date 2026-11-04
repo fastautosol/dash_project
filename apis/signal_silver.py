@@ -400,26 +400,9 @@ def run_signal_silver_transformation() -> int:
 
     except Exception:
 
-        logger.exception(
-            "Signal Silver transzformációs hiba"
-        )
-
+        logger.exception("Signal Silver transzformációs hiba")
         raise
 
     finally:
 
         conn.close()
-
-
-# ============================================================
-# STANDALONE TEST
-# ============================================================
-
-if __name__ == "__main__":
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(message)s"
-    )
-
-    run_signal_silver_transformation()
