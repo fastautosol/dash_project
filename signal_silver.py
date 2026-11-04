@@ -24,19 +24,14 @@ FULL_REFRESH = os.getenv("SILVER_FULL_REFRESH", "0") == "1"
 # ============================================================
 # POSTGRES CONNECTION
 # ============================================================
-def _conninfo_value(value: str) -> str:
-    value = str(value)
-    value = value.replace("\\", "\\\\")
-    value = value.replace("'", "\\'")
-    return f"'{value}'"
 
 def _build_attach_dsn() -> str:
     return (
-        f"host={_conninfo_value(os.getenv('DB_HOST', 'postgresql'))} "
-        f"port={_conninfo_value(os.getenv('DB_PORT', '5432'))} "
-        f"dbname={_conninfo_value(os.getenv('DB_NAME', 'n8n'))} "
-        f"user={_conninfo_value(os.getenv('DB_USER', 'sql_admin'))} "
-        f"password={_conninfo_value(os.getenv('DB_PASSWORD', 'sql_pass'))}"
+        f"host={os.getenv('DB_HOST', 'postgresql'))} "
+        f"port={os.getenv('DB_PORT', '5432'))} "
+        f"dbname={os.getenv('DB_NAME', 'n8n'))} "
+        f"user={os.getenv('DB_USER', 'sql_admin'))} "
+        f"password={os.getenv('DB_PASSWORD', 'sql_pass'))}"
     )
 
 # ============================================================
