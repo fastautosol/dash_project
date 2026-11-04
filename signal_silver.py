@@ -404,3 +404,4 @@ def run_signal_silver_transformation() -> int:
         raise
 
     finally:
+          conn.close()
