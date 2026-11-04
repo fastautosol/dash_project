@@ -50,7 +50,6 @@ def _build_source(conn) -> int:
         # --------------------------------------------------------
         # FULL REFRESH: Összes Bronze sor
         # --------------------------------------------------------
-        logger.info("[SILVER] Building FULL REFRESH source...")
         conn.execute(f"""
             CREATE OR REPLACE TEMP TABLE _silver_source AS
             SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h, r24h, change24, funding, open_interest
@@ -80,9 +79,7 @@ def _build_source(conn) -> int:
     else:
         # --------------------------------------------------------
         # INCREMENTAL: Új Bronze sorok + releváns Silver sorok
-        # --------------------------------------------------------
-        logger.info("[SILVER] Building INCREMENTAL source...")
-        
+        # --------------------------------------------------------        
         # 1. Új Bronze sorok (még nincsenek a Silver-ben)
         conn.execute(f"""
             CREATE OR REPLACE TEMP TABLE _new_bronze AS
@@ -137,7 +134,6 @@ def _build_source(conn) -> int:
         """)
     
     source_count = conn.execute("SELECT COUNT(*) FROM _silver_source").fetchone()[0]
-    logger.info("[SILVER] Source records: %d", source_count)
     return source_count
 
 # ============================================================
@@ -145,7 +141,6 @@ def _build_source(conn) -> int:
 # ============================================================
 def _calculate_momentum(conn) -> int:
     """Egyszerű momentum számítás toleranciák nélkül."""
-    logger.info("[SILVER] Calculating momentum (LAG %d, %d, %d)...", R5_LAG, R15_LAG, R30_LAG)
     
     conn.execute(f"""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
@@ -254,8 +249,6 @@ def run_signal_silver_transformation() -> int:
         conn.execute("SET TimeZone = 'UTC';")
         conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver;")
         
-        logger.info("[SILVER] Connected to PostgreSQL through DuckDB.")
-        
         # 1. Forrás előkészítése
         source_count = _build_source(conn)
         if source_count == 0:
@@ -279,16 +272,6 @@ def run_signal_silver_transformation() -> int:
         stats = _validate_silver(conn)
         
         elapsed = time.perf_counter() - start_time
-        logger.info("-" * 50)
-        logger.info("SIGNAL SILVER TRANSFORMATION SUCCESS")
-        logger.info("-" * 50)
-        logger.info("Mode: %s", "FULL REFRESH" if FULL_REFRESH else "INCREMENTAL")
-        logger.info("Silver rows: %d", stats["total_rows"])
-        logger.info("Unique coins: %d", stats["unique_coins"])
-        logger.info("First snapshot: %s", stats["first_snapshot"])
-        logger.info("Last snapshot: %s", stats["last_snapshot"])
-        logger.info("Missing r5/r15/r30: %d / %d / %d",
-                   stats["missing_r5"], stats["missing_r15"], stats["missing_r30"])
         logger.info("Execution time: %.2f sec", elapsed)
         logger.info("-" * 50)
         
