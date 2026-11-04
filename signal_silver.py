@@ -156,7 +156,6 @@ def _calculate_momentum0(conn) -> int:
 
 def _calculate_momentum(conn) -> int:
     """Időalapú momentum számítás toleranciákkal."""
-
     conn.execute("""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
         WITH base AS (SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h, r24h, change24, funding, open_interest,
