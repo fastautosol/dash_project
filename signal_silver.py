@@ -1,4 +1,4 @@
-# 2026.11.04 Signal Silver Transformation - Egyszerűsített verzió
+# 2026.11.04 18.00  Signal Silver Transformation
 import os
 import time
 import logging
@@ -16,7 +16,6 @@ R5_LAG = 1
 R15_LAG = 3
 R30_LAG = 6
 
-# Hány Silver sort tartsunk meg symbol-onként a LAG számításhoz
 # 6 elég lenne, de legyen tartalék a kimaradt sorok esetére
 SILVER_LOOKBACK_ROWS = 10
 
@@ -272,8 +271,7 @@ def run_signal_silver_transformation() -> int:
         stats = _validate_silver(conn)
         
         elapsed = time.perf_counter() - start_time
-        logger.info("Execution time: %.2f sec", elapsed)
-        logger.info("-" * 50)
+        logger.info("[SILVER] Execution time: %.2f sec", elapsed)
         
         return stats["total_rows"]
     
