@@ -7,7 +7,7 @@ import time
 from datetime import datetime, UTC, timedelta
 import ccxt.async_support as ccxt
 import dlt
-from signal_silver import run_signal_silver_transformation
+from apis.signal_silver import run_signal_silver_transformation
 
 # ============================================================
 # 1. LOGGING
