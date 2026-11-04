@@ -133,7 +133,7 @@ def _build_source(conn) -> int:
 # ============================================================
 # MOMENTUM CALCULATION
 # ============================================================
-def _calculate_momentum(conn) -> int:
+def _calculate_momentum0(conn) -> int:
     """Egyszerű momentum számítás toleranciák nélkül."""
     
     conn.execute(f"""
@@ -156,6 +156,87 @@ def _calculate_momentum(conn) -> int:
     """)
     
     return conn.execute("SELECT COUNT(*) FROM _silver_output").fetchone()[0]
+
+
+def _calculate_momentum(conn) -> int:
+    """Időalapú momentum számítás toleranciákkal."""
+
+    conn.execute("""
+        CREATE OR REPLACE TEMP TABLE _silver_output AS
+        WITH base AS (SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h, r24h, change24, funding, open_interest,
+
+            -- R5 referencia: 4-6 perccel korábbi ár
+            (SELECT p.price FROM _silver_source p
+                    WHERE p.symbol = b.symbol AND p.snapshot_at < b.snapshot_at AND p.snapshot_at BETWEEN b.snapshot_at - INTERVAL '6 minutes' AND b.snapshot_at - INTERVAL '4 minutes'
+                    ORDER BY ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '5 minutes'))), p.snapshot_at DESC LIMIT 1
+            ) AS previous_price_5,
+
+            -- R15 referencia: 13-17 perccel korábbi ár
+            (SELECT p.price FROM _silver_source p
+                    WHERE p.symbol = b.symbol AND p.snapshot_at < b.snapshot_at AND p.snapshot_at BETWEEN b.snapshot_at - INTERVAL '17 minutes' AND b.snapshot_at - INTERVAL '13 minutes'
+                    ORDER BY ABS(EPOCH( p.snapshot_at -  (b.snapshot_at - INTERVAL '15 minutes'))), p.snapshot_at DESC LIMIT 1
+            ) AS previous_price_15,
+
+            -- R30 referencia: 28-32 perccel korábbi ár
+                (
+                    SELECT p.price
+                    FROM _silver_source p
+                    WHERE p.symbol = b.symbol
+                      AND p.snapshot_at < b.snapshot_at
+                      AND p.snapshot_at BETWEEN
+                          b.snapshot_at - INTERVAL '32 minutes'
+                          AND b.snapshot_at - INTERVAL '28 minutes'
+                    ORDER BY
+                        ABS(EPOCH(
+                            p.snapshot_at -
+                            (b.snapshot_at - INTERVAL '30 minutes')
+                        )),
+                        p.snapshot_at DESC
+                    LIMIT 1
+                ) AS previous_price_30
+
+            FROM _silver_source b
+        )
+
+        SELECT
+            symbol,
+            snapshot_at,
+            price,
+            max_leverage,
+            turnover24h,
+
+            CASE
+                WHEN previous_price_5 > 0
+                THEN ((price / previous_price_5) - 1) * 100
+                ELSE NULL
+            END AS r5,
+
+            CASE
+                WHEN previous_price_15 > 0
+                THEN ((price / previous_price_15) - 1) * 100
+                ELSE NULL
+            END AS r15,
+
+            CASE
+                WHEN previous_price_30 > 0
+                THEN ((price / previous_price_30) - 1) * 100
+                ELSE NULL
+            END AS r30,
+
+            r1h,
+            r24h,
+            change24,
+            funding,
+            open_interest,
+            CURRENT_TIMESTAMP AS transformed_at
+
+        FROM base
+    """)
+
+    return conn.execute(
+        "SELECT COUNT(*) FROM _silver_output"
+    ).fetchone()[0]
+
 
 # ============================================================
 # WRITE SILVER
