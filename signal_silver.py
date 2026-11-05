@@ -1,4 +1,4 @@
-# 2026.11.04 18.00  Signal Silver Transformation
+# 2026.11.05 18.00  Signal Silver Transformation
 import os
 import time
 import logging
@@ -155,49 +155,198 @@ def _calculate_momentum0(conn) -> int:
 
 
 def _calculate_momentum(conn) -> int:
-    """Időalapú momentum számítás toleranciákkal."""
+    """Időalapú momentum-, turnover- és OI-változás számítás toleranciákkal."""
     conn.execute("""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
-        WITH base AS (SELECT symbol, snapshot_at, price, max_leverage, turnover24h, r1h, r24h, change24, funding, open_interest,
+        WITH base AS (
+            SELECT
+                b.symbol,
+                b.snapshot_at,
+                b.price,
+                b.max_leverage,
+                b.turnover24h,
+                b.r1h,
+                b.r24h,
+                b.change24,
+                b.funding,
+                b.open_interest,
 
-            -- R5 referencia: 4-6 perccel korábbi ár
-            (SELECT p.price FROM _silver_source p
-                WHERE p.symbol = b.symbol AND p.snapshot_at < b.snapshot_at AND p.snapshot_at BETWEEN b.snapshot_at - INTERVAL '6 minutes' AND b.snapshot_at - INTERVAL '4 minutes'
-                ORDER BY ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '5 minutes'))), p.snapshot_at DESC LIMIT 1
-            ) AS previous_price_5,
+                -- Ár referencia: 5 perccel korábban (±1 perc)
+                (
+                    SELECT p.price
+                    FROM _silver_source p
+                    WHERE p.symbol = b.symbol
+                      AND p.snapshot_at < b.snapshot_at
+                      AND p.snapshot_at BETWEEN
+                          b.snapshot_at - INTERVAL '6 minutes'
+                          AND b.snapshot_at - INTERVAL '4 minutes'
+                    ORDER BY
+                        ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '5 minutes'))),
+                        p.snapshot_at DESC
+                    LIMIT 1
+                ) AS previous_price_5,
 
-            -- R15 referencia: 13-17 perccel korábbi ár
-            (SELECT p.price FROM _silver_source p
-                WHERE p.symbol = b.symbol AND p.snapshot_at < b.snapshot_at AND p.snapshot_at BETWEEN b.snapshot_at - INTERVAL '17 minutes' AND b.snapshot_at - INTERVAL '13 minutes'
-                ORDER BY ABS(EPOCH(p.snapshot_at -  (b.snapshot_at - INTERVAL '15 minutes'))), p.snapshot_at DESC LIMIT 1
-            ) AS previous_price_15,
+                -- Ár referencia: 15 perccel korábban (±2 perc)
+                (
+                    SELECT p.price
+                    FROM _silver_source p
+                    WHERE p.symbol = b.symbol
+                      AND p.snapshot_at < b.snapshot_at
+                      AND p.snapshot_at BETWEEN
+                          b.snapshot_at - INTERVAL '17 minutes'
+                          AND b.snapshot_at - INTERVAL '13 minutes'
+                    ORDER BY
+                        ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '15 minutes'))),
+                        p.snapshot_at DESC
+                    LIMIT 1
+                ) AS previous_price_15,
 
-            -- R30 referencia: 28-32 perccel korábbi ár
-            ( SELECT p.price FROM _silver_source p               
-                WHERE p.symbol = b.symbol AND p.snapshot_at < b.snapshot_at AND p.snapshot_at BETWEEN b.snapshot_at - INTERVAL '32 minutes' AND b.snapshot_at - INTERVAL '28 minutes'
-                ORDER BY ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '30 minutes'))), p.snapshot_at DESC LIMIT 1
-            ) AS previous_price_30
+                -- Ár referencia: 30 perccel korábban (±2 perc)
+                (
+                    SELECT p.price
+                    FROM _silver_source p
+                    WHERE p.symbol = b.symbol
+                      AND p.snapshot_at < b.snapshot_at
+                      AND p.snapshot_at BETWEEN
+                          b.snapshot_at - INTERVAL '32 minutes'
+                          AND b.snapshot_at - INTERVAL '28 minutes'
+                    ORDER BY
+                        ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '30 minutes'))),
+                        p.snapshot_at DESC
+                    LIMIT 1
+                ) AS previous_price_30,
+
+                -- turnover24h referencia: 5 perccel korábban (±1 perc)
+                (
+                    SELECT p.turnover24h
+                    FROM _silver_source p
+                    WHERE p.symbol = b.symbol
+                      AND p.snapshot_at < b.snapshot_at
+                      AND p.snapshot_at BETWEEN
+                          b.snapshot_at - INTERVAL '6 minutes'
+                          AND b.snapshot_at - INTERVAL '4 minutes'
+                    ORDER BY
+                        ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '5 minutes'))),
+                        p.snapshot_at DESC
+                    LIMIT 1
+                ) AS previous_turnover_5,
+
+                -- turnover24h referencia: 15 perccel korábban (±2 perc)
+                (
+                    SELECT p.turnover24h
+                    FROM _silver_source p
+                    WHERE p.symbol = b.symbol
+                      AND p.snapshot_at < b.snapshot_at
+                      AND p.snapshot_at BETWEEN
+                          b.snapshot_at - INTERVAL '17 minutes'
+                          AND b.snapshot_at - INTERVAL '13 minutes'
+                    ORDER BY
+                        ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '15 minutes'))),
+                        p.snapshot_at DESC
+                    LIMIT 1
+                ) AS previous_turnover_15,
+
+                -- Open interest referencia: 5 perccel korábban (±1 perc)
+                (
+                    SELECT p.open_interest
+                    FROM _silver_source p
+                    WHERE p.symbol = b.symbol
+                      AND p.snapshot_at < b.snapshot_at
+                      AND p.snapshot_at BETWEEN
+                          b.snapshot_at - INTERVAL '6 minutes'
+                          AND b.snapshot_at - INTERVAL '4 minutes'
+                    ORDER BY
+                        ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '5 minutes'))),
+                        p.snapshot_at DESC
+                    LIMIT 1
+                ) AS previous_oi_5,
+
+                -- Open interest referencia: 15 perccel korábban (±2 perc)
+                (
+                    SELECT p.open_interest
+                    FROM _silver_source p
+                    WHERE p.symbol = b.symbol
+                      AND p.snapshot_at < b.snapshot_at
+                      AND p.snapshot_at BETWEEN
+                          b.snapshot_at - INTERVAL '17 minutes'
+                          AND b.snapshot_at - INTERVAL '13 minutes'
+                    ORDER BY
+                        ABS(EPOCH(p.snapshot_at - (b.snapshot_at - INTERVAL '15 minutes'))),
+                        p.snapshot_at DESC
+                    LIMIT 1
+                ) AS previous_oi_15
 
             FROM _silver_source b
         )
-        SELECT symbol, snapshot_at, price, max_leverage, turnover24h,
-            CASE
-                WHEN previous_price_5 > 0
-                THEN ((price / previous_price_5) - 1) * 100  ELSE NULL
+        SELECT
+            symbol,
+            snapshot_at,
+            price,
+            max_leverage,
+            turnover24h,
+
+            CASE WHEN previous_price_5 > 0
+                 THEN ROUND(((price / previous_price_5) - 1) * 100, 2)
+                 ELSE NULL
             END AS r5,
-            CASE
-                WHEN previous_price_15 > 0
-                THEN ((price / previous_price_15) - 1) * 100  ELSE NULL
+
+            CASE WHEN previous_price_15 > 0
+                 THEN ROUND(((price / previous_price_15) - 1) * 100, 2)
+                 ELSE NULL
             END AS r15,
-            CASE
-                WHEN previous_price_30 > 0
-                THEN ((price / previous_price_30) - 1) * 100 ELSE NULL
-            END AS r30, r1h, r24h, change24, funding, open_interest,
+
+            CASE WHEN previous_price_30 > 0
+                 THEN ROUND(((price / previous_price_30) - 1) * 100, 2)
+                 ELSE NULL
+            END AS r30,
+
+            CASE WHEN previous_turnover_5 > 0 AND turnover24h IS NOT NULL
+                 THEN ROUND(((turnover24h / previous_turnover_5) - 1) * 100, 2)
+                 ELSE NULL
+            END AS volume_change_5m,
+
+            CASE WHEN previous_turnover_15 > 0 AND turnover24h IS NOT NULL
+                 THEN ROUND(((turnover24h / previous_turnover_15) - 1) * 100, 2)
+                 ELSE NULL
+            END AS volume_change_15m,
+
+            CASE WHEN previous_oi_5 > 0 AND open_interest IS NOT NULL
+                 THEN ROUND(((open_interest / previous_oi_5) - 1) * 100, 2)
+                 ELSE NULL
+            END AS oi_change_5m,
+
+            CASE WHEN previous_oi_15 > 0 AND open_interest IS NOT NULL
+                 THEN ROUND(((open_interest / previous_oi_15) - 1) * 100, 2)
+                 ELSE NULL
+            END AS oi_change_15m,
+
+            r1h,
+            r24h,
+            change24,
+            funding,
+            open_interest,
             CURRENT_TIMESTAMP AS transformed_at
         FROM base
     """)
 
     return conn.execute("SELECT COUNT(*) FROM _silver_output").fetchone()[0]
+
+
+# ============================================================
+# SILVER SCHEMA MIGRATION
+# ============================================================
+def _ensure_silver_columns(conn):
+    """Hiányzó új oszlopok hozzáadása a már létező Silver táblához."""
+    conn.execute("""
+        ALTER TABLE pg.silver.fact_market_snapshots
+            ADD COLUMN IF NOT EXISTS volume_change_5m DOUBLE;
+        ALTER TABLE pg.silver.fact_market_snapshots
+            ADD COLUMN IF NOT EXISTS volume_change_15m DOUBLE;
+        ALTER TABLE pg.silver.fact_market_snapshots
+            ADD COLUMN IF NOT EXISTS oi_change_5m DOUBLE;
+        ALTER TABLE pg.silver.fact_market_snapshots
+            ADD COLUMN IF NOT EXISTS oi_change_15m DOUBLE;
+    """)
 
 
 # ============================================================
@@ -211,8 +360,17 @@ def _write_silver(conn):
     else:
         # Csak az új sorokat írjuk (amik a _new_bronze-ban vannak)
         conn.execute("""
-            INSERT INTO pg.silver.fact_market_snapshots (symbol, snapshot_at, price, max_leverage, turnover24h, r5, r15, r30, r1h, r24h, change24, funding, open_interest, transformed_at)
-            SELECT o.symbol, o.snapshot_at, o.price, o.max_leverage, o.turnover24h, o.r5, o.r15, o.r30, o.r1h, o.r24h, o.change24, o.funding, o.open_interest, o.transformed_at
+            INSERT INTO pg.silver.fact_market_snapshots (
+                symbol, snapshot_at, price, max_leverage, turnover24h,
+                r5, r15, r30,
+                volume_change_5m, volume_change_15m, oi_change_5m, oi_change_15m,
+                r1h, r24h, change24, funding, open_interest, transformed_at
+            )
+            SELECT
+                o.symbol, o.snapshot_at, o.price, o.max_leverage, o.turnover24h,
+                o.r5, o.r15, o.r30,
+                o.volume_change_5m, o.volume_change_15m, o.oi_change_5m, o.oi_change_15m,
+                o.r1h, o.r24h, o.change24, o.funding, o.open_interest, o.transformed_at
             FROM _silver_output o
             INNER JOIN _new_bronze n
             ON o.symbol = n.symbol AND o.snapshot_at = n.snapshot_at
@@ -242,12 +400,18 @@ def _validate_silver(conn) -> dict:
             COUNT(*) FILTER (WHERE price IS NULL OR price <= 0) AS invalid_prices,
             COUNT(*) FILTER (WHERE r5 IS NULL) AS missing_r5,
             COUNT(*) FILTER (WHERE r15 IS NULL) AS missing_r15,
-            COUNT(*) FILTER (WHERE r30 IS NULL) AS missing_r30
+            COUNT(*) FILTER (WHERE r30 IS NULL) AS missing_r30,
+            COUNT(*) FILTER (WHERE volume_change_5m IS NULL) AS missing_volume_change_5m,
+            COUNT(*) FILTER (WHERE volume_change_15m IS NULL) AS missing_volume_change_15m,
+            COUNT(*) FILTER (WHERE oi_change_5m IS NULL) AS missing_oi_change_5m,
+            COUNT(*) FILTER (WHERE oi_change_15m IS NULL) AS missing_oi_change_15m
         FROM pg.silver.fact_market_snapshots
     """).fetchone()
     
     (total_rows, unique_coins, first_snapshot, last_snapshot,
-     invalid_prices, missing_r5, missing_r15, missing_r30) = stats
+     invalid_prices, missing_r5, missing_r15, missing_r30,
+     missing_volume_change_5m, missing_volume_change_15m,
+     missing_oi_change_5m, missing_oi_change_15m) = stats
     
     if invalid_prices > 0:
         raise RuntimeError(f"Invalid Silver prices: {invalid_prices}")
@@ -266,6 +430,10 @@ def _validate_silver(conn) -> dict:
         "missing_r5": missing_r5,
         "missing_r15": missing_r15,
         "missing_r30": missing_r30,
+        "missing_volume_change_5m": missing_volume_change_5m,
+        "missing_volume_change_15m": missing_volume_change_15m,
+        "missing_oi_change_5m": missing_oi_change_5m,
+        "missing_oi_change_15m": missing_oi_change_15m,
     }
 
 # ============================================================
