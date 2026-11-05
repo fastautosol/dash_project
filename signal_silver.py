@@ -133,7 +133,7 @@ def _build_source(conn) -> int:
 # ============================================================
 # MOMENTUM CALCULATION
 # ============================================================
-def _calculate_momentum(conn) -> int:
+def _calculate_momentum0(conn) -> int:
     """Egyszerű momentum számítás toleranciák nélkül."""
     conn.execute(f"""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
@@ -154,7 +154,7 @@ def _calculate_momentum(conn) -> int:
     return conn.execute("SELECT COUNT(*) FROM _silver_output").fetchone()[0]
 
 
-def _calculate_momentum0(conn) -> int:
+def _calculate_momentum(conn) -> int:
     """Időalapú momentum számítás toleranciákkal."""
     conn.execute("""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
