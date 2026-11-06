@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # CONFIGURATION
 # ============================================================
-RETENTION_DAYS = 7
+RETENTION_DAYS = 5
 
 # Momentum LAG offsets (5, 15, 30 perc = 1, 3, 6 sor 5 perces intervallumnál)
 R5_LAG = 1
