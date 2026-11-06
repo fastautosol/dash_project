@@ -133,14 +133,20 @@ def _build_source(conn) -> int:
 # ============================================================
 # MOMENTUM CALCULATION
 # ============================================================
+GAP_5  = (240, 360)    # 5 perc  ± 1 perc
+GAP_15 = (780, 1020)   # 15 perc ± 2 perc  (13–17 perc)
+GAP_30 = (1680, 1920)  # 30 perc ± 2 perc  (28–32 perc)
+
 def _calculate_momentum(conn) -> int:
-    """Sor-alapú (LAG) momentum-, turnover- és OI-változás számítás."""
     conn.execute(f"""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
         WITH base AS (
             SELECT
                 symbol, snapshot_at, price, max_leverage, turnover24h,
                 r1h, r24h, change24, funding, open_interest,
+                LAG(snapshot_at, {R5_LAG})  OVER w AS prev_ts_5,
+                LAG(snapshot_at, {R15_LAG}) OVER w AS prev_ts_15,
+                LAG(snapshot_at, {R30_LAG}) OVER w AS prev_ts_30,
                 LAG(price, {R5_LAG})  OVER w AS previous_price_5,
                 LAG(price, {R15_LAG}) OVER w AS previous_price_15,
                 LAG(price, {R30_LAG}) OVER w AS previous_price_30,
@@ -149,23 +155,30 @@ def _calculate_momentum(conn) -> int:
                 LAG(open_interest, {R5_LAG})  OVER w AS previous_oi_5,
                 LAG(open_interest, {R15_LAG}) OVER w AS previous_oi_15
             FROM _silver_source
-            WINDOW w AS (PARTITION BY symbol ORDER BY snapshot_at)
-        )
-        SELECT
-            symbol, snapshot_at, price, max_leverage, turnover24h,
-            CASE WHEN previous_price_5 > 0 THEN ROUND(((price / previous_price_5) - 1) * 100, 2) END AS r5,
-            CASE WHEN previous_price_15 > 0 THEN ROUND(((price / previous_price_15) - 1) * 100, 2) END AS r15,
-            CASE WHEN previous_price_30 > 0 THEN ROUND(((price / previous_price_30) - 1) * 100, 2) END AS r30,
-            CASE WHEN previous_turnover_5 > 0 THEN ROUND(((turnover24h / previous_turnover_5) - 1) * 100, 2) END AS volume_change_5m,
-            CASE WHEN previous_turnover_15 > 0 THEN ROUND(((turnover24h / previous_turnover_15) - 1) * 100, 2) END AS volume_change_15m,
-            CASE WHEN previous_oi_5 > 0 THEN ROUND(((open_interest / previous_oi_5) - 1) * 100, 2) END AS oi_change_5m,
-            CASE WHEN previous_oi_15 > 0 THEN ROUND(((open_interest / previous_oi_15) - 1) * 100, 2) END AS oi_change_15m,
-            r1h, r24h, change24, funding, open_interest,
-            CURRENT_TIMESTAMP AS transformed_at
-        FROM base
+            WINDOW w AS (PARTITION BY symbol ORDER BY snapshot_at)),
+            
+        gaps AS (SELECT *,EPOCH(snapshot_at - prev_ts_5)  AS gap_5, EPOCH(snapshot_at - prev_ts_15) AS gap_15, EPOCH(snapshot_at - prev_ts_30) AS gap_30 FROM base)
+        
+        SELECT symbol, snapshot_at, price, max_leverage, turnover24h,
+            CASE WHEN gap_5 BETWEEN {GAP_5[0]} AND {GAP_5[1]} AND previous_price_5 > 0
+                 THEN ROUND(((price / previous_price_5) - 1) * 100, 2) END AS r5,
+            CASE WHEN gap_15 BETWEEN {GAP_15[0]} AND {GAP_15[1]} AND previous_price_15 > 0
+                 THEN ROUND(((price / previous_price_15) - 1) * 100, 2) END AS r15,
+            CASE WHEN gap_30 BETWEEN {GAP_30[0]} AND {GAP_30[1]} AND previous_price_30 > 0
+                 THEN ROUND(((price / previous_price_30) - 1) * 100, 2) END AS r30,
+            CASE WHEN gap_5 BETWEEN {GAP_5[0]} AND {GAP_5[1]} AND previous_turnover_5 > 0
+                 THEN ROUND(((turnover24h / previous_turnover_5) - 1) * 100, 2) END AS volume_change_5m,
+            CASE WHEN gap_15 BETWEEN {GAP_15[0]} AND {GAP_15[1]} AND previous_turnover_15 > 0
+                 THEN ROUND(((turnover24h / previous_turnover_15) - 1) * 100, 2) END AS volume_change_15m,
+            CASE WHEN gap_5 BETWEEN {GAP_5[0]} AND {GAP_5[1]} AND previous_oi_5 > 0
+                 THEN ROUND(((open_interest / previous_oi_5) - 1) * 100, 2) END AS oi_change_5m,
+            CASE WHEN gap_15 BETWEEN {GAP_15[0]} AND {GAP_15[1]} AND previous_oi_15 > 0
+                 THEN ROUND(((open_interest / previous_oi_15) - 1) * 100, 2) END AS oi_change_15m,
+            r1h, r24h, change24, funding, open_interest, CURRENT_TIMESTAMP AS transformed_at
+        FROM gaps
     """)
+    
     return conn.execute("SELECT COUNT(*) FROM _silver_output").fetchone()[0]
-
 
 # ============================================================
 # SILVER SCHEMA MIGRATION
