@@ -133,20 +133,41 @@ def _build_source(conn) -> int:
 # ============================================================
 # MOMENTUM CALCULATION
 # ============================================================
-def _calculate_momentum0(conn) -> int:
+def _calculate_momentum(conn) -> int:
     """Egyszerű momentum számítás toleranciák nélkül."""
     conn.execute(f"""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
         SELECT symbol, snapshot_at, price, max_leverage,  turnover24h,
+        
             CASE WHEN LAG(price, {R5_LAG}) OVER w > 0
                  THEN ((price / LAG(price, {R5_LAG}) OVER w) - 1) * 100 ELSE NULL
             END AS r5,
+            
             CASE WHEN LAG(price, {R15_LAG}) OVER w > 0
                  THEN ((price / LAG(price, {R15_LAG}) OVER w) - 1) * 100 ELSE NULL
             END AS r15,
+            
             CASE WHEN LAG(price, {R30_LAG}) OVER w > 0
                  THEN ((price / LAG(price, {R30_LAG}) OVER w) - 1) * 100 ELSE NULL
-            END AS r30, r1h, r24h, change24, funding, open_interest, CURRENT_TIMESTAMP AS transformed_at
+            END AS r30, 
+            
+            CASE WHEN previous_turnover_5 > 0 AND turnover24h IS NOT NULL
+                 THEN ROUND(((turnover24h / previous_turnover_5) - 1) * 100, 2) ELSE NULL
+            END AS volume_change_5m,
+
+            CASE WHEN previous_turnover_15 > 0 AND turnover24h IS NOT NULL
+                 THEN ROUND(((turnover24h / previous_turnover_15) - 1) * 100, 2) ELSE NULL
+            END AS volume_change_15m,
+
+            CASE WHEN previous_oi_5 > 0 AND open_interest IS NOT NULL
+                 THEN ROUND(((open_interest / previous_oi_5) - 1) * 100, 2) ELSE NULL
+            END AS oi_change_5m,
+
+            CASE WHEN previous_oi_15 > 0 AND open_interest IS NOT NULL
+                 THEN ROUND(((open_interest / previous_oi_15) - 1) * 100, 2) ELSE NULL
+            END AS oi_change_15m,
+                       
+            r1h, r24h, change24, funding, open_interest, CURRENT_TIMESTAMP AS transformed_at
         FROM _silver_source
         WINDOW w AS (PARTITION BY symbol ORDER BY snapshot_at)
     """)
@@ -154,7 +175,7 @@ def _calculate_momentum0(conn) -> int:
     return conn.execute("SELECT COUNT(*) FROM _silver_output").fetchone()[0]
 
 
-def _calculate_momentum(conn) -> int:
+def _calculate_momentum000(conn) -> int:
     """Időalapú momentum-, turnover- és OI-változás számítás toleranciákkal."""
     conn.execute("""
         CREATE OR REPLACE TEMP TABLE _silver_output AS
