@@ -1,4 +1,4 @@
-# 2026.11.04  11.00 (5-minute market snapshots)
+# 2026.11.06  11.00 (5-minute market snapshots)
 import asyncio
 import logging
 import math
@@ -7,7 +7,6 @@ import time
 from datetime import datetime, UTC, timedelta
 import ccxt.async_support as ccxt
 import dlt
-from signal_silver import run_signal_silver_transformation
 
 # ============================================================
 # 1. LOGGING
@@ -36,8 +35,8 @@ MIN_LEV = 25
 MIN_TURNOVER = 500_000  #USDT/24h
 
 PIPELINE_NAME = "bybit_market_snapshots"
-DATASET_NAME = "bybit_data"
-TABLE_NAME = "market_snapshots"
+DATASET_NAME = "bronze"
+TABLE_NAME = "bybit_snapshots"
 PRIMARY_KEY = ["symbol", "snapshot_at"]
 
 CLEANUP_HOURS = 72
@@ -222,18 +221,7 @@ async def scanner_loop(exchange, pipeline):
 
             records = await run_bybit_scan(exchange)
             if records:
-
-                # 1. BRONZE: save snapshots to PostgreSQL
                 await save_market_snapshots(pipeline, records)
-            
-                # 2. SILVER: transform Bronze -> Silver
-                try:
-                    log.info("[SILVER] Starting Silver transformation...")
-                    silver_rows = await asyncio.to_thread(run_signal_silver_transformation)
-                    log.info("[SILVER] Transformation completed. Rows: %s", silver_rows)
-                except Exception:
-                    log.exception("[SILVER] Transformation failed. Bronze data is preserved; previous Silver state may remain.")
-
             else:
                 log.info("[SCAN] No market snapshots matched the filters.")
 
