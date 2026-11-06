@@ -31,8 +31,8 @@ DB_CONFIG = {
 # Bybit scanner
 POLL_INTERVAL = 300  # 5 minutes
 
-MIN_LEV = 25
-MIN_TURNOVER = 500_000  #USDT/24h
+MIN_LEV = 50
+MIN_TURNOVER = 1_000_000  #USDT/24h
 
 PIPELINE_NAME = "bybit_market_snapshots"
 DATASET_NAME = "bronze"
