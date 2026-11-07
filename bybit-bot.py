@@ -88,6 +88,7 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
 async def refresh_ticker_cache(exchange: ccxtpro.bybit) -> None:
     while True:
         try:
+            log.info("=" * 45)
             tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
             state.ticker_cache = tickers
             state.last_ticker_fetch = time.time()
@@ -105,7 +106,6 @@ async def refresh_ticker_cache(exchange: ccxtpro.bybit) -> None:
 # DB WRITER & CLEANUP LOOP
 # =========================
 def _safe_float(value, default=0.0) -> float:
-    """Never lets a None/missing field crash record building — no silent bad records."""
     try:
         if value is None:
             return default
@@ -114,7 +114,6 @@ def _safe_float(value, default=0.0) -> float:
         return default
 
 async def db_writer_loop(pipeline) -> None:
-    """Upserts the latest state + ticker stats to DB every POLL_INTERVAL seconds."""
     while True:
         await asyncio.sleep(POLL_INTERVAL)
         now = time.time()
