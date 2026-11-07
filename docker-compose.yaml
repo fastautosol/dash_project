@@ -181,7 +181,7 @@ services:
       N8N_WEBHOOK_URL: https://${SERVICE_FQDN_N8N}/webhook/crypto-alert
       PYTHONUNBUFFERED: "1"
       TZ: ${TZ:-Europe/Berlin}
-    command: ["python", "signal-bot.py"]
+    command: ["python", "bybit-bot.py"]
     mem_limit: 500m
     cpus: 0.5
     logging:
