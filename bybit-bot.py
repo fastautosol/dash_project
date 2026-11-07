@@ -59,7 +59,7 @@ async def load_historical_ohlcv(exchange: ccxtpro.bybit, symbol: str, is_linear:
 # =========================
 # WEBSOCKET — OHLCV WATCHER
 # =========================
-async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, is_linear: bool) -> None:
+async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
     ws_symbol = to_linear(symbol) if is_linear else symbol
 
     # 1. Load historical data FIRST
