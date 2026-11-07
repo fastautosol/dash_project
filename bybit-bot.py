@@ -16,12 +16,9 @@ log = logging.getLogger(__name__)
 # =========================
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
-CRYPTO_SYMBOLS = [
+ALL_SYMBOLS = [
     "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "ARB/USDT", "ETC/USDT", "COMP/USDT",
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT",  "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT"]
-
-XSTOCK_SYMBOLS = ["AAPLX/USDT", "TSLAX/USDT", "NVDAX/USDT", "AMZNX/USDT",  "COINX/USDT", "CRCLX/USDT", "METAX/USDT", "HOODX/USDT", "GOOGLX/USDT"]
-ALL_SYMBOLS = CRYPTO_SYMBOLS + XSTOCK_SYMBOLS
 
 POLL_INTERVAL = 150       # Seconds between DB upserts
 TICKER_INTERVAL = 300     # Seconds between ticker cache refreshes (funding/OI/turnover)
