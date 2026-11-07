@@ -116,7 +116,7 @@ async def db_writer_loop(pipeline) -> None:
         records = []
 
         # 1. Build records from WebSocket state + Ticker cache
-        for sym in ALL_SYMBOLS:
+        for sym in CRYPTO_SYMBOLS:
             bar = state.ohlcv.get(sym)
             if not bar:
                 continue
