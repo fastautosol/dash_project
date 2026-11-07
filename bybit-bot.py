@@ -43,11 +43,35 @@ class MarketState:
 
 state = MarketState()
 
+
+# ============================
+# WEBSOCKET — HISTORICAL OHLCV
+# ============================
+async def load_historical_ohlcv(exchange: ccxtpro.bybit, symbol: str, is_linear: bool, limit: int = 1000) -> list:
+    """Load historical candles on startup"""
+    ws_symbol = to_linear(symbol) if is_linear else symbol
+    try:
+        log.info(f"[HIST] Loading {limit} candles for {symbol}...")
+        ohlcv = await exchange.fetch_ohlcv(ws_symbol, timeframe="5m", limit=limit)
+        log.info(f"[HIST] {symbol}: Loaded {len(ohlcv)} historical candles")
+        return ohlcv
+    except Exception as e:
+        log.error(f"[HIST] {symbol} failed: {e}")
+        return []
+
 # =========================
 # WEBSOCKET — OHLCV WATCHER
 # =========================
 async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, is_linear: bool) -> None:
     ws_symbol = to_linear(symbol) if is_linear else symbol
+
+    # 1. Load historical data FIRST
+    historical = await load_historical_ohlcv(exchange, symbol, is_linear, limit=1000)
+    for candle in historical:
+        state.ohlcv[symbol] = candle  # Ez felülírja, de a db_writer elmenti
+        await asyncio.sleep(0.1)  # Rate limit
+
+    # 2. THEN start WebSocket for real-time updates
     while True:
         try:
             ohlcv = await exchange.watch_ohlcv(ws_symbol, timeframe="5m", limit=1)
