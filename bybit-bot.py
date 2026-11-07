@@ -20,9 +20,9 @@ ALL_SYMBOLS = [
     "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "ARB/USDT", "ETC/USDT", "COMP/USDT",
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT",  "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT"]
 
-POLL_INTERVAL = 150       # Seconds between DB upserts
-TICKER_INTERVAL = 300     # Seconds between ticker cache refreshes (funding/OI/turnover)
-CLEANUP_HOURS = 60        # Hours of data to retain
+POLL_INTERVAL = 150     # Seconds between DB upserts
+TICKER_INTERVAL = 300   # Seconds between ticker cache refreshes (funding/OI/turnover)
+CLEANUP_HOURS = 120     # Hours of data to retain
 
 def to_linear(symbol: str) -> str:
     return f"{symbol}:USDT"
