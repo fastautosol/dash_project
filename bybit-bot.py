@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 # =========================
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
-ALL_SYMBOLS = [
+CRYPTO_SYMBOLS = [
     "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "SUI/USDT", "HYPE/USDT", "ARB/USDT", "ETC/USDT", "COMP/USDT",
     "AVAX/USDT", "AXS/USDT", "LINK/USDT", "BCH/USDT", "TIA/USDT", "ZEN/USDT",  "NEAR/USDT", "AAVE/USDT", "LTC/USDT", "ICP/USDT"]
 
@@ -90,7 +90,10 @@ async def refresh_ticker_cache(exchnge: ccxtpro.bybit) -> None:
             log.info(f"[TICKER] Cache refreshed for {len(tickers)} symbols.")
         except Exception as e:
             log.warning(f"[TICKER] Refresh failed: {e}")
-        await asyncio.sleep(TICKER_INTERVAL)
+
+        delay = POLL_INTERVAL - (time.time() % TICKER_INTERVAL)
+        log.info("[WAIT] Next scan in %.1f seconds.", delay)
+        await asyncio.sleep(delay)
 
 # =========================
 # DB WRITER & CLEANUP LOOP
