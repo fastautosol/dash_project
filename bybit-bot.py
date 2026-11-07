@@ -172,7 +172,6 @@ async def main() -> None:
     # Initialize TWO exchange instances: linear (crypto) and spot (x-stocks)
     base_cfg = {"enableRateLimit": True}
     ex_linear = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "linear"}})
-    ex_spot   = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "spot"}})
 
     # Initialize dlt pipeline
     pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bybit_data")
@@ -181,14 +180,8 @@ async def main() -> None:
     tasks = []
 
     for sym in CRYPTO_SYMBOLS:
-        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym, is_linear=True), name=f"ws-linear-{sym}"))
-
-    for sym in XSTOCK_SYMBOLS:
-        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_spot, sym, is_linear=False), name=f"ws-spot-{sym}"))
-
-    tasks.append(asyncio.create_task(refresh_ticker_cache(ex_linear, ex_spot), name="ticker-cache"))
-
-    # Start unified DB writer
+        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym), name=f"ws-{sym}"))
+    tasks.append(asyncio.create_task(refresh_ticker_cache(ex_linear), name="ticker-cache"))
     tasks.append(asyncio.create_task(db_writer_loop(pipeline), name="db-writer"))
 
     try:
@@ -198,7 +191,7 @@ async def main() -> None:
     finally:
         for t in tasks:
             t.cancel()
-        await asyncio.gather(ex_linear.close(), ex_spot.close(), return_exceptions=True)
+        await ex_linear.close()
         log.info("All connections closed. Bye.")
 
 if __name__ == "__main__":
