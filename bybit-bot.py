@@ -130,9 +130,9 @@ async def db_writer_loop(pipeline) -> None:
                 "close":          _safe_float(bar[4]),
                 "volume":         _safe_float(bar[5]),
                 "vwap":           _safe_float(ticker.get("vwap")) if ticker else None,
-                "prev_price_1h":  _safe_float(info.get("prev_price_1h")), 
-                "turnover24h":    _safe_float(info.get("turnover24h")),
+                "prev_price_1h":  _safe_float(info.get("prevPrice1h")), 
                 "price24hpcnt":   _safe_float(info.get("price24hPcnt")),
+                "turnover24h":    _safe_float(info.get("turnover24h")),
                 "funding":        _safe_float(info.get("fundingRate") or info.get("lastFundingRate")),
                 "oi":             _safe_float(info.get("openInterest")),
             })
@@ -141,7 +141,7 @@ async def db_writer_loop(pipeline) -> None:
         if records:
             try:
                 async with state.pipeline_lock:
-                    await asyncio.to_thread(pipeline.run, records, table_name="bybit_candles", write_disposition="merge", primary_key=["symbol", "timestamp"])
+                    await asyncio.to_thread(pipeline.run, records, table_name="bybit_marketinfo", write_disposition="merge", primary_key=["symbol", "timestamp"])
             except Exception as e:
                 log.error(f"[DB] Upsert failed: {e}")
 
@@ -170,7 +170,7 @@ async def main() -> None:
     ex_linear = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "linear"}})
 
     # Initialize dlt pipeline
-    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bybit_data")
+    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
     pipeline.abort_packages()
 
     tasks = []
