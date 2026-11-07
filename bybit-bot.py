@@ -44,9 +44,9 @@ state = MarketState()
 # ============================
 # WEBSOCKET — HISTORICAL OHLCV
 # ============================
-async def load_historical_ohlcv(exchange: ccxtpro.bybit, symbol: str, is_linear: bool, limit: int = 1000) -> list:
+async def load_historical_ohlcv(exchange: ccxtpro.bybit, symbol: str, limit: int = 1000) -> list:
     """Load historical candles on startup"""
-    ws_symbol = to_linear(symbol) if is_linear else symbol
+    ws_symbol = f"{symbol}:USDT"
     try:
         log.info(f"[HIST] Loading {limit} candles for {symbol}...")
         ohlcv = await exchange.fetch_ohlcv(ws_symbol, timeframe="5m", limit=limit)
@@ -63,7 +63,7 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
     ws_symbol = to_linear(symbol) if is_linear else symbol
 
     # 1. Load historical data FIRST
-    historical = await load_historical_ohlcv(exchange, symbol, is_linear, limit=1000)
+    historical = await load_historical_ohlcv(exchange, symbol, limit=1000)
     for candle in historical:
         state.ohlcv[symbol] = candle  # Ez felülírja, de a db_writer elmenti
         await asyncio.sleep(0.1)  # Rate limit
@@ -168,7 +168,6 @@ async def db_writer_loop(pipeline) -> None:
 # MAIN
 # =========================
 async def main() -> None:
-    # Initialize TWO exchange instances: linear (crypto) and spot (x-stocks)
     base_cfg = {"enableRateLimit": True}
     ex_linear = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "linear"}})
 
