@@ -1,4 +1,4 @@
-# 2026.11.07  15.00
+# 2026.11.07  17.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -7,7 +7,7 @@ import time
 import logging
 import os
 
-os.environ.setdefault("LOAD__DELETE_COMPLETED_JOBS", "true") # dlt: a lefutott load package-ek törlése, ne halmozódjanak
+os.environ.setdefault("LOAD__DELETE_COMPLETED_JOBS", "true")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
 log = logging.getLogger(__name__)
 
@@ -124,14 +124,13 @@ async def db_writer_loop(pipeline) -> None:
             records.append({
                 "symbol":         sym,
                 "timestamp":      datetime.fromtimestamp(bar[0] / 1000, tz=UTC),
-                # Raw floats — do NOT round to 2 decimals here, sub-$1 symbols
-                # (SUI, ZEN, etc.) would collapse to 0.00 and lose precision.
                 "open":           _safe_float(bar[1]),
                 "high":           _safe_float(bar[2]),
                 "low":            _safe_float(bar[3]),
                 "close":          _safe_float(bar[4]),
                 "volume":         _safe_float(bar[5]),
                 "vwap":           _safe_float(ticker.get("vwap")) if ticker else None,
+                "prev_price_1h":  _safe_float(info.get("prev_price_1h")), 
                 "turnover24h":    _safe_float(info.get("turnover24h")),
                 "price24hpcnt":   _safe_float(info.get("price24hPcnt")),
                 "funding":        _safe_float(info.get("fundingRate") or info.get("lastFundingRate")),
