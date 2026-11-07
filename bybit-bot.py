@@ -84,18 +84,15 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str, is_linear: bo
 # =========================
 # TICKER CACHE REFRESH (funding / OI / turnover / 24h change)
 # =========================
-async def refresh_ticker_cache(ex_linear: ccxtpro.bybit, ex_spot: ccxtpro.bybit) -> None:
+async def refresh_ticker_cache(exchnge: ccxtpro.bybit) -> None:
     while True:
         try:
-            linear_symbols = [to_linear(s) for s in CRYPTO_SYMBOLS]
-            linear_tickers_raw = await ex_linear.fetch_tickers(symbols=linear_symbols)
-            spot_tickers = await ex_spot.fetch_tickers(symbols=XSTOCK_SYMBOLS)
-            linear_tickers = {sym: linear_tickers_raw[to_linear(sym)] for sym in CRYPTO_SYMBOLS if to_linear(sym) in linear_tickers_raw}
-            state.ticker_cache = {**linear_tickers, **spot_tickers}
+            tickers = await exchange.fetch_tickers(symbols=CRYPTO_SYMBOLS)
+            state.ticker_cache = tickers
             state.last_ticker_fetch = time.time()
-            log.info(f"[TICKER] Updated {len(spot_tickers) + len(linear_tickers)} SYMBOLS")
+            log.info(f"[TICKER] Cache refreshed for {len(tickers)} symbols.")
         except Exception as e:
-            log.warning(f"[TICKER] refresh failed: {e}")
+            log.warning(f"[TICKER] Refresh failed: {e}")
         await asyncio.sleep(TICKER_INTERVAL)
 
 # =========================
