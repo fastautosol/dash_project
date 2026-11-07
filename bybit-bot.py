@@ -88,6 +88,7 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
 async def refresh_ticker_cache(exchange: ccxtpro.bybit) -> None:
     while True:
         try:
+            log.info("=" * 45)   
             tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
             state.ticker_cache = tickers
             state.last_ticker_fetch = time.time()
@@ -99,7 +100,6 @@ async def refresh_ticker_cache(exchange: ccxtpro.bybit) -> None:
 
         delay = TICKER_INTERVAL - (time.time() % TICKER_INTERVAL)
         log.info("[WAIT] Next ticker refresh in %.1f seconds.", delay)
-        log.info("=" * 45)
         await asyncio.sleep(delay)
 
 # =========================
