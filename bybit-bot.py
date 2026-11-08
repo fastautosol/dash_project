@@ -1,4 +1,4 @@
-# 2026.11.07  18.00
+# 2026.11.08  11.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -16,9 +16,11 @@ log = logging.getLogger(__name__)
 # =========================
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
-CRYPTO_SYMBOLS = ["AAVE/USDT","ALGO/USDT","APT/USDT","ARB/USDT","AVAX/USDT","AXS/USDT","BCH/USDT","BNB/USDT","BTC/USDT","COMP/USDT","DASH/USDT",
+CRYPTO_SYMBOLS = ["AAVE/USDT","ALGO/USDT","APT/USDT","ARB/USDT","ASTER/USDT","AVAX/USDT","AXS/USDT","BCH/USDT","BNB/USDT","BTC/USDT","COMP/USDT","CRV/USDT",
+        "DASH/USDT",
         "ENA/USDT","ETC/USDT","ETH/USDT","HBAR/USDT","HYPE/USDT","ICP/USDT","INJ/USDT","LINK/USDT","LIT/USDT","LTC/USDT","NEAR/USDT","ONDO/USDT",
-        "OP/USDT","POL/USDT","SAND/USDT","SOL/USDT","SUI/USDT","TIA/USDT","TAO/USDT","ZEC/USDT","ZEN/USDT","UNI/USDT","XRP/USDT","XTZ/USDT"]
+        "OP/USDT","QNT/USD","POL/USDT","SAND/USDT","SOL/USDT","SUI/USDT","TIA/USDT","TAO/USDT","ZEC/USDT","ZEN/USDT","UNI/USDT","XLM/USDT","XMR/USDT",
+        "XRP/USDT","XTZ/USDT"]
 
 POLL_INTERVAL = 150     # Seconds between DB upserts
 TICKER_INTERVAL = 300   # Seconds between ticker cache refreshes (funding/OI/turnover)
