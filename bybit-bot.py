@@ -18,17 +18,11 @@ log = logging.getLogger(__name__)
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 CRYPTO_SYMBOLS = [
-    "1000BONK/USDT", "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", 
-    "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", 
-    "COMP/USDT", "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", 
-    "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", 
-    "ICP/USDT", "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", 
-    "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", 
-    "PUMPFUN/USDT", "PYTH/USDT", "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", 
-    "SEI/USDT", "SUI/USDT", "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", 
-    "ZEN/USDT", "ZRO/USDT", "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", 
-    "XRP/USDT", "XTZ/USDT", "W/USDT"
-]
+    "1000BONK/USDT", "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", 
+    "COMP/USDT", "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", 
+    "ICP/USDT", "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", 
+    "PUMPFUN/USDT", "PYTH/USDT", "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT", "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", 
+    "ZEN/USDT", "ZRO/USDT", "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT"]
 
 POLL_INTERVAL = 150     # Seconds between DB upserts
 TICKER_INTERVAL = 300   # Seconds between ticker cache refreshes
@@ -60,7 +54,6 @@ def _sql_literal(value: str) -> str:
 
 def run_bybit_silver_transformation() -> int:
     """Létrehozza/frissíti a silver.bybit_indicators táblát a bronze.bybit_marketinfo alapján."""
-    # Környezeti változók használata a csatlakozáshoz (fallback a hardcoded értékekre)
     attach_dsn = (
         f"host={_sql_literal(os.getenv('DB_HOST', 'postgresql'))} "
         f"port={_sql_literal(os.getenv('DB_PORT', '5432'))} "
@@ -213,10 +206,7 @@ async def db_writer_loop(pipeline) -> None:
         if records:
             try:
                 async with state.pipeline_lock:
-                    await asyncio.to_thread(
-                        pipeline.run, records,
-                        table_name=TABLE_NAME, write_disposition="merge", primary_key=["symbol", "timestamp"],
-                    )
+                    await asyncio.to_thread(pipeline.run, records, table_name=TABLE_NAME, write_disposition="merge", primary_key=["symbol", "timestamp"])
                 log.info(f"[DB] Upserted {len(records)} records.")
             except Exception as e:
                 log.error(f"[DB] Upsert failed: {e}")
@@ -242,21 +232,14 @@ async def main() -> None:
     base_cfg = {"enableRateLimit": True}
     ex_linear = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "linear"}})
     
-    pipeline = dlt.pipeline(
-        pipeline_name="crypto_candles_bybit", 
-        destination=dlt.destinations.postgres(credentials=DB_URL), 
-        dataset_name="bronze"
-    )
+    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
     pipeline.abort_packages()
 
     tasks = []
     for sym in CRYPTO_SYMBOLS:
-        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym), name=f"ws-{sym}"))
-    
+        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym), name=f"ws-{sym}"))  
     tasks.append(asyncio.create_task(refresh_ticker_cache(ex_linear), name="ticker-cache"))
     tasks.append(asyncio.create_task(db_writer_loop(pipeline), name="db-writer"))
-    
-    # Új task: Silver ETL futtatása 15 percenként
     tasks.append(asyncio.create_task(silver_etl_loop(), name="silver-etl"))
 
     try:
