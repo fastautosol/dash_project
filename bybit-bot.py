@@ -1,4 +1,4 @@
-# 2026.11.08  12.00
+# 2026.11.08  18.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -50,7 +50,6 @@ class MarketState:
         self.last_ticker_fetch: float = 0.0
         self.last_cleanup: float = 0.0
         self.pipeline_lock = asyncio.Lock()
-
 state = MarketState()
 
 # =========================================================
@@ -79,24 +78,15 @@ def run_bybit_silver_transformation() -> int:
         query = """
             CREATE OR REPLACE TABLE pg.silver.bybit_indicators AS
             WITH base AS (
-                SELECT 
-                    symbol,
-                    timestamp,
-                    close,
-                    open, high, low, volume,
-                    funding, oi, turnover24h,
-                    -- Hozamok (Returns): 5p, 15p, 30p, 1h
+                SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h,
                     (close - LAG(close, 1) OVER w) / NULLIF(LAG(close, 1) OVER w, 0) AS r5,
                     (close - LAG(close, 3) OVER w) / NULLIF(LAG(close, 3) OVER w, 0) AS r15,
                     (close - LAG(close, 6) OVER w) / NULLIF(LAG(close, 6) OVER w, 0) AS r30,
                     (close - LAG(close, 12) OVER w) / NULLIF(LAG(close, 12) OVER w, 0) AS r1h,
-                    -- Mozgóátlagok (SMA50 és SMA100 - DuckDB-ben natív EMA nincs, SMA a legstabilabb)
                     AVG(close) OVER w50 AS ema50,
                     AVG(close) OVER w100 AS ema100,
-                    -- Bollinger Bands (20 periódus, 2 szórás)
                     AVG(close) OVER w20 AS bb_basis,
                     STDDEV_SAMP(close) OVER w20 AS bb_std,
-                    -- Volume Ratio (20 periódusos átlaghoz képest)
                     volume / NULLIF(AVG(volume) OVER w20, 0) AS vol_ratio
                 FROM pg.bronze.bybit_marketinfo
                 WINDOW 
@@ -105,23 +95,11 @@ def run_bybit_silver_transformation() -> int:
                     w100 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 99 PRECEDING AND CURRENT ROW),
                     w20 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
             )
-            SELECT 
-                symbol,
-                timestamp,
-                close,
-                open, high, low, volume,
-                funding, oi, turnover24h,
-                r5, r15, r30, r1h,
-                ema50, ema100,
-                bb_basis,
-                (bb_basis + 2 * bb_std) AS bb_upper,
-                (bb_basis - 2 * bb_std) AS bb_lower,
-                vol_ratio,
-                CURRENT_TIMESTAMP AS calculated_at
+            SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h, r5, r15, r30, r1h, ema50, ema100,
+                bb_basis, (bb_basis + 2 * bb_std) AS bb_upper, (bb_basis - 2 * bb_std) AS bb_lower, vol_ratio, CURRENT_TIMESTAMP AS calculated_at
             FROM base
         """
-        conn.execute(query)
-        
+        conn.execute(query) 
         count = conn.execute("SELECT COUNT(*) FROM pg.silver.bybit_indicators").fetchone()[0]
         log.info("[SILVER] Transzformáció sikeres: silver.bybit_indicators, %d sor", count)
         return count
@@ -134,7 +112,7 @@ def run_bybit_silver_transformation() -> int:
 async def silver_etl_loop() -> None:
     """Periodikusan futtatja a Silver transzformációt a háttérben."""
     while True:
-        await asyncio.sleep(900)  # 15 percenként
+        await asyncio.sleep(300)  # 5 percenként
         try:
             log.info("[SILVER] Starting Silver ETL transformation...")
             await asyncio.to_thread(run_bybit_silver_transformation)
