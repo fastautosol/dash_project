@@ -18,11 +18,11 @@ log = logging.getLogger(__name__)
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 CRYPTO_SYMBOLS = [
-    "1000BONK/USDT", "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", 
-    "COMP/USDT", "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", 
-    "ICP/USDT", "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", 
-    "PUMPFUN/USDT", "PYTH/USDT", "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT", "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", 
-    "ZEN/USDT", "ZRO/USDT", "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT"]
+    "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", 
+    "COMP/USDT", "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", 
+    "HYPE/USDT", "ICP/USDT", "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", 
+    "PLUME/USDT", "POL/USDT", "PYTH/USDT", "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT","STRK/USDT", "TIA/USDT", 
+    "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", "ZEN/USDT", "ZRO/USDT", "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT"]
 
 POLL_INTERVAL = 150     # Seconds between DB upserts
 TICKER_INTERVAL = 300   # Seconds between ticker cache refreshes
@@ -88,11 +88,11 @@ def run_bybit_silver_transformation() -> int:
                     w25 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 24 PRECEDING AND CURRENT ROW)
             )
             SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h,
-                ROUND(r5, 3) AS r5, ROUND(r15, 3) AS r15, ROUND(r30, 3) AS r30, ROUND(r1h, 3)AS r1h, ROUND(ema50, 4) AS ema50, ROUND(ema100, 4) AS ema100,
-                ROUND(bb_basis, 4) AS bb_basis,
-                ROUND(bb_basis + 2 * bb_std, 4) AS bb_upper,
-                ROUND(bb_basis - 2 * bb_std, 4) AS bb_lower,
-                ROUND(vol_ratio, 4) AS vol_ratio,
+                ROUND(r5, 3) AS r5, ROUND(r15, 3) AS r15, ROUND(r30, 3) AS r30, ROUND(r1h, 3)AS r1h, ROUND(ema50, 3) AS ema50, ROUND(ema100, 3) AS ema100,
+                ROUND(bb_basis, 3) AS bb_basis,
+                ROUND(bb_basis + 2 * bb_std, 3) AS bb_upper,
+                ROUND(bb_basis - 2 * bb_std, 3) AS bb_lower,
+                ROUND(vol_ratio, 3) AS vol_ratio,
                 CURRENT_TIMESTAMP AS calculated_at
             FROM base
             
