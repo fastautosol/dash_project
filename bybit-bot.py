@@ -88,8 +88,10 @@ def run_bybit_silver_transformation() -> int:
                     w100 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 99 PRECEDING AND CURRENT ROW),
                     w20 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
             )
-            SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h, r5, r15, r30, r1h, ema50, ema100,
-                bb_basis, (bb_basis + 2 * bb_std) AS bb_upper, (bb_basis - 2 * bb_std) AS bb_lower, vol_ratio, CURRENT_TIMESTAMP AS calculated_at
+            SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h, 
+            ROUND(r5, 3) AS r5,  ROUND(r15, 3) AS r15,  ROUND(r30, 3) AS r30,  ROUND(r1h, 3) AS r1h, ROUND(ema50, 3) AS ema50,  ROUND(ema100, 3) AS ema100,
+            ROUND(bb_basis, 3) AS bb_basis, ROUND((bb_basis + 2 * bb_std), 3) AS bb_upper, ROUND((bb_basis - 2 * bb_std), 3) AS bb_lower,
+            ROUND(vol_ratio, 4) AS vol_ratio, CURRENT_TIMESTAMP AS calculated_at
             FROM base
         """
         conn.execute(query) 
