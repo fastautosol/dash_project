@@ -77,9 +77,7 @@ def run_bybit_silver_transformation() -> int:
                     100.0 * (close - LAG(close, 3)  OVER w) / NULLIF(LAG(close, 3)  OVER w, 0) AS r15,
                     100.0 * (close - LAG(close, 6)  OVER w) / NULLIF(LAG(close, 6)  OVER w, 0) AS r30,
                     100.0 * (close - LAG(close, 12) OVER w) / NULLIF(LAG(close, 12) OVER w, 0) AS r1h,
-                    AVG(close) OVER w50 AS ema50,
-                    AVG(close) OVER w100 AS ema100,
-                    AVG(close) OVER w20 AS bb_basis,
+                    AVG(close) OVER w50 AS ema50, AVG(close) OVER w100 AS ema100, AVG(close) OVER w20 AS bb_basis,
                     STDDEV_SAMP(close) OVER w20 AS bb_std,
                     volume / NULLIF(AVG(volume) OVER w20, 0) AS vol_ratio
                 FROM pg.bronze.bybit_marketinfo
@@ -90,12 +88,7 @@ def run_bybit_silver_transformation() -> int:
                     w20 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
             )
             SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h,
-                ROUND(r5, 4)   AS r5,
-                ROUND(r15, 4)  AS r15,
-                ROUND(r30, 4)  AS r30,
-                ROUND(r1h, 4)  AS r1h,
-                ROUND(ema50, 8)  AS ema50,
-                ROUND(ema100, 8) AS ema100,
+                ROUND(r5, 4)   AS r5, ROUND(r15, 4)  AS r15, ROUND(r30, 4)  AS r30, ROUND(r1h, 4)  AS r1h, ROUND(ema50, 8)  AS ema50, ROUND(ema100, 8) AS ema100,
                 ROUND(bb_basis, 8) AS bb_basis,
                 ROUND(bb_basis + 2 * bb_std, 8) AS bb_upper,
                 ROUND(bb_basis - 2 * bb_std, 8) AS bb_lower,
