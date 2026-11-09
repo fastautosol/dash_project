@@ -45,21 +45,14 @@ SILVER_SELECT = """
 # ============================================================
 # POSTGRES CONNECTION
 # ============================================================
-
-def _conninfo_value(value: str) -> str:
-    value = str(value)
-    value = value.replace("\\", "\\\\")
-    value = value.replace("'", "\\'")
-    return f"'{value}'"
-
-
 def _build_attach_dsn() -> str:
     return (
-        f"host={_conninfo_value(os.getenv('DB_HOST', 'postgresql'))} "
-        f"port={_conninfo_value(os.getenv('DB_PORT', '5432'))} "
-        f"dbname={_conninfo_value(os.getenv('DB_NAME', 'n8n'))} "
-        f"user={_conninfo_value(os.getenv('DB_USER', 'sql_admin'))} "
-        f"password={_conninfo_value(os.getenv('DB_PASSWORD', 'sql_pass'))}")
+        f"host='{os.getenv('DB_HOST', 'postgresql')}' "
+        f"port='{os.getenv('DB_PORT', '5432')}' "
+        f"dbname='{os.getenv('DB_NAME', 'n8n')}' "
+        f"user='{os.getenv('DB_USER', 'sql_admin')}' "
+        f"password='{os.getenv('DB_PASSWORD', 'sql_pass')}'"
+    )
 
 # ============================================================
 # SILVER TRANSFORMATION
@@ -77,20 +70,12 @@ def run_bybit_silver_transformation() -> int:
         conn.execute("LOAD postgres;")
         conn.execute(f"ATTACH '{attach_dsn_sql}' AS pg (TYPE POSTGRES);")
         conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver;")
-
-        # Csak az első futásnál hozza létre; a view-k függhetnek tőle, ezért nincs DROP.
         conn.execute(f"CREATE TABLE IF NOT EXISTS pg.silver.bybit_indicators AS {SILVER_SELECT} LIMIT 0")
-
         conn.execute("BEGIN")
         try:
             conn.execute("DELETE FROM pg.silver.bybit_indicators WHERE timestamp >= ?", [cutoff])
-            conn.execute(
-                f"INSERT INTO pg.silver.bybit_indicators SELECT * FROM ({SILVER_SELECT}) WHERE timestamp >= ?",
-                [cutoff])
-            # retention: a bronze-ból már kitakarított sorok törlése
-            conn.execute(
-                "DELETE FROM pg.silver.bybit_indicators "
-                "WHERE timestamp < (SELECT MIN(timestamp) FROM pg.bronze.bybit_marketinfo)")
+            conn.execute(f"INSERT INTO pg.silver.bybit_indicators SELECT * FROM ({SILVER_SELECT}) WHERE timestamp >= ?", [cutoff])
+            conn.execute("DELETE FROM pg.silver.bybit_indicators WHERE timestamp < (SELECT MIN(timestamp) FROM pg.bronze.bybit_marketinfo)")
             conn.execute("COMMIT")
         except Exception:
             conn.execute("ROLLBACK")
