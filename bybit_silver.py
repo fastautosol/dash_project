@@ -1,3 +1,4 @@
+# 2026.11.09  10.00
 import os
 import time
 import logging
@@ -82,7 +83,7 @@ def run_bybit_silver_transformation() -> int:
             raise
 
         count = conn.execute("SELECT COUNT(*) FROM pg.silver.bybit_indicators").fetchone()[0]
-        logger.info("[SILVER] Inkrementális frissítés kész: %d sor (%.2f mp)", count, time.perf_counter() - start_time)
+        logger.info("[SILVER] Incremental Updare Ready: %d rows (%.2f mp)", count, time.perf_counter() - start_time)
         return count
 
     except Exception:
