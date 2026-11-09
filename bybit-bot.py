@@ -1,12 +1,12 @@
-# 2026.11.09  9.00
+# 2026.11.09  (bronze: websocket + ticker -> PostgreSQL; silver: apis/bybit_silver.py)
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
-import duckdb
 from datetime import datetime, UTC, timedelta
 import time
 import logging
 import os
+from bybit_silver import run_bybit_silver_transformation
 
 os.environ.setdefault("LOAD__DELETE_COMPLETED_JOBS", "true")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
@@ -19,13 +19,14 @@ DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 CRYPTO_SYMBOLS = [
     "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", 
-    "COMP/USDT", "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", 
-    "HYPE/USDT", "ICP/USDT", "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", 
-    "PLUME/USDT", "POL/USDT", "PYTH/USDT", "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT", "STRK/USDT", "TIA/USDT", 
-    "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", "ZEN/USDT", "ZRO/USDT", "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT"]
+    "COMP/USDT", "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", 
+    "ICP/USDT", "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", 
+    "PYTH/USDT", "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT", "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", 
+    "ZEN/USDT", "ZRO/USDT", "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT"]
 
 POLL_INTERVAL = 150     # Seconds between DB upserts
 TICKER_INTERVAL = 300   # Seconds between ticker cache refreshes
+SILVER_INTERVAL = 300   # Seconds between Silver transformations
 CLEANUP_HOURS = 120     # Hours of data to retain
 TABLE_NAME = "bybit_marketinfo"
 
@@ -47,85 +48,18 @@ class MarketState:
 state = MarketState()
 
 # =========================================================
-# 3. SILVER ETL (DuckDB Transformation)
+# 3. SILVER LOOP (a transzformáció az apis/bybit_silver.py-ban van)
 # =========================================================
-def _sql_literal(value: str) -> str:
-    return value.replace("'", "''")
-
-def run_bybit_silver_transformation() -> int:
-
-SILVER_SELECT = """
-    WITH base AS (
-        SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h,
-            100.0 * (close - LAG(close, 1)  OVER w) / NULLIF(LAG(close, 1)  OVER w, 0) AS r5,
-            100.0 * (close - LAG(close, 3)  OVER w) / NULLIF(LAG(close, 3)  OVER w, 0) AS r15,
-            100.0 * (close - LAG(close, 6)  OVER w) / NULLIF(LAG(close, 6)  OVER w, 0) AS r30,
-            100.0 * (close - LAG(close, 12) OVER w) / NULLIF(LAG(close, 12) OVER w, 0) AS r1h,
-            AVG(close) OVER w50  AS ema50, AVG(close) OVER w100 AS ema100, AVG(close) OVER w20  AS bb_basis,
-            STDDEV_SAMP(close) OVER w20 AS bb_std, volume / NULLIF(AVG(volume) OVER w20, 0) AS vol_ratio
-        FROM pg.bronze.bybit_marketinfo
-        WINDOW
-            w    AS (PARTITION BY symbol ORDER BY timestamp),
-            w50  AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 49 PRECEDING AND CURRENT ROW),
-            w100 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 99 PRECEDING AND CURRENT ROW),
-            w20  AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
-    )
-    SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h,
-        ROUND(r5, 4) AS r5, ROUND(r15, 4) AS r15, ROUND(r30, 4) AS r30, ROUND(r1h, 4) AS r1h,
-        ROUND(ema50, 8) AS ema50, ROUND(ema100, 8) AS ema100,
-        ROUND(bb_basis, 8) AS bb_basis, ROUND(bb_basis + 2 * bb_std, 8) AS bb_upper, ROUND(bb_basis - 2 * bb_std, 8) AS bb_lower, ROUND(vol_ratio, 4) AS vol_ratio,
-        CURRENT_TIMESTAMP AS calculated_at
-    FROM base
-"""
-
-REFRESH_HOURS = 3  # ennyi órát számol újra minden futásnál
-
-def run_bybit_silver_transformation() -> int:
-    attach_dsn = (
-        f"host={_sql_literal(os.getenv('DB_HOST', 'postgresql'))} "
-        f"port={_sql_literal(os.getenv('DB_PORT', '5432'))} "
-        f"dbname={_sql_literal(os.getenv('DB_NAME', 'n8n'))} "
-        f"user={_sql_literal(os.getenv('DB_USER', 'sql_admin'))} "
-        f"password={_sql_literal(os.getenv('DB_PASSWORD', 'sql_pass'))}"
-    )
-    cutoff = datetime.now(UTC) - timedelta(hours=REFRESH_HOURS)
-
-    conn = duckdb.connect()
-    try:
-        conn.execute("INSTALL postgres; LOAD postgres;")
-        conn.execute(f"ATTACH '{attach_dsn}' AS pg (TYPE POSTGRES);")
-        conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver")
-        conn.execute(f"CREATE TABLE IF NOT EXISTS pg.silver.bybit_indicators AS {SILVER_SELECT} LIMIT 0")
-        conn.execute("BEGIN")
-        try:
-            conn.execute("DELETE FROM pg.silver.bybit_indicators WHERE timestamp >= ?", [cutoff])
-            conn.execute(f"INSERT INTO pg.silver.bybit_indicators SELECT * FROM ({SILVER_SELECT}) WHERE timestamp >= ?", [cutoff],)
-            conn.execute("DELETE FROM pg.silver.bybit_indicators WHERE timestamp < (SELECT MIN(timestamp) FROM pg.bronze.bybit_marketinfo)")
-            conn.execute("COMMIT")
-        except Exception:
-            conn.execute("ROLLBACK")
-            raise
-
-        count = conn.execute("SELECT COUNT(*) FROM pg.silver.bybit_indicators").fetchone()[0]
-        log.info("[SILVER] Inkrementális frissítés kész: %d sor", count)
-        return count
-    except Exception:
-        log.exception("[SILVER] Transzformációs hiba")
-        raise
-    finally:
-        conn.close()
-
-# -------------------------------------------------------------------
 async def silver_etl_loop() -> None:
     """Periodikusan futtatja a Silver transzformációt a háttérben."""
     while True:
-        await asyncio.sleep(300)  # 5 percenként
+        await asyncio.sleep(SILVER_INTERVAL)
         try:
-            log.info("[SILVER] Starting Silver ETL transformation...")
-            await asyncio.to_thread(run_bybit_silver_transformation)
-            log.info("[SILVER] Silver ETL completed.")
-        except Exception as e:
-            log.error(f"[SILVER] ETL failed: {e}")
+            log.info("[SILVER] Starting Silver transformation...")
+            silver_rows = await asyncio.to_thread(run_bybit_silver_transformation)
+            log.info("[SILVER] Transformation completed. Rows: %s", silver_rows)
+        except Exception:
+            log.exception("[SILVER] Transformation failed. Bronze data is preserved; previous Silver state remains.")
 
 # =========================================================
 # 4. HISTORICAL OHLCV
