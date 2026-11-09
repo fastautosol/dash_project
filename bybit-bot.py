@@ -27,7 +27,7 @@ CRYPTO_SYMBOLS = [
 POLL_INTERVAL = 150     # Seconds between DB upserts
 TICKER_INTERVAL = 300   # Seconds between ticker cache refreshes
 SILVER_INTERVAL = 300   # Seconds between Silver transformations
-CLEANUP_HOURS = 120     # Hours of data to retain
+CLEANUP_HOURS = 72      # Hours of data to retain
 TABLE_NAME = "bybit_marketinfo"
 
 def to_linear(symbol: str) -> str:
@@ -64,7 +64,7 @@ async def silver_etl_loop() -> None:
 # =========================================================
 # 4. HISTORICAL OHLCV
 # =========================================================
-async def load_historical_ohlcv(exchange: ccxtpro.bybit, symbol: str, limit: int = 1000) -> list:
+async def load_historical_ohlcv(exchange: ccxtpro.bybit, symbol: str, limit: int = 300) -> list:
     try:
         ohlcv = await exchange.fetch_ohlcv(to_linear(symbol), timeframe="5m", limit=limit)
         return ohlcv
