@@ -5,5 +5,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY requirements-bot.txt .
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-bot.txt
 COPY bybit-bot.py .
-COPY bybit-silver.py .
+COPY bybit_silver.py .
 COPY candles-bot.py .
