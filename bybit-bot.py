@@ -98,7 +98,8 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
 async def refresh_ticker_cache(exchange: ccxtpro.bybit) -> None:
     while True:
         try:
-            log.info("\n" + "=" * 45)
+            print()
+            log.info("=" * 45)
             tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
             state.ticker_cache = tickers
             state.last_ticker_fetch = time.time()
