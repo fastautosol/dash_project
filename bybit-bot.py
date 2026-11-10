@@ -1,4 +1,4 @@
-# 2026.11.10  (bronze: websocket + ticker -> PostgreSQL; silver: apis/bybit_silver.py)
+# 2026.11.10  10.00
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
@@ -98,7 +98,7 @@ async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
 async def refresh_ticker_cache(exchange: ccxtpro.bybit) -> None:
     while True:
         try:
-            log.info("")
+            log.info(" ")
             log.info("=" * 45)
             tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
             state.ticker_cache = tickers
