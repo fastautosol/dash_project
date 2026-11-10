@@ -1,4 +1,4 @@
-# 2026.11.09  (bronze: websocket + ticker -> PostgreSQL; silver: apis/bybit_silver.py)
+# 2026.11.10  (bronze: websocket + ticker -> PostgreSQL; silver: apis/bybit_silver.py)
 import asyncio
 import ccxt.pro as ccxtpro
 import dlt
