@@ -99,7 +99,7 @@ async def refresh_ticker_cache(exchange: ccxtpro.bybit) -> None:
     while True:
         try:
             print()
-            log.info("=" * 45)
+            print("=" * 70)
             tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
             state.ticker_cache = tickers
             state.last_ticker_fetch = time.time()
