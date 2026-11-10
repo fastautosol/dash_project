@@ -126,7 +126,7 @@ def first_or(x, default="Unknown"):
     Input("refresh", "n_intervals")
 )
 def load_tmdb_data(_):
-    query = f"SELECT * FROM {TABLE} ORDER BY updated_at DESC LIMIT 5000"
+    query = f"SELECT * FROM {TABLE} ORDER BY updated_at DESC LIMIT 50000"
     with sql_engine.connect() as conn:
         df = pd.read_sql(query, conn)
     if df.empty:
