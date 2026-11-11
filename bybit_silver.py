@@ -103,14 +103,14 @@ def run_bybit_silver_transformation() -> int:
         conn.execute("BEGIN")
         try:
             # 1. Régi (cutoff utáni) adatok törlése
-            conn.execute("DELETE FROM {DST_TABLE} WHERE timestamp >= ?", [cutoff])
+            conn.execute(f"DELETE FROM {DST_TABLE} WHERE timestamp >= ?", [cutoff])
             
             # 2. Új adatok beszúrása
             conn.execute(f"INSERT INTO {DST_TABLE} SELECT * FROM ({SILVER_SELECT}) WHERE timestamp >= ?", [cutoff])
             
             # 3. Olyan sorok törlése, amik már nincsenek benne a bronze forrásban
             # (Itt a bybit_tickers-t nézzük, mert az a biztos forrás sampler módban)
-            conn.execute("DELETE FROM {DST_TABLE} WHERE timestamp < (SELECT MIN(timestamp) FROM {SRC_TABLE})")
+            conn.execute(f"DELETE FROM {DST_TABLE} WHERE timestamp < (SELECT MIN(timestamp) FROM {SRC_TABLE})")
             
             conn.execute("COMMIT")
         except Exception:
