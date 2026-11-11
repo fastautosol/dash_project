@@ -117,7 +117,7 @@ def run_bybit_silver_transformation() -> int:
             conn.execute("ROLLBACK")
             raise
             
-        count = conn.execute("SELECT COUNT(*) FROM {DST_TABLE}").fetchone()[0]
+        count = conn.execute(f"SELECT COUNT(*) FROM {DST_TABLE}").fetchone()[0]
         logger.info("[SILVER] Incremental Update Ready: %d rows (%.2f s)", count, time.perf_counter() - start_time)
         return count
         
