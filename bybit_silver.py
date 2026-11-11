@@ -1,4 +1,4 @@
-# 2026.11.11  15.00
+# 2026.11.11  17.00
 import os
 import time
 import logging
@@ -13,7 +13,6 @@ REFRESH_HOURS = 3  # ennyi órát számol újra minden futásnál
 SRC_TABLE = "pg.bronze.bybit_tickers"          # ezt írja a bybit-bot.py
 DST_TABLE = "pg.silver.bybit_indicators"
 
-# Sampler-only módban a close, funding, oi, turnover24h érhető el.
 SILVER_SELECT = f"""
 WITH base AS (
     SELECT symbol, timestamp, close, funding, oi, turnover24h,
@@ -59,19 +58,13 @@ def _build_attach_dsn() -> str:
     )
 
 
-def _columns(conn, query: str) -> list[str]:
-    """Egy lekérdezés oszlopnevei (adat nélkül)."""
-    return [d[0] for d in conn.execute(f"SELECT * FROM ({query}) LIMIT 0").description]
-
-
 # ============================================================
 # SILVER TRANSFORMATION
 # ============================================================
 def run_bybit_silver_transformation() -> int:
-    """Inkrementálisan frissíti a silver.bybit_indicators táblát a bronze.bybit_tickers alapján."""
     start_time = time.perf_counter()
     cutoff = datetime.now(UTC) - timedelta(hours=REFRESH_HOURS)
-
+    
     attach_dsn_sql = _build_attach_dsn().replace("'", "''")
     conn = duckdb.connect()
     try:
@@ -79,41 +72,31 @@ def run_bybit_silver_transformation() -> int:
         conn.execute("LOAD postgres;")
         conn.execute(f"ATTACH '{attach_dsn_sql}' AS pg (TYPE POSTGRES);")
         conn.execute("CREATE SCHEMA IF NOT EXISTS pg.silver;")
-
-        # Tábla létrehozása, ha még nem létezik
+        
+        # Tábla létrehozása (ha még nem létezik) az első futáskor
         conn.execute(f"CREATE TABLE IF NOT EXISTS {DST_TABLE} AS {SILVER_SELECT} LIMIT 0")
-
-        # Séma-eltérés (régi tábla más oszlopszámmal) -> eldobás és teljes újraszámolás
-        expected_cols = _columns(conn, SILVER_SELECT)
-        existing_cols = _columns(conn, f"SELECT * FROM {DST_TABLE}")
-        if existing_cols != expected_cols:
-            logger.warning("[SILVER] Séma-eltérés (%d vs %d oszlop), tábla újraépítése", len(existing_cols), len(expected_cols))
-            conn.execute(f"DROP TABLE {DST_TABLE}")
-            conn.execute(f"CREATE TABLE {DST_TABLE} AS {SILVER_SELECT} LIMIT 0")
-            cutoff = datetime(1970, 1, 1, tzinfo=UTC)  # teljes bronze újraszámolása
-
-        col_list = ", ".join(expected_cols)
-
+        
         conn.execute("BEGIN")
         try:
             # 1. Régi (cutoff utáni) adatok törlése
-            conn.execute(f"DELETE FROM {DST_TABLE} WHERE timestamp >= ?", [cutoff])
-
-            # 2. Új adatok beszúrása (explicit oszloplistával)
-            conn.execute(f"INSERT INTO {DST_TABLE} ({col_list}) SELECT {col_list} FROM ({SILVER_SELECT}) WHERE timestamp >= ?", [cutoff])
-
-            # 3. Olyan sorok törlése, amik már nincsenek a bronze forrásban
-            conn.execute(f"DELETE FROM {DST_TABLE} WHERE timestamp < (SELECT MIN(timestamp) FROM {SRC_TABLE})")
-
+            conn.execute("DELETE FROM {DST_TABLE} WHERE timestamp >= ?", [cutoff])
+            
+            # 2. Új adatok beszúrása
+            conn.execute(f"INSERT INTO {DST_TABLE} SELECT * FROM ({SILVER_SELECT}) WHERE timestamp >= ?", [cutoff])
+            
+            # 3. Olyan sorok törlése, amik már nincsenek benne a bronze forrásban
+            # (Itt a bybit_tickers-t nézzük, mert az a biztos forrás sampler módban)
+            conn.execute("DELETE FROM {DST_TABLE} WHERE timestamp < (SELECT MIN(timestamp) FROM {SRC_TABLE})")
+            
             conn.execute("COMMIT")
         except Exception:
             conn.execute("ROLLBACK")
             raise
-
-        count = conn.execute(f"SELECT COUNT(*) FROM {DST_TABLE}").fetchone()[0]
+            
+        count = conn.execute("SELECT COUNT(*) FROM {DST_TABLE}").fetchone()[0]
         logger.info("[SILVER] Incremental Update Ready: %d rows (%.2f s)", count, time.perf_counter() - start_time)
         return count
-
+        
     except Exception:
         logger.exception("[SILVER] Transzformációs hiba")
         raise
