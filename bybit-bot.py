@@ -1,205 +1,150 @@
 # 2026.11.11  10.00
 import asyncio
-import ccxt.pro as ccxtpro
-import dlt
-from datetime import datetime, UTC, timedelta
+import math
 import time
 import logging
 import os
+from datetime import datetime, UTC, timedelta
+import ccxt.async_support as ccxt
+import dlt
 from bybit_silver import run_bybit_silver_transformation
 
 os.environ.setdefault("LOAD__DELETE_COMPLETED_JOBS", "true")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
-log = logging.getLogger(__name__)
+log = logging.getLogger("bybit_bot")
 
 # =========================================================
-# 1. CONFIGURATION
+# 1. CONFIG
 # =========================================================
 DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
 
 CRYPTO_SYMBOLS = [
-    "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", 
-    "COMP/USDT", "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", 
-    "ICP/USDT", "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", 
-    "PYTH/USDT", "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT", "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", 
-    "ZEN/USDT", "ZRO/USDT", "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT"]
+    "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", "COMP/USDT",
+    "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", "ICP/USDT",
+    "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", "PYTH/USDT",
+    "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT",  "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", "ZEN/USDT", "ZRO/USDT",
+    "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT",
+]
+CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
 
-POLL_INTERVAL = 150     # Seconds between DB upserts
-TICKER_INTERVAL = 300   # Seconds between ticker cache refreshes
-SILVER_INTERVAL = 300   # Seconds between Silver transformations
-CLEANUP_HOURS = 72      # Hours of data to retain
-TABLE_NAME = "bybit_marketinfo"
+BAR_SEC          = 300
+CYCLE_OFFSET_SEC = 15     # gyertyazárás után ennyivel mintavételezünk
+CLEANUP_HOURS    = 72
+T_TICKER         = "bybit_tickers"
+
 
 def to_linear(symbol: str) -> str:
     return f"{symbol}:USDT"
 
 LINEAR_SYMBOLS = [to_linear(s) for s in CRYPTO_SYMBOLS]
 
-# =========================================================
-# 2. SHARED STATE
-# =========================================================
-class MarketState:
-    def __init__(self) -> None:
-        self.ohlcv: dict[str, list] = {}
-        self.ticker_cache: dict[str, dict] = {}
-        self.last_ticker_fetch: float = 0.0
-        self.last_cleanup: float = 0.0
-        self.pipeline_lock = asyncio.Lock()
-state = MarketState()
-
-# =========================================================
-# 3. SILVER LOOP (a transzformáció az apis/bybit_silver.py-ban van)
-# =========================================================
-async def silver_etl_loop() -> None:
-    """Periodikusan futtatja a Silver transzformációt a háttérben."""
-    while True:
-        await asyncio.sleep(SILVER_INTERVAL)
-        try:
-            log.info("[SILVER] Starting Silver transformation...")
-            silver_rows = await asyncio.to_thread(run_bybit_silver_transformation)
-            log.info("[SILVER] Transformation completed. Rows: %s", silver_rows)
-        except Exception:
-            log.exception("[SILVER] Transformation failed. Bronze data is preserved; previous Silver state remains.")
-
-# =========================================================
-# 4. HISTORICAL OHLCV
-# =========================================================
-async def load_historical_ohlcv(exchange: ccxtpro.bybit, symbol: str, limit: int = 300) -> list:
-    try:
-        ohlcv = await exchange.fetch_ohlcv(to_linear(symbol), timeframe="5m", limit=limit)
-        return ohlcv
-    except Exception as e:
-        log.error(f"[HIST] {symbol} failed: {e}")
-        return []
-
-# =========================================================
-# 5. WEBSOCKET — OHLCV WATCHER
-# =========================================================
-async def watch_ohlcv_symbol(exchange: ccxtpro.bybit, symbol: str) -> None:
-    ws_symbol = to_linear(symbol)
-    historical = await load_historical_ohlcv(exchange, symbol, limit=1000)
-    if historical:
-        state.ohlcv[symbol] = historical[-1]
-    
-    while True:
-        try:
-            ohlcv = await exchange.watch_ohlcv(ws_symbol, timeframe="5m", limit=1)
-            if ohlcv:
-                state.ohlcv[symbol] = ohlcv[-1]
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            log.warning(f"[WS] {symbol} error: {e} — reconnecting in 3s")
-            await asyncio.sleep(3)
-
-# =========================================================
-# 6. TICKER CACHE REFRESH
-# =========================================================
-async def refresh_ticker_cache(exchange: ccxtpro.bybit) -> None:
-    while True:
-        try:
-            print()
-            print("=" * 70)
-            tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
-            state.ticker_cache = tickers
-            state.last_ticker_fetch = time.time()
-            log.info(f"[TICKER] Cache refreshed for {len(tickers)} symbols.")
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            log.warning(f"[TICKER] Refresh failed: {e}")
-        delay = TICKER_INTERVAL - (time.time() % TICKER_INTERVAL)
-        log.info("[WAIT] Next ticker refresh in %.1f seconds.", delay)
-        await asyncio.sleep(delay)
-
-# =========================================================
-# 7. DB WRITER & CLEANUP LOOP
-# =========================================================
-def _safe_float(value, default=0.0) -> float:
+def _f(value, default=None):
+    """None / NaN / Inf safe float. Hiányzó adatra NULL megy, NEM 0.0."""
     try:
         if value is None:
             return default
-        return float(value)
+        x = float(value)
+        return x if math.isfinite(x) else default
     except (TypeError, ValueError):
         return default
 
-async def db_writer_loop(pipeline) -> None:
-    while True:
-        await asyncio.sleep(POLL_INTERVAL)
-        now = time.time()
-        now_utc = datetime.now(UTC)
-        records = []
+def _dt(ms: int) -> datetime:
+    return datetime.fromtimestamp(ms / 1000, tz=UTC)
 
-        for sym in CRYPTO_SYMBOLS:
-            bar = state.ohlcv.get(sym)
-            if not bar:
-                continue
-            ticker = state.ticker_cache.get(to_linear(sym), {})
-            info = ticker.get("info", {}) if ticker else {}
-            records.append({
-                "symbol":         sym,
-                "timestamp":      datetime.fromtimestamp(bar[0] / 1000, tz=UTC),
-                "open":           _safe_float(bar[1]),
-                "high":           _safe_float(bar[2]),
-                "low":            _safe_float(bar[3]),
-                "close":          _safe_float(bar[4]),
-                "volume":         _safe_float(bar[5]),
-                "vwap":           _safe_float(ticker.get("vwap")) if ticker else None,
-                "prevPrice1h":    _safe_float(info.get("prevPrice1h")),
-                "price24hpcnt":   _safe_float(info.get("price24hPcnt")),
-                "turnover24h":    _safe_float(info.get("turnover24h")),
-                "funding":        _safe_float(info.get("fundingRate") or info.get("lastFundingRate")),
-                "oi":             _safe_float(info.get("openInterest")),
-            })
-
-        if records:
-            try:
-                async with state.pipeline_lock:
-                    await asyncio.to_thread(pipeline.run, records, table_name=TABLE_NAME, write_disposition="merge", primary_key=["symbol", "timestamp"])
-                log.info(f"[DB] Upserted {len(records)} records.")
-            except Exception as e:
-                log.error(f"[DB] Upsert failed: {e}")
-
-        if now - state.last_cleanup >= 3600:
-            threshold = now_utc - timedelta(hours=CLEANUP_HOURS)
-            try:
-                async with state.pipeline_lock:
-                    def _cleanup():
-                        with pipeline.sql_client() as client:
-                            tname = client.make_qualified_table_name(TABLE_NAME)
-                            client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
-                    await asyncio.to_thread(_cleanup)
-                log.info(f"[CLEANUP] Removed data older than {CLEANUP_HOURS}h")
-            except Exception as e:
-                log.error(f"[CLEANUP] Failed: {e}")
-            state.last_cleanup = now
 
 # =========================================================
-# 8. MAIN
+# 2. EGY CIKLUS: egyetlen fetch_tickers hívás
+# =========================================================
+async def run_cycle(exchange, pipeline) -> int:
+    now_ms = int(time.time() * 1000)
+    bucket_ms = (now_ms // (BAR_SEC * 1000)) * (BAR_SEC * 1000)
+    target_ms = bucket_ms - BAR_SEC * 1000      # a LEZÁRT gyertya timestampje
+
+    tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
+
+    recs = []
+    for sym in CRYPTO_SYMBOLS:
+        tk = tickers.get(to_linear(sym))
+        if not tk:
+            continue
+        info = tk.get("info", {}) or {}
+        funding = _f(info.get("fundingRate"))
+        if funding is None:
+            funding = _f(info.get("lastFundingRate"))
+        recs.append({
+            "symbol":         sym,
+            "timestamp":      _dt(target_ms),
+            "close":          _f(tk.get("last")),        # close-only bar
+            "mark_price":     _f(info.get("markPrice")),
+            "index_price":    _f(info.get("indexPrice")),
+            "bid":            _f(info.get("bid1Price")),
+            "ask":            _f(info.get("ask1Price")),
+            "vwap":           _f(tk.get("vwap")),
+            "turnover24h":    _f(info.get("turnover24h")),
+            "prev_price_1h":  _f(info.get("prevPrice1h")),
+            "price_24h_pcnt": _f(info.get("price24hPcnt")),
+            "funding":        funding,
+            "oi":             _f(info.get("openInterest")),
+            "oi_value":       _f(info.get("openInterestValue")),
+        })
+
+    if recs:
+        await asyncio.to_thread(pipeline.run, recs, table_name=T_TICKER, write_disposition="merge", primary_key=["symbol", "timestamp"])
+    return len(recs)
+
+
+# =========================================================
+# 3. CLEANUP
+# =========================================================
+async def cleanup(pipeline) -> None:
+    threshold = datetime.now(UTC) - timedelta(hours=CLEANUP_HOURS)
+
+    def _c():
+        with pipeline.sql_client() as client:
+            for t in (T_TICKER, "bybit_ohlcv"):
+                try:
+                    tname = client.make_qualified_table_name(t)
+                    client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
+                except Exception:
+                    pass   # az ohlcv tábla lehet, hogy még nem létezik
+    try:
+        await asyncio.to_thread(_c)
+        log.info("[CLEANUP] %dh-nál régebbi adatok törölve", CLEANUP_HOURS)
+    except Exception:
+        log.exception("[CLEANUP] failed")
+
+
+# =========================================================
+# 4. MAIN — egyetlen szekvenciális loop
 # =========================================================
 async def main() -> None:
-    base_cfg = {"enableRateLimit": True}
-    ex_linear = ccxtpro.bybit({**base_cfg, "options": {"defaultType": "linear"}})
-    
-    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
+    exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
+    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze",)
     pipeline.abort_packages()
 
-    tasks = []
-    for sym in CRYPTO_SYMBOLS:
-        tasks.append(asyncio.create_task(watch_ohlcv_symbol(ex_linear, sym), name=f"ws-{sym}"))  
-    tasks.append(asyncio.create_task(refresh_ticker_cache(ex_linear), name="ticker-cache"))
-    tasks.append(asyncio.create_task(db_writer_loop(pipeline), name="db-writer"))
-    tasks.append(asyncio.create_task(silver_etl_loop(), name="silver-etl"))
+    cycle_no = 0
+    last_cleanup = 0.0
+    while True:
+        now = time.time()
+        bucket = int(now // BAR_SEC) * BAR_SEC
+        wake = bucket + CYCLE_OFFSET_SEC
+        if now < wake:
+            await asyncio.sleep(wake - now)
 
-    try:
-        await asyncio.gather(*tasks)
-    except asyncio.CancelledError:
-        log.info("Shutdown signal received.")
-    finally:
-        for t in tasks:
-            t.cancel()
-        await ex_linear.close()
-        log.info("All connections closed. Bye.")
+        cycle_no += 1
+        try:
+            n = await run_cycle(exchange, pipeline)
+            log.info("[CYCLE %d] tickers=%d", cycle_no, n)
+            await asyncio.to_thread(run_bybit_silver_transformation)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("[CYCLE %d] failed", cycle_no)
+
+        if time.time() - last_cleanup >= 3600:
+            await cleanup(pipeline)
+            last_cleanup = time.time()
+
 
 if __name__ == "__main__":
     try:
