@@ -122,18 +122,18 @@ async def main() -> None:
     pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
     pipeline.abort_packages()
 
-    cycle_no = 0
     last_cleanup = 0.0
     while True:
-        cycle_no += 1
         try:
+            print()
+            log.info("=" *70)
             n = await run_cycle(exchange, pipeline)
-            log.info("[CYCLE %d] tickers=%d", cycle_no, n)
+            log.info("[CYCLE START] tickers=%d", n)
             await asyncio.to_thread(run_bybit_silver_transformation)
         except asyncio.CancelledError:
             raise
         except Exception:
-            log.exception("[CYCLE %d] failed", cycle_no)
+            log.exception("[CYCLE] failed")
 
         if time.time() - last_cleanup >= 3600:
             await cleanup(pipeline)
