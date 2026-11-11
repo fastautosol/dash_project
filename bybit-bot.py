@@ -22,16 +22,14 @@ CRYPTO_SYMBOLS = [
     "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", "COMP/USDT",
     "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", "ICP/USDT",
     "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", "PYTH/USDT",
-    "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT",  "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", "ZEN/USDT", "ZRO/USDT",
+    "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT", "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", "ZEN/USDT", "ZRO/USDT",
     "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT",
 ]
 CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
 
-BAR_SEC          = 300
-CYCLE_OFFSET_SEC = 15     # gyertyazárás után ennyivel mintavételezünk
-CLEANUP_HOURS    = 72
-T_TICKER         = "bybit_tickers"
-
+POLL_INTERVAL = 300      # ciklusidő ÉS gyertyaméret (5m) — ugyanaz a konstans
+CLEANUP_HOURS = 72
+T_TICKER      = "bybit_tickers"
 
 def to_linear(symbol: str) -> str:
     return f"{symbol}:USDT"
@@ -48,6 +46,7 @@ def _f(value, default=None):
     except (TypeError, ValueError):
         return default
 
+
 def _dt(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=UTC)
 
@@ -56,9 +55,10 @@ def _dt(ms: int) -> datetime:
 # 2. EGY CIKLUS: egyetlen fetch_tickers hívás
 # =========================================================
 async def run_cycle(exchange, pipeline) -> int:
+    # a LEZÁRT gyertya timestampje (5 perces rács, epoch-align)
+    step_ms = POLL_INTERVAL * 1000
     now_ms = int(time.time() * 1000)
-    bucket_ms = (now_ms // (BAR_SEC * 1000)) * (BAR_SEC * 1000)
-    target_ms = bucket_ms - BAR_SEC * 1000      # a LEZÁRT gyertya timestampje
+    target_ms = (now_ms // step_ms) * step_ms - step_ms
 
     tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
 
@@ -115,22 +115,16 @@ async def cleanup(pipeline) -> None:
 
 
 # =========================================================
-# 4. MAIN — egyetlen szekvenciális loop
+# 4. MAIN — egyszerű loop, a régi delay-mintával
 # =========================================================
 async def main() -> None:
     exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
-    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze",)
+    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
     pipeline.abort_packages()
 
     cycle_no = 0
     last_cleanup = 0.0
     while True:
-        now = time.time()
-        bucket = int(now // BAR_SEC) * BAR_SEC
-        wake = bucket + CYCLE_OFFSET_SEC
-        if now < wake:
-            await asyncio.sleep(wake - now)
-
         cycle_no += 1
         try:
             n = await run_cycle(exchange, pipeline)
@@ -144,6 +138,10 @@ async def main() -> None:
         if time.time() - last_cleanup >= 3600:
             await cleanup(pipeline)
             last_cleanup = time.time()
+
+        delay = POLL_INTERVAL - (time.time() % POLL_INTERVAL)
+        log.info("[WAIT] Next cycle in %.1f seconds.", delay)
+        await asyncio.sleep(delay)
 
 
 if __name__ == "__main__":
