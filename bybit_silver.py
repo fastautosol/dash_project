@@ -16,7 +16,7 @@ REFRESH_HOURS = 3  # ennyi órát számol újra minden futásnál
 # Sampler-only módban az open/high/low/volume oszlopok NULL értéket kapnak, de a close, funding, oi, turnover24h tökéletesen elérhető a számításokhoz.
 SILVER_SELECT = """
 WITH base AS (
-    SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h,
+    SELECT symbol, timestamp, close, funding, oi, turnover24h,
         100.0 * (close - LAG(close, 1)  OVER w) / NULLIF(LAG(close, 1)  OVER w, 0) AS r5,
         100.0 * (close - LAG(close, 3)  OVER w) / NULLIF(LAG(close, 3)  OVER w, 0) AS r15,
         100.0 * (close - LAG(close, 6)  OVER w) / NULLIF(LAG(close, 6)  OVER w, 0) AS r30,
@@ -32,7 +32,7 @@ WITH base AS (
         w100 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 99 PRECEDING AND CURRENT ROW),
         w20  AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
 )
-SELECT symbol, timestamp, close, open, high, low, volume, funding, oi, turnover24h,
+SELECT symbol, timestamp, close, funding, oi, turnover24h,
     ROUND(r5::numeric, 4) AS r5, 
     ROUND(r15::numeric, 4) AS r15, 
     ROUND(r30::numeric, 4) AS r30, 
