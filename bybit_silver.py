@@ -1,4 +1,4 @@
-# 2026.11.11  17.00
+# 2026.11.11  18.00
 import os
 import time
 import logging
@@ -13,34 +13,58 @@ REFRESH_HOURS = 3  # ennyi órát számol újra minden futásnál
 SRC_TABLE = "pg.bronze.bybit_tickers"          # ezt írja a bybit-bot.py
 DST_TABLE = "pg.silver.bybit_indicators"
 
-SILVER_SELECT = f"""
-WITH base AS (
-    SELECT symbol, timestamp, close, funding, oi, turnover24h,
-        100.0 * (close - LAG(close, 1)  OVER w) / NULLIF(LAG(close, 1)  OVER w, 0) AS r5,
-        100.0 * (close - LAG(close, 3)  OVER w) / NULLIF(LAG(close, 3)  OVER w, 0) AS r15,
-        100.0 * (close - LAG(close, 6)  OVER w) / NULLIF(LAG(close, 6)  OVER w, 0) AS r30,
-        100.0 * (close - LAG(close, 12) OVER w) / NULLIF(LAG(close, 12) OVER w, 0) AS r1h,
-        AVG(close) OVER w50  AS ema50,
-        AVG(close) OVER w100 AS ema100,
-        AVG(close) OVER w20  AS bb_basis,
-        STDDEV_SAMP(close) OVER w20 AS bb_std
-    FROM {SRC_TABLE}
+SILVER_SELECT = """
+WITH src AS (
+    SELECT symbol, timestamp, close, mark_price, bid, ask, vwap,
+           funding, oi, turnover24h, price_24h_pcnt,
+           -- smart close: 0.3%-nál nagyobb close/mark eltérés = scam wick -> mark-ot használunk
+           CASE WHEN mark_price IS NOT NULL
+                 AND ABS(close - mark_price) / NULLIF(mark_price, 0) > 0.003
+                THEN mark_price ELSE close END AS px
+    FROM pg.bronze.bybit_tickers
+),
+base AS (
+    SELECT *,
+        100.0 * (px - LAG(px, 1)  OVER w) / NULLIF(LAG(px, 1)  OVER w, 0) AS r5,
+        100.0 * (px - LAG(px, 3)  OVER w) / NULLIF(LAG(px, 3)  OVER w, 0) AS r15,
+        100.0 * (px - LAG(px, 6)  OVER w) / NULLIF(LAG(px, 6)  OVER w, 0) AS r30,
+        100.0 * (px - LAG(px, 12) OVER w) / NULLIF(LAG(px, 12) OVER w, 0) AS r1h,
+        AVG(px) OVER w50  AS ema50,
+        AVG(px) OVER w100 AS ema100,
+        AVG(px) OVER w20  AS bb_basis,
+        STDDEV_SAMP(px) OVER w20 AS bb_std,
+        100.0 * (oi / NULLIF(LAG(oi, 3)  OVER w, 0) - 1) AS oi_chg_15m,
+        100.0 * (oi / NULLIF(LAG(oi, 12) OVER w, 0) - 1) AS oi_chg_1h
+    FROM src
     WINDOW
         w    AS (PARTITION BY symbol ORDER BY timestamp),
         w50  AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 49 PRECEDING AND CURRENT ROW),
         w100 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 99 PRECEDING AND CURRENT ROW),
         w20  AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
 )
-SELECT symbol, timestamp, close, funding, oi, turnover24h,
-    ROUND(r5::numeric, 4) AS r5,
+SELECT symbol, timestamp,
+    ROUND(close::numeric, 8)      AS close,
+    ROUND(px::numeric, 8)         AS smart_close,
+    ROUND(mark_price::numeric, 8) AS mark_price,
+    ROUND(r5::numeric, 4)  AS r5,
     ROUND(r15::numeric, 4) AS r15,
     ROUND(r30::numeric, 4) AS r30,
     ROUND(r1h::numeric, 4) AS r1h,
-    ROUND(ema50::numeric, 8) AS ema50,
+    ROUND((price_24h_pcnt * 100)::numeric, 4) AS r24h,
+    ROUND(ema50::numeric, 8)  AS ema50,
     ROUND(ema100::numeric, 8) AS ema100,
     ROUND(bb_basis::numeric, 8) AS bb_basis,
     ROUND((bb_basis + 2 * bb_std)::numeric, 8) AS bb_upper,
     ROUND((bb_basis - 2 * bb_std)::numeric, 8) AS bb_lower,
+    ROUND((CASE WHEN ask > bid AND bid > 0
+                THEN 10000.0 * (ask - bid) / ((ask + bid) / 2) END)::numeric, 2) AS spread_bps,
+    ROUND((100.0 * (close - vwap) / NULLIF(vwap, 0))::numeric, 4) AS vwap_dev_pct,
+    ROUND((100.0 * (close - mark_price) / NULLIF(mark_price, 0))::numeric, 4) AS local_premium_pct,
+    ROUND(funding::numeric, 10) AS funding,
+    ROUND(oi::numeric, 4) AS oi,
+    ROUND(oi_chg_15m::numeric, 4) AS oi_chg_15m,
+    ROUND(oi_chg_1h::numeric, 4)  AS oi_chg_1h,
+    ROUND(turnover24h::numeric, 2) AS turnover24h,
     CURRENT_TIMESTAMP AS calculated_at
 FROM base
 """
