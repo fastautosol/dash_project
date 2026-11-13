@@ -27,3 +27,4 @@ databricks-sql-connector
 bs4
 youtube-transcript-api
 gridstatus
+azure-storage-blob
