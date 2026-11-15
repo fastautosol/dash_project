@@ -1,4 +1,4 @@
-# 2026.11.15  12.00
+# 2026.11.15  18.00
 import io
 import json
 import logging
@@ -127,5 +127,5 @@ async def trigger_azure_blob_ingest(request: AzureBlobRequest, background_tasks:
     return {
         "status": "accepted",
         "message": f"Azure blob ingestion started in background for {request.blob_name}",
-        "target_table": f"bronze.{request.table_name}",
+        "target_table": f"bronze_azure_blob.{request.table_name}",
     }
