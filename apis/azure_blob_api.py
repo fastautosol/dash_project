@@ -1,100 +1,102 @@
 # 2026.11.15  12.00
 import io
 import json
+import logging
 import os
-from typing import Optional
-
+import threading
 import dlt
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel
 
-app = FastAPI(title="Azure Blob to PostgreSQL (dlt) API")
-
-# Konfigurációk Coolify Environment Variables-ből
-DB_URL = os.getenv("DB_URL", "postgresql://sql_admin:sql_pass@postgresql:5432/n8n")
+logger = logging.getLogger(__name__)
+router = APIRouter()
+pipeline_lock = threading.Lock()
 
 AZURE_BLOB_KEY = "NnrfB+Oq71lv1fad3Az37bmZGLUt36VlEEbdUC9t1Gwy1fs/4AQuZaWpesteQtiwuIm4tKML2QP7+ASt4BHAzg=="
 AZURE_CONNECTION_STRING = f"DefaultEndpointsProtocol=https;AccountName=azurestoragekcs1;AccountKey={AZURE_BLOB_KEY};EndpointSuffix=core.windows.net"
-#AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING", "")
-
 DEFAULT_CONTAINER = os.getenv("AZURE_CONTAINER_NAME", "external-catalog")
 
+DB_CONFIG = {
+    "host": "postgresql",
+    "port": 5432,
+    "database": "n8n",
+    "username": "sql_admin",
+    "password": "sql_pass",
+    "connect_timeout": 15}
+
+SUPPORTED_EXTENSIONS = (".csv", ".xls", ".xlsx", ".json")
 blob_service_client = (BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING) if AZURE_CONNECTION_STRING else None)
 
+class AzureBlobRequest(BaseModel):
+    blob_name: str = "Online_Retail.xlsx"
+    table_name: str = "online_retail"
+    source_name: str = "azure_external_catalog"
+    write_disposition: str = "replace"       # "replace", "append" vagy "merge"
+    primary_key: list[str] | str | None = None
+    container_name: str = DEFAULT_CONTAINER
+    dtype_overrides: dict[str, str] | None = {"InvoiceNo": "str", "StockCode": "str"}
 
-def read_blob_to_dataframe(blob_name: str, stream: io.BytesIO) -> pd.DataFrame:
 
+def _read_stream_to_df(blob_name: str, stream: io.BytesIO, dtype_overrides: dict[str, str] | None) -> pd.DataFrame:
+    
     lower_name = blob_name.lower()
     if lower_name.endswith(".csv"):
-        return pd.read_csv(stream)
+        return pd.read_csv(stream, dtype=dtype_overrides)
     if lower_name.endswith((".xls", ".xlsx")):
-        df = pd.read_excel(stream, engine="openpyxl", dtype={"InvoiceNo": str, "StockCode": str})
-        return df
+        return pd.read_excel(stream, engine="openpyxl", dtype=dtype_overrides)
     if lower_name.endswith(".json"):
-        raw_data = json.loads(stream.getvalue().decode("utf-8"))
-        if isinstance(raw_data, dict):
-            raw_data = [raw_data]
-        return pd.json_normalize(raw_data)
+        raw = json.loads(stream.getvalue().decode("utf-8"))
+        if isinstance(raw, dict):
+            raw = [raw]
+        return pd.json_normalize(raw)
 
-    raise HTTPException(status_code=400, detail="Nem támogatott formátum. Csak .csv, .xls, .xlsx vagy .json engedélyezett.")
+    raise ValueError(f"Nem támogatott formátum: {blob_name}")
 
 
-@app.post("/process-azure-blob/")
-def process_azure_blob(
-    blob_name: str = "Online_Retail.xlsx",
-    table_name: str = "online_retail",
-    source_name: str = "azure_external_catalog",
-    write_disposition: str = "replace",
-    primary_key: Optional[str] = None,
-    container_name: str = DEFAULT_CONTAINER,
-):
-    """
-    Beolvassa a megadott fájlt az Azure Blob Storage-ból és betölti PostgreSQL-be dlt-vel.
-    Megjegyzés: szinkron `def` végpontot használunk, így a FastAPI külön threadpoolban
-    futtatja a blokkoló I/O (Azure letöltés + Pandas + dlt) műveleteket.
-    """
-    if not blob_service_client:
-        raise HTTPException(status_code=500, detail="Hiányzó AZURE_CONNECTION_STRING.")
-
+def run_azure_blob_pipeline(req: AzureBlobRequest):
     try:
-        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
-        if not blob_client.exists():
-            raise HTTPException(status_code=404, detail=f"Blob nem található: {blob_name}")
+        logger.info("Azure Blob feldolgozás indult: %s -> bronze.%s", req.blob_name, req.table_name)
+        blob_client = blob_service_client.get_blob_client(container=req.container_name, blob=req.blob_name)
+
         stream = io.BytesIO()
         blob_client.download_blob().readinto(stream)
         stream.seek(0)
-        df = read_blob_to_dataframe(blob_name, stream)
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Azure letöltési/olvasási hiba: {str(e)}")
+        df = _read_stream_to_df(req.blob_name, stream, req.dtype_overrides)
+        if df.empty:
+            logger.warning("Üres fájl, kihagyva: %s", req.blob_name)
+            return
 
-    if df.empty:
-        return {"status": "ok", "message": "A fájl üres volt, nem történt betöltés."}
+        df["data_source_meta"] = req.source_name
 
-    # Metaadat oszlop hozzáadása
-    df["data_source_meta"] = source_name
+        with pipeline_lock:
+            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze_azure_blob)
+            run_kwargs = {"table_name": req.table_name, "write_disposition": req.write_disposition}
+            if req.primary_key and req.write_disposition == "merge":
+                run_kwargs["primary_key"] = req.primary_key
 
-    try:
-        pipeline = dlt.pipeline(pipeline_name="azure_blob_pipeline", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze_azure_blob")
+            info = pipeline.run(df, **run_kwargs)
+            info.raise_on_failed_jobs()
 
-        run_kwargs = {"table_name": table_name, "write_disposition": write_disposition}
-        if primary_key and write_disposition == "merge":
-            run_kwargs["primary_key"] = primary_key
-
-        load_info = pipeline.run(df, **run_kwargs)
-        load_info.raise_on_failed_jobs()
-
-        return {
-            "status": "success",
-            "container": container_name,
-            "blob_name": blob_name,
-            "rows_processed": len(df),
-            "target_table": f"raw_external_data.{table_name}",
-            "dlt_load_ids": load_info.loads_ids,
-        }
+        logger.info("Azure Blob kész (%d sor): %s -> bronze.%s | %s", len(df), req.blob_name, req.table_name, info)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"dlt betöltési hiba: {str(e)}")
+        logger.exception("Azure Blob pipeline hiba (%s): %s", req.blob_name, e)
+
+
+@router.post("/")
+async def trigger_azure_blob_ingest(request: AzureBlobRequest, background_tasks: BackgroundTasks):
+    if not blob_service_client:
+        raise HTTPException(status_code=500, detail="Hiányzik az AZURE_CONNECTION_STRING környezeti változó.")
+
+    if not request.blob_name.lower().endswith(SUPPORTED_EXTENSIONS):
+        raise HTTPException(status_code=400, detail=f"Csak ezek támogatottak: {SUPPORTED_EXTENSIONS}")
+
+    blob_client = blob_service_client.get_blob_client(container=request.container_name, blob=request.blob_name)
+    if not blob_client.exists():
+        raise HTTPException(status_code=404, detail=f"A blob nem található: {request.blob_name}")
+
+    background_tasks.add_task(run_azure_blob_pipeline, request)
+    return {"status": "accepted", "message": f"Azure blob ingestion started in background for {request.blob_name}", "target_table": f"bronze.{request.table_name}"}
