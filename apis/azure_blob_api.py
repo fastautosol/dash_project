@@ -5,7 +5,6 @@ import logging
 import os
 import threading
 from datetime import datetime, timezone
-
 import dlt
 import polars as pl
 import pyarrow as pa
@@ -15,11 +14,11 @@ from azure.storage.blob import BlobServiceClient
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
-# A uvicorn.error logger azonnal és pufferelés nélkül ír a Coolify Runtime Logs-ba
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 router = APIRouter()
 pipeline_lock = threading.Lock()
 
+# Kényszeríti a dlt-t, hogy Arrow betöltésnél is generáljon _dlt_id és _dlt_load_id oszlopokat
 os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_ID"] = "true"
 os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_LOAD_ID"] = "true"
 
@@ -33,16 +32,11 @@ DB_CONFIG = {
     "database": "n8n",
     "username": "sql_admin",
     "password": "sql_pass",
-    "connect_timeout": 15,
-}
+    "connect_timeout": 15}
 
 SUPPORTED_EXTENSIONS = (".csv", ".xls", ".xlsx", ".json", ".parquet")
 
-blob_service_client = (
-    BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
-    if AZURE_CONNECTION_STRING
-    else None
-)
+blob_service_client = (BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING) if AZURE_CONNECTION_STRING else None)
 
 
 class AzureBlobRequest(BaseModel):
@@ -56,13 +50,10 @@ class AzureBlobRequest(BaseModel):
 
 def _read_stream_to_arrow(blob_name: str, stream: io.BytesIO) -> pa.Table:
     lower_name = blob_name.lower()
-
     if lower_name.endswith(".parquet"):
         return pq.read_table(stream)
-
     if lower_name.endswith(".csv"):
         return pv.read_csv(stream)
-
     if lower_name.endswith(".json"):
         text = stream.getvalue().decode("utf-8").strip()
         if not text:
@@ -72,70 +63,63 @@ def _read_stream_to_arrow(blob_name: str, stream: io.BytesIO) -> pa.Table:
             if isinstance(raw, dict):
                 raw = [raw]
         except json.JSONDecodeError:
+            # NDJSON (soronkénti JSON) támogatás
             raw = [json.loads(line) for line in text.splitlines() if line.strip()]
         return pa.Table.from_pylist(raw)
 
     if lower_name.endswith((".xls", ".xlsx")):
-        # infer_schema_length=None: teljes fájlt átvizsgálja típusütközés ellen
-        df = pl.read_excel(stream, engine="calamine", infer_schema_length=None)
+        # A magas infer_schema_length megelőzi a vegyes szöveg/szám oszlopok (pl. Description) miatti típusütközést
+        df = pl.read_excel(stream, engine="calamine", infer_schema_length=10000)
         return df.to_arrow()
 
     raise ValueError(f"Nem támogatott formátum: {blob_name}")
 
 
 def _append_metadata(table: pa.Table, source_name: str, blob_name: str) -> pa.Table:
+    """Metaadat oszlopok hozzáfűzése közvetlenül PyArrow szinten."""
     n = table.num_rows
     now_utc = datetime.now(timezone.utc)
-
     table = table.append_column("data_source_meta", pa.repeat(pa.scalar(source_name, type=pa.string()), n))
     table = table.append_column("source_file_name", pa.repeat(pa.scalar(blob_name, type=pa.string()), n))
-    table = table.append_column(
-        "ingested_at",
-        pa.repeat(pa.scalar(now_utc, type=pa.timestamp("us", tz="UTC")), n),
-    )
+    table = table.append_column("ingested_at", pa.repeat(pa.scalar(now_utc, type=pa.timestamp("us", tz="UTC")), n))
     return table
 
 
 def run_azure_blob_pipeline(req: AzureBlobRequest):
     try:
-        logger.info("[AZURE-DLT] Letöltés indul: %s -> bronze.%s", req.blob_name, req.table_name)
+        logger.info("Azure Blob feldolgozás indult: %s -> bronze.%s", req.blob_name, req.table_name)
         blob_client = blob_service_client.get_blob_client(container=req.container_name, blob=req.blob_name)
 
         stream = io.BytesIO()
         blob_client.download_blob().readinto(stream)
         stream.seek(0)
 
-        logger.info("[AZURE-DLT] Beolvasás (Arrow/Polars): %s", req.blob_name)
         arrow_table = _read_stream_to_arrow(req.blob_name, stream)
         if arrow_table.num_rows == 0:
-            logger.warning("[AZURE-DLT] Üres fájl, kihagyva: %s", req.blob_name)
+            logger.warning("Üres fájl, kihagyva: %s", req.blob_name)
             return
 
         arrow_table = _append_metadata(arrow_table, req.source_name, req.blob_name)
 
-        logger.info("[AZURE-DLT] PostgreSQL betöltés indul (%d sor)...", arrow_table.num_rows)
         with pipeline_lock:
             pipeline = dlt.pipeline(
                 pipeline_name="azure_blob_ingest",
                 destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-                dataset_name="bronze",
-            )
+                dataset_name="bronze_azure_blob")
 
             @dlt.resource(
-                name=req.table_name,
-                write_disposition=req.write_disposition,
-                primary_key=req.primary_key if req.write_disposition == "merge" else None,
-            )
+                name=req.table_name, write_disposition=req.write_disposition,
+                primary_key=req.primary_key if req.write_disposition == "merge" else None)
             def blob_resource():
                 yield arrow_table
 
             info = pipeline.run(blob_resource())
             info.raise_on_failed_jobs()
 
-        logger.info("[AZURE-DLT] KÉSZ (%d sor): bronze.%s | %s", arrow_table.num_rows, req.table_name, info)
+        logger.info("Azure Blob kész (%d sor): %s -> bronze.%s | %s", arrow_table.num_rows, req.blob_name, req.table_name, info)
 
     except Exception as e:
-        logger.exception("[AZURE-DLT] HIBA (%s): %s", req.blob_name, e)
+        logger.exception("Azure Blob pipeline hiba (%s): %s", req.blob_name, e)
 
 
 @router.post("/")
@@ -157,5 +141,4 @@ async def trigger_azure_blob_ingest(request: AzureBlobRequest, background_tasks:
     return {
         "status": "accepted",
         "message": f"Azure blob ingestion started in background for {request.blob_name}",
-        "target_table": f"bronze.{request.table_name}",
-    }
+        "target_table": f"bronze_azure_blob.{request.table_name}"}
