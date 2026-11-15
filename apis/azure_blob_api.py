@@ -72,7 +72,7 @@ def run_azure_blob_pipeline(req: AzureBlobRequest):
         df["data_source_meta"] = req.source_name
 
         with pipeline_lock:
-            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze_azure_blob)
+            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze_azure_blob")
             run_kwargs = {"table_name": req.table_name, "write_disposition": req.write_disposition}
             if req.primary_key and req.write_disposition == "merge":
                 run_kwargs["primary_key"] = req.primary_key
