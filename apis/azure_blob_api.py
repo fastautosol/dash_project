@@ -24,10 +24,17 @@ DB_CONFIG = {
     "database": "n8n",
     "username": "sql_admin",
     "password": "sql_pass",
-    "connect_timeout": 15}
+    "connect_timeout": 15,
+}
 
 SUPPORTED_EXTENSIONS = (".csv", ".xls", ".xlsx", ".json")
-blob_service_client = (BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING) if AZURE_CONNECTION_STRING else None)
+
+blob_service_client = (
+    BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
+    if AZURE_CONNECTION_STRING
+    else None
+)
+
 
 class AzureBlobRequest(BaseModel):
     blob_name: str = "Online_Retail.xlsx"
@@ -36,23 +43,34 @@ class AzureBlobRequest(BaseModel):
     write_disposition: str = "replace"       # "replace", "append" vagy "merge"
     primary_key: list[str] | str | None = None
     container_name: str = DEFAULT_CONTAINER
-    dtype_overrides: dict[str, str] | None = {"InvoiceNo": "str", "StockCode": "str"}
 
 
-def _read_stream_to_df(blob_name: str, stream: io.BytesIO, dtype_overrides: dict[str, str] | None) -> pd.DataFrame:
-    
+def _sanitize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Megelőzi a PyArrow ArrowTypeError hibát: minden vegyes 'object' oszlopban
+    stringgé alakítja a nem-null értékeket, miközben a NaN-okat NULL-ként hagyja meg.
+    """
+    for col in df.select_dtypes(include=["object"]).columns:
+        df[col] = df[col].where(df[col].isna(), df[col].astype(str))
+    return df
+
+
+def _read_stream_to_df(blob_name: str, stream: io.BytesIO) -> pd.DataFrame:
     lower_name = blob_name.lower()
+
     if lower_name.endswith(".csv"):
-        return pd.read_csv(stream, dtype=dtype_overrides)
-    if lower_name.endswith((".xls", ".xlsx")):
-        return pd.read_excel(stream, engine="openpyxl", dtype=dtype_overrides)
-    if lower_name.endswith(".json"):
+        df = pd.read_csv(stream, low_memory=False)
+    elif lower_name.endswith((".xls", ".xlsx")):
+        df = pd.read_excel(stream, engine="openpyxl")
+    elif lower_name.endswith(".json"):
         raw = json.loads(stream.getvalue().decode("utf-8"))
         if isinstance(raw, dict):
             raw = [raw]
-        return pd.json_normalize(raw)
+        df = pd.json_normalize(raw)
+    else:
+        raise ValueError(f"Nem támogatott formátum: {blob_name}")
 
-    raise ValueError(f"Nem támogatott formátum: {blob_name}")
+    return _sanitize_dataframe(df)
 
 
 def run_azure_blob_pipeline(req: AzureBlobRequest):
@@ -64,7 +82,7 @@ def run_azure_blob_pipeline(req: AzureBlobRequest):
         blob_client.download_blob().readinto(stream)
         stream.seek(0)
 
-        df = _read_stream_to_df(req.blob_name, stream, req.dtype_overrides)
+        df = _read_stream_to_df(req.blob_name, stream)
         if df.empty:
             logger.warning("Üres fájl, kihagyva: %s", req.blob_name)
             return
@@ -72,11 +90,15 @@ def run_azure_blob_pipeline(req: AzureBlobRequest):
         df["data_source_meta"] = req.source_name
 
         with pipeline_lock:
-            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest", 
-                                    destination=dlt.destinations.postgres(credentials=DB_CONFIG), 
-                                    dataset_name="bronze_azure_blob")
-            
-            run_kwargs = {"table_name": req.table_name, "write_disposition": req.write_disposition}
+            pipeline = dlt.pipeline(
+                pipeline_name="azure_blob_ingest",
+                destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+                dataset_name="bronze_azure_blob",
+            )
+            run_kwargs = {
+                "table_name": req.table_name,
+                "write_disposition": req.write_disposition,
+            }
             if req.primary_key and req.write_disposition == "merge":
                 run_kwargs["primary_key"] = req.primary_key
 
@@ -102,5 +124,8 @@ async def trigger_azure_blob_ingest(request: AzureBlobRequest, background_tasks:
         raise HTTPException(status_code=404, detail=f"A blob nem található: {request.blob_name}")
 
     background_tasks.add_task(run_azure_blob_pipeline, request)
-    return {"status": "accepted", "message": f"Azure blob ingestion started in background for {request.blob_name}", 
-            "target_table": f"bronze_azure_blob.{request.table_name}"}
+    return {
+        "status": "accepted",
+        "message": f"Azure blob ingestion started in background for {request.blob_name}",
+        "target_table": f"bronze.{request.table_name}",
+    }
