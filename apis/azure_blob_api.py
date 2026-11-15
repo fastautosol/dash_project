@@ -15,6 +15,8 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+
 router = APIRouter()
 pipeline_lock = threading.Lock()
 
@@ -59,11 +61,14 @@ def _decode_csv_bytes_to_utf8(raw_bytes: bytes) -> io.BytesIO:
 
 def _read_stream_to_arrow(blob_name: str, stream: io.BytesIO) -> pa.Table:
     lower_name = blob_name.lower()
+    
     if lower_name.endswith(".parquet"):
         return pq.read_table(stream)
+
     if lower_name.endswith(".csv"):
         utf8_stream = _decode_csv_bytes_to_utf8(stream.getvalue())
-        return pv.read_csv(utf8_stream)
+        return pv.read_csv(utf8_stream, read_options=pv.ReadOptions(block_size=16 * 1024 * 1024), parse_options=pv.ParseOptions(newlines_in_values=True))
+        
     if lower_name.endswith(".json"):
         text = stream.getvalue().decode("utf-8").strip()
         if not text:
