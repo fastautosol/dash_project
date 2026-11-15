@@ -64,11 +64,25 @@ def _json_bytes_to_arrow(raw_bytes: bytes) -> pa.Table:
             raw = [raw]
     except json.JSONDecodeError:
         raw = [json.loads(line) for line in text.splitlines() if line.strip()]
-
     return pa.Table.from_pylist(raw) if raw else pa.table({})
 
 
+def _sanitize_column_names(table: pa.Table) -> pa.Table:
+    new_names = []
+    seen = set()
+    for idx, name in enumerate(table.column_names):
+        clean = (name or "").strip()
+        if not clean:
+            clean = f"unnamed_col_{idx}"
+        if clean in seen:
+            clean = f"{clean}_{idx}"
+        seen.add(clean)
+        new_names.append(clean)
+    return table.rename_columns(new_names)
+
+
 def _append_metadata(table: pa.Table, source_name: str, blob_name: str, now_utc: datetime, archive_member: str | None = None) -> pa.Table:
+    table = _sanitize_column_names(table)
     n = table.num_rows
     table = table.append_column("data_source_meta", pa.repeat(pa.scalar(source_name, type=pa.string()), n))
     table = table.append_column("source_file_name", pa.repeat(pa.scalar(blob_name, type=pa.string()), n))
