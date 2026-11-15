@@ -67,22 +67,31 @@ def _json_bytes_to_arrow(raw_bytes: bytes) -> pa.Table:
     return pa.Table.from_pylist(raw) if raw else pa.table({})
 
 
-def _sanitize_column_names(table: pa.Table) -> pa.Table:
-    new_names = []
+def _sanitize_arrow_table(table: pa.Table) -> pa.Table:
+    new_arrays = []
+    new_fields = []
     seen = set()
-    for idx, name in enumerate(table.column_names):
-        clean = (name or "").strip()
-        if not clean:
-            clean = f"unnamed_col_{idx}"
+
+    for idx, field in enumerate(table.schema):
+        col = table.column(idx)
+        if pa.types.is_null(field.type):
+            col = pa.nulls(table.num_rows, type=pa.string())
+
+        clean = re.sub(r"[^0-9a-zA-Z]+", "_", (field.name or "").strip()).strip("_").lower()
+        if not clean or clean[0].isdigit():
+            clean = f"col_{clean or idx}"
         if clean in seen:
             clean = f"{clean}_{idx}"
         seen.add(clean)
-        new_names.append(clean)
-    return table.rename_columns(new_names)
+
+        new_fields.append(pa.field(clean, col.type))
+        new_arrays.append(col)
+
+    return pa.Table.from_arrays(new_arrays, schema=pa.schema(new_fields))
 
 
 def _append_metadata(table: pa.Table, source_name: str, blob_name: str, now_utc: datetime, archive_member: str | None = None) -> pa.Table:
-    table = _sanitize_column_names(table)
+    table = _sanitize_arrow_table(table)
     n = table.num_rows
     table = table.append_column("data_source_meta", pa.repeat(pa.scalar(source_name, type=pa.string()), n))
     table = table.append_column("source_file_name", pa.repeat(pa.scalar(blob_name, type=pa.string()), n))
