@@ -47,13 +47,23 @@ class AzureBlobRequest(BaseModel):
     primary_key: list[str] | str | None = None
     container_name: str = DEFAULT_CONTAINER
 
+def _decode_csv_bytes_to_utf8(raw_bytes: bytes) -> io.BytesIO:
+    for encoding in ("utf-8-sig", "cp1252", "latin1"):
+        try:
+            text = raw_bytes.decode(encoding)
+            return io.BytesIO(text.encode("utf-8"))
+        except UnicodeDecodeError:
+            continue
+    return io.BytesIO(raw_bytes.decode("utf-8", errors="replace").encode("utf-8"))
+
 
 def _read_stream_to_arrow(blob_name: str, stream: io.BytesIO) -> pa.Table:
     lower_name = blob_name.lower()
     if lower_name.endswith(".parquet"):
         return pq.read_table(stream)
     if lower_name.endswith(".csv"):
-        return pv.read_csv(stream)
+        utf8_stream = _decode_csv_bytes_to_utf8(stream.getvalue())
+        return pv.read_csv(utf8_stream)
     if lower_name.endswith(".json"):
         text = stream.getvalue().decode("utf-8").strip()
         if not text:
@@ -63,13 +73,12 @@ def _read_stream_to_arrow(blob_name: str, stream: io.BytesIO) -> pa.Table:
             if isinstance(raw, dict):
                 raw = [raw]
         except json.JSONDecodeError:
-            # NDJSON (soronkénti JSON) támogatás
             raw = [json.loads(line) for line in text.splitlines() if line.strip()]
         return pa.Table.from_pylist(raw)
 
     if lower_name.endswith((".xls", ".xlsx")):
         # A magas infer_schema_length megelőzi a vegyes szöveg/szám oszlopok (pl. Description) miatti típusütközést
-        df = pl.read_excel(stream, engine="calamine", infer_schema_length=10000)
+        df = pl.read_excel(stream, engine="calamine", infer_schema_length=None)
         return df.to_arrow()
 
     raise ValueError(f"Nem támogatott formátum: {blob_name}")
