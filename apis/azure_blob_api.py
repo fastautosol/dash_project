@@ -72,7 +72,10 @@ def run_azure_blob_pipeline(req: AzureBlobRequest):
         df["data_source_meta"] = req.source_name
 
         with pipeline_lock:
-            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze_azure_blob")
+            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest", 
+                                    destination=dlt.destinations.postgres(credentials=DB_CONFIG), 
+                                    dataset_name="bronze_azure_blob")
+            
             run_kwargs = {"table_name": req.table_name, "write_disposition": req.write_disposition}
             if req.primary_key and req.write_disposition == "merge":
                 run_kwargs["primary_key"] = req.primary_key
@@ -99,4 +102,5 @@ async def trigger_azure_blob_ingest(request: AzureBlobRequest, background_tasks:
         raise HTTPException(status_code=404, detail=f"A blob nem található: {request.blob_name}")
 
     background_tasks.add_task(run_azure_blob_pipeline, request)
-    return {"status": "accepted", "message": f"Azure blob ingestion started in background for {request.blob_name}", "target_table": f"bronze.{request.table_name}"}
+    return {"status": "accepted", "message": f"Azure blob ingestion started in background for {request.blob_name}", 
+            "target_table": f"bronze_azure_blob.{request.table_name}"}
