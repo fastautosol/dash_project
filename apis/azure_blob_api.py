@@ -3,8 +3,11 @@ import io
 import json
 import logging
 import os
+import tarfile
 import threading
+import zipfile
 from datetime import datetime, timezone
+from typing import Iterator
 import dlt
 import polars as pl
 import pyarrow as pa
@@ -14,13 +17,12 @@ from azure.storage.blob import BlobServiceClient
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 
 router = APIRouter()
 pipeline_lock = threading.Lock()
 
-# Kényszeríti a dlt-t, hogy Arrow betöltésnél is generáljon _dlt_id és _dlt_load_id oszlopokat
 os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_ID"] = "true"
 os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_LOAD_ID"] = "true"
 
@@ -28,18 +30,11 @@ AZURE_BLOB_KEY = "NnrfB+Oq71lv1fad3Az37bmZGLUt36VlEEbdUC9t1Gwy1fs/4AQuZaWpesteQt
 AZURE_CONNECTION_STRING = f"DefaultEndpointsProtocol=https;AccountName=azurestoragekcs1;AccountKey={AZURE_BLOB_KEY};EndpointSuffix=core.windows.net"
 DEFAULT_CONTAINER = os.getenv("AZURE_CONTAINER_NAME", "external-catalog")
 
-DB_CONFIG = {
-    "host": "postgresql",
-    "port": 5432,
-    "database": "n8n",
-    "username": "sql_admin",
-    "password": "sql_pass",
-    "connect_timeout": 15}
+DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 
-SUPPORTED_EXTENSIONS = (".csv", ".xls", ".xlsx", ".json", ".parquet")
+SUPPORTED_EXTENSIONS = (".csv", ".xls", ".xlsx", ".json", ".jsonl", ".parquet", ".tar", ".tar.gz", ".tgz", ".zip")
 
 blob_service_client = (BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING) if AZURE_CONNECTION_STRING else None)
-
 
 class AzureBlobRequest(BaseModel):
     blob_name: str = "Online_Retail.xlsx"
@@ -49,91 +44,126 @@ class AzureBlobRequest(BaseModel):
     primary_key: list[str] | str | None = None
     container_name: str = DEFAULT_CONTAINER
 
+
 def _decode_csv_bytes_to_utf8(raw_bytes: bytes) -> io.BytesIO:
     for encoding in ("utf-8-sig", "cp1252", "latin1"):
         try:
-            text = raw_bytes.decode(encoding)
-            return io.BytesIO(text.encode("utf-8"))
+            return io.BytesIO(raw_bytes.decode(encoding).encode("utf-8"))
         except UnicodeDecodeError:
             continue
     return io.BytesIO(raw_bytes.decode("utf-8", errors="replace").encode("utf-8"))
 
 
-def _read_stream_to_arrow(blob_name: str, stream: io.BytesIO) -> pa.Table:
-    lower_name = blob_name.lower()
-    
-    if lower_name.endswith(".parquet"):
-        return pq.read_table(stream)
+def _json_bytes_to_arrow(raw_bytes: bytes) -> pa.Table:
+    text = raw_bytes.decode("utf-8-sig", errors="replace").strip()
+    if not text:
+        return pa.table({})
+    try:
+        raw = json.loads(text)
+        if isinstance(raw, dict):
+            raw = [raw]
+    except json.JSONDecodeError:
+        raw = [json.loads(line) for line in text.splitlines() if line.strip()]
 
-    if lower_name.endswith(".csv"):
-        utf8_stream = _decode_csv_bytes_to_utf8(stream.getvalue())
-        return pv.read_csv(utf8_stream, read_options=pv.ReadOptions(block_size=16 * 1024 * 1024), parse_options=pv.ParseOptions(newlines_in_values=True))
-        
-    if lower_name.endswith(".json"):
-        text = stream.getvalue().decode("utf-8").strip()
-        if not text:
-            return pa.table({})
-        try:
-            raw = json.loads(text)
-            if isinstance(raw, dict):
-                raw = [raw]
-        except json.JSONDecodeError:
-            raw = [json.loads(line) for line in text.splitlines() if line.strip()]
-        return pa.Table.from_pylist(raw)
-
-    if lower_name.endswith((".xls", ".xlsx")):
-        # A magas infer_schema_length megelőzi a vegyes szöveg/szám oszlopok (pl. Description) miatti típusütközést
-        df = pl.read_excel(stream, engine="calamine", infer_schema_length=None)
-        return df.to_arrow()
-
-    raise ValueError(f"Nem támogatott formátum: {blob_name}")
+    return pa.Table.from_pylist(raw) if raw else pa.table({})
 
 
-def _append_metadata(table: pa.Table, source_name: str, blob_name: str) -> pa.Table:
-    """Metaadat oszlopok hozzáfűzése közvetlenül PyArrow szinten."""
+def _append_metadata(table: pa.Table, source_name: str, blob_name: str, now_utc: datetime, archive_member: str | None = None) -> pa.Table:
     n = table.num_rows
-    now_utc = datetime.now(timezone.utc)
     table = table.append_column("data_source_meta", pa.repeat(pa.scalar(source_name, type=pa.string()), n))
     table = table.append_column("source_file_name", pa.repeat(pa.scalar(blob_name, type=pa.string()), n))
+    table = table.append_column("archive_member", pa.repeat(pa.scalar(archive_member, type=pa.string()), n))
     table = table.append_column("ingested_at", pa.repeat(pa.scalar(now_utc, type=pa.timestamp("us", tz="UTC")), n))
     return table
 
 
+def _is_valid_json_member(filename: str) -> bool:
+    base = os.path.basename(filename)
+    if not base or base.startswith((".", "._")) or "__MACOSX" in filename:
+        return False
+    return base.lower().endswith((".json", ".jsonl", ".ndjson"))
+
+
+def _iter_arrow_batches(blob_name: str, stream: io.BytesIO, source_name: str) -> Iterator[pa.Table]:
+    """Fájltípustól függően 1 vagy több (archívum esetén fájlonként) PyArrow táblát ad vissza."""
+    lower_name = blob_name.lower()
+    now_utc = datetime.now(timezone.utc)
+
+    # 1. TAR / TAR.GZ / TGZ archívumok (pl. jsons.tar)
+    if lower_name.endswith((".tar", ".tar.gz", ".tgz")):
+        with tarfile.open(fileobj=stream, mode="r:*") as tar:
+            for member in tar:
+                if not member.isfile() or not _is_valid_json_member(member.name):
+                    continue
+                extracted = tar.extractfile(member)
+                if not extracted:
+                    continue
+                table = _json_bytes_to_arrow(extracted.read())
+                if table.num_rows > 0:
+                    yield _append_metadata(table, source_name, blob_name, now_utc, archive_member=member.name)
+        return
+
+    # 2. ZIP archívumok
+    if lower_name.endswith(".zip"):
+        with zipfile.ZipFile(stream, mode="r") as zf:
+            for member_name in zf.namelist():
+                if member_name.endswith("/") or not _is_valid_json_member(member_name):
+                    continue
+                table = _json_bytes_to_arrow(zf.read(member_name))
+                if table.num_rows > 0:
+                    yield _append_metadata(table, source_name, blob_name, now_utc, archive_member=member_name)
+        return
+
+    # 3. Egyedi fájlok (Parquet, CSV, JSON, Excel)
+    if lower_name.endswith(".parquet"):
+        table = pq.read_table(stream)
+    elif lower_name.endswith(".csv"):
+        utf8_stream = _decode_csv_bytes_to_utf8(stream.getvalue())
+        table = pv.read_csv(utf8_stream, read_options=pv.ReadOptions(block_size=16 * 1024 * 1024), parse_options=pv.ParseOptions(newlines_in_values=True))
+    elif lower_name.endswith((".json", ".jsonl", ".ndjson")):
+        table = _json_bytes_to_arrow(stream.getvalue())
+    elif lower_name.endswith((".xls", ".xlsx")):
+        df = pl.read_excel(stream, engine="calamine", infer_schema_length=None)
+        table = df.to_arrow()
+    else:
+        raise ValueError(f"Nem támogatott formátum: {blob_name}")
+
+    if table.num_rows > 0:
+        yield _append_metadata(table, source_name, blob_name, now_utc)
+
+
 def run_azure_blob_pipeline(req: AzureBlobRequest):
     try:
-        logger.info("Azure Blob feldolgozás indult: %s -> bronze.%s", req.blob_name, req.table_name)
+        logger.info("[AZURE-DLT] Letöltés indul: %s -> bronze.%s", req.blob_name, req.table_name)
         blob_client = blob_service_client.get_blob_client(container=req.container_name, blob=req.blob_name)
 
         stream = io.BytesIO()
         blob_client.download_blob().readinto(stream)
         stream.seek(0)
 
-        arrow_table = _read_stream_to_arrow(req.blob_name, stream)
-        if arrow_table.num_rows == 0:
-            logger.warning("Üres fájl, kihagyva: %s", req.blob_name)
-            return
-
-        arrow_table = _append_metadata(arrow_table, req.source_name, req.blob_name)
+        total_rows = 0
 
         with pipeline_lock:
-            pipeline = dlt.pipeline(
-                pipeline_name="azure_blob_ingest",
+            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest",
                 destination=dlt.destinations.postgres(credentials=DB_CONFIG),
                 dataset_name="bronze_azure_blob")
 
-            @dlt.resource(
-                name=req.table_name, write_disposition=req.write_disposition,
+            @dlt.resource(name=req.table_name, write_disposition=req.write_disposition,
                 primary_key=req.primary_key if req.write_disposition == "merge" else None)
             def blob_resource():
-                yield arrow_table
+                nonlocal total_rows
+                for batch in _iter_arrow_batches(req.blob_name, stream, req.source_name):
+                    total_rows += batch.num_rows
+                    yield batch
 
             info = pipeline.run(blob_resource())
             info.raise_on_failed_jobs()
 
-        logger.info("Azure Blob kész (%d sor): %s -> bronze.%s | %s", arrow_table.num_rows, req.blob_name, req.table_name, info)
+        stream.close()
+        logger.info("[AZURE-DLT] KÉSZ (%d sor): %s -> bronze.%s | %s", total_rows, req.blob_name, req.table_name, info)
 
     except Exception as e:
-        logger.exception("Azure Blob pipeline hiba (%s): %s", req.blob_name, e)
+        logger.exception("[AZURE-DLT] HIBA (%s): %s", req.blob_name, e)
 
 
 @router.post("/")
@@ -155,4 +185,5 @@ async def trigger_azure_blob_ingest(request: AzureBlobRequest, background_tasks:
     return {
         "status": "accepted",
         "message": f"Azure blob ingestion started in background for {request.blob_name}",
-        "target_table": f"bronze_azure_blob.{request.table_name}"}
+        "target_table": f"bronze_azure_blob.{request.table_name}",
+    }
