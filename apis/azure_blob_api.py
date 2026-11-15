@@ -22,7 +22,8 @@ pipeline_lock = threading.Lock()
 os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_ID"] = "true"
 os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_LOAD_ID"] = "true"
 
-AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING", "")
+AZURE_BLOB_KEY = "NnrfB+Oq71lv1fad3Az37bmZGLUt36VlEEbdUC9t1Gwy1fs/4AQuZaWpesteQtiwuIm4tKML2QP7+ASt4BHAzg=="
+AZURE_CONNECTION_STRING = f"DefaultEndpointsProtocol=https;AccountName=azurestoragekcs1;AccountKey={AZURE_BLOB_KEY};EndpointSuffix=core.windows.net"
 DEFAULT_CONTAINER = os.getenv("AZURE_CONTAINER_NAME", "external-catalog")
 
 DB_CONFIG = {
