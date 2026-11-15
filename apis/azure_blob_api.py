@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import re
 import tarfile
 import threading
 import zipfile
