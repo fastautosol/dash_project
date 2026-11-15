@@ -1,98 +1,100 @@
-from fastapi import FastAPI, HTTPException
-import pandas as pd
-import json
+# 2026.11.15  12.00
 import io
+import json
+import os
+from typing import Optional
+
 import dlt
-from sqlalchemy import create_engine, text
+import pandas as pd
 from azure.storage.blob import BlobServiceClient
+from fastapi import FastAPI, HTTPException
 
-app = FastAPI(title="Azure Blob Stream to dlt Pipeline API")
+app = FastAPI(title="Azure Blob to PostgreSQL (dlt) API")
 
-# 1. Konfigurációk (Ezeket érdemes a Coolify Környezeti Változói közé (Environment Variables) tenni)
-DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
-AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=your_account;AccountKey=your_key;EndpointSuffix=core.windows.net"
-CONTAINER_NAME = "client-raw-data"
+# Konfigurációk Coolify Environment Variables-ből
+DB_URL = os.getenv("DB_URL", "postgresql://sql_admin:sql_pass@postgresql:5432/n8n")
 
-# SQLAlchemy engine az adatbázis kapcsolatokhoz
-engine = create_engine(DB_URL, pool_pre_ping=True)
+AZURE_BLOB_KEY = "NnrfB+Oq71lv1fad3Az37bmZGLUt36VlEEbdUC9t1Gwy1fs/4AQuZaWpesteQtiwuIm4tKML2QP7+ASt4BHAzg=="
+AZURE_CONNECTION_STRING = f"DefaultEndpointsProtocol=https;AccountName=azurestoragekcs1;AccountKey={AZURE_BLOB_KEY};EndpointSuffix=core.windows.net"
+#AZURE_CONNECTION_STRING = os.getenv("AZURE_CONNECTION_STRING", "")
 
-# Azure Blob Service kliens inicializálása
-try:
-    blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
-except Exception as e:
-    print(f"Súlyos hiba az Azure Blob kliens inicializálásakor: {str(e)}")
+DEFAULT_CONTAINER = os.getenv("AZURE_CONTAINER_NAME", "external-catalog")
+
+blob_service_client = (BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING) if AZURE_CONNECTION_STRING else None)
+
+
+def read_blob_to_dataframe(blob_name: str, stream: io.BytesIO) -> pd.DataFrame:
+
+    lower_name = blob_name.lower()
+    if lower_name.endswith(".csv"):
+        return pd.read_csv(stream)
+    if lower_name.endswith((".xls", ".xlsx")):
+        df = pd.read_excel(stream, engine="openpyxl", dtype={"InvoiceNo": str, "StockCode": str})
+        return df
+    if lower_name.endswith(".json"):
+        raw_data = json.loads(stream.getvalue().decode("utf-8"))
+        if isinstance(raw_data, dict):
+            raw_data = [raw_data]
+        return pd.json_normalize(raw_data)
+
+    raise HTTPException(status_code=400, detail="Nem támogatott formátum. Csak .csv, .xls, .xlsx vagy .json engedélyezett.")
+
 
 @app.post("/process-azure-blob/")
-async def process_azure_blob(blob_name: str, source_name: str):
+def process_azure_blob(
+    blob_name: str = "Online_Retail.xlsx",
+    table_name: str = "online_retail",
+    source_name: str = "azure_external_catalog",
+    write_disposition: str = "replace",
+    primary_key: Optional[str] = None,
+    container_name: str = DEFAULT_CONTAINER,
+):
     """
-    Közvetlenül az Azure Blob Storage-ból olvassa be a fájlt streamelve, 
-    majd dlt-vel betölti a PostgreSQL-be.
-    :param blob_name: A fájl pontos elérése a containeren belül (pl: 'incoming/sales_2026_11.csv')
-    :param source_name: Metaadat a dlt-nek az adat eredetéről (pl: 'Shopify_Kaggle')
+    Beolvassa a megadott fájlt az Azure Blob Storage-ból és betölti PostgreSQL-be dlt-vel.
+    Megjegyzés: szinkron `def` végpontot használunk, így a FastAPI külön threadpoolban
+    futtatja a blokkoló I/O (Azure letöltés + Pandas + dlt) műveleteket.
     """
+    if not blob_service_client:
+        raise HTTPException(status_code=500, detail="Hiányzó AZURE_CONNECTION_STRING.")
+
     try:
-        # 2. Kapcsolódás a specifikus blobhoz a konténeren belül
-        blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
-        
+        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
         if not blob_client.exists():
-            raise HTTPException(status_code=404, detail=f"A megadott blob nem található: {blob_name}")
-            
-        # 3. Streamelés indítása: Nem töltjük le az egész fájlt a VPS lemezére, hanem memóriastreamként kezeljük
-        blob_data = blob_client.download_blob()
+            raise HTTPException(status_code=404, detail=f"Blob nem található: {blob_name}")
         stream = io.BytesIO()
-        blob_data.readinto(stream)
-        stream.seek(0)  # Visszaállítjuk a stream elejére a mutatót az olvasáshoz
-        
-        # 4. Fájltípus detektálása a kiterjesztés alapján és beolvasás Pandas segítségével
-        if blob_name.endswith('.csv'):
-            df = pd.read_csv(stream)
-            data_to_load = df.to_dict(orient="records")
-            
-        elif blob_name.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(stream)
-            data_to_load = df.to_dict(orient="records")
-            
-        elif blob_name.endswith('.json'):
-            # JSON esetében szöveges streamként olvassuk be
-            stream_text = io.StringIO(stream.getvalue().decode('utf-8'))
-            data_to_load = json.load(stream_text)
-            if isinstance(data_to_load, dict):
-                data_to_load = [data_to_load]
-        else:
-            raise HTTPException(status_code=400, detail="Nem támogatott fájlformátum az Azure-ban. Csak CSV, Excel vagy JSON feldolgozható.")
+        blob_client.download_blob().readinto(stream)
+        stream.seek(0)
+        df = read_blob_to_dataframe(blob_name, stream)
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Hiba az Azure Blob letöltése/streamelése során: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Azure letöltési/olvasási hiba: {str(e)}")
 
-    if not data_to_load:
-        return {"status": "Sikeres", "üzenet": "A fájl üres volt, nem történt betöltés."}
+    if df.empty:
+        return {"status": "ok", "message": "A fájl üres volt, nem történt betöltés."}
 
-    # Metaadat hozzáadása
-    for record in data_to_load:
-        record["data_source_meta"] = source_name
+    # Metaadat oszlop hozzáadása
+    df["data_source_meta"] = source_name
 
-    # 5. dlt Pipeline futtatása MERGE stratégiával
     try:
-        pipeline = dlt.pipeline(
-            pipeline_name="azure_kkv_pipeline",
-            destination=dlt.destinations.postgres(credentials=DB_URL),
-            dataset_name="sales_data"
-        )
+        pipeline = dlt.pipeline(pipeline_name="azure_blob_pipeline", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze_azure_blob")
 
-        # Összefésülés order_id alapján
-        load_info = pipeline.run(
-            data_to_load,
-            table_name="orders",
-            write_disposition="merge",
-            primary_key="order_id"
-        )
-        
+        run_kwargs = {"table_name": table_name, "write_disposition": write_disposition}
+        if primary_key and write_disposition == "merge":
+            run_kwargs["primary_key"] = primary_key
+
+        load_info = pipeline.run(df, **run_kwargs)
+        load_info.raise_on_failed_jobs()
+
         return {
-            "status": "Sikeresen feldolgozva",
-            "feldolgozott_blob": blob_name,
-            "dlt_load_id": load_info.loads.load_id if load_info.loads else "N/A",
-            "üzenet": "Az Azure-ból streamelt fájl sikeresen bekerült a PostgreSQL-be."
+            "status": "success",
+            "container": container_name,
+            "blob_name": blob_name,
+            "rows_processed": len(df),
+            "target_table": f"raw_external_data.{table_name}",
+            "dlt_load_ids": load_info.loads_ids,
         }
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"dlt csővezeték hiba: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"dlt betöltési hiba: {str(e)}")
