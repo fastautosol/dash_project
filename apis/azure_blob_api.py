@@ -82,6 +82,7 @@ def _sanitize_column_names(table: pa.Table) -> pa.Table:
         new_names.append(clean)
     return table.rename_columns(new_names)
 
+
 def _times_to_string(table: pa.Table) -> pa.Table:
     for i, field in enumerate(table.schema):
         if pa.types.is_time(field.type):
