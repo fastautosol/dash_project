@@ -82,6 +82,12 @@ def _sanitize_column_names(table: pa.Table) -> pa.Table:
         new_names.append(clean)
     return table.rename_columns(new_names)
 
+def _times_to_string(table: pa.Table) -> pa.Table:
+    for i, field in enumerate(table.schema):
+        if pa.types.is_time(field.type):
+            table = table.set_column(i, field.name, table.column(i).cast(pa.string()))
+    return table
+
 
 def _append_metadata(table: pa.Table, source_name: str, blob_name: str, now_utc: datetime, archive_member: str | None = None) -> pa.Table:
     table = _sanitize_column_names(table)
@@ -133,11 +139,16 @@ def _iter_arrow_batches(blob_name: str, stream: io.BytesIO, source_name: str) ->
     # 3. Egyedi fájlok (Parquet, CSV, JSON, Excel)
     if lower_name.endswith(".parquet"):
         table = pq.read_table(stream)
+        
     elif lower_name.endswith(".csv"):
         utf8_stream = _decode_csv_bytes_to_utf8(stream.getvalue())
         table = pv.read_csv(utf8_stream, read_options=pv.ReadOptions(block_size=16 * 1024 * 1024), parse_options=pv.ParseOptions(newlines_in_values=True))
+        table = _times_to_string(table)
+        logger.info("[AZURE-DLT] schema: %s", table.schema)
+        
     elif lower_name.endswith((".json", ".jsonl", ".ndjson")):
         table = _json_bytes_to_arrow(stream.getvalue())
+        
     elif lower_name.endswith((".xls", ".xlsx")):
         df = pl.read_excel(stream, engine="calamine", infer_schema_length=None)
         table = df.to_arrow()
