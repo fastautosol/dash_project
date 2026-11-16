@@ -1,4 +1,4 @@
-# 2026.11.16  14.00
+# 2026.11.16  19.00
 import asyncio
 import math
 import time
@@ -24,11 +24,25 @@ DB_PASS = os.getenv("DB_PASSWORD", "sql_pass")
 DB_URL  = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 CRYPTO_SYMBOLS = [
-    "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", "COMP/USDT",
-    "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", "ICP/USDT",
-    "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", "PYTH/USDT",
-    "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT", "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", "ZEN/USDT", "ZRO/USDT",
-    "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT"]
+    # --- TOP S Tier ---
+    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "NEAR/USDT", "SUI/USDT", "AAVE/USDT", "RENDER/USDT", "INJ/USDT", "TAO/USDT",
+
+    # --- TOP Alts & Layer-1s & Layer-2s (High Cap, TOP 50) ---
+    "DOGE/USDT", "SHIB/USDT", "PEPE/USDT", "WIF/USDT", "BONK/USDT", "FLOKI/USDT", "TON/USDT", "TRX/USDT", "LTC/USDT", "BCH/USDT",
+    "LINK/USDT", "UNI/USDT", "LEO/USDT", "ICP/USDT", "APT/USDT", "FET/USDT", "ETC/USDT", "FIL/USDT", "KAS/USDT", "OM/USDT",
+    "SEI/USDT", "POL/USDT", "OP/USDT", "ARB/USDT", "GRT/USDT", "AAVE/USDT", "NEAR/USDT", "RNDR/USDT", "VET/USDT", "JUP/USDT",
+    "PYTH/USDT", "TIA/USDT", "RUNE/USDT", "STX/USDT", "LDO/USDT", "IMX/USDT", "FTM/USDT", "MNT/USDT", "ATOM/USDT", "THETA/USDT",
+
+    # --- Top 50 - 100 + Bybit kedvencek (Mid-Cap, Nagy volumenűek) ---
+    "ALGO/USDT", "FLOW/USDT", "EGLD/USDT", "SAND/USDT", "MANA/USDT", "AXS/USDT", "APE/USDT", "GALA/USDT", "CRV/USDT", "LRC/USDT",
+    "ENJ/USDT", "ANKR/USDT", "MINA/USDT", "HBAR/USDT", "QNT/USDT", "CHZ/USDT", "FTT/USDT", "ZEC/USDT", "DASH/USDT", "XMR/USDT",
+    "XLM/USDT", "WAVES/USDT", "ROSE/USDT", "MKR/USDT", "COMP/USDT", "LDO/USDT", "RPL/USDT", "FXS/USDT", "DYDX/USDT", "PNDR/USDT",
+    "KAVA/USDT", "WOO/USDT", "GMT/USDT", "JASMY/USDT", "IOTA/USDT", "HOT/USDT", "ONE/USDT", "XEM/USDT", "CELO/USDT", "QTUM/USDT",
+    "BAT/USDT", "ONT/USDT", "ZIL/USDT", "OMG/USDT", "YFI/USDT", "SUSHI/USDT", "1INCH/USDT", "REI/USDT", "MASK/USDT", "LINA/USDT",
+
+    # --- Trendi & Új, nagy tőkeáramlású coinok (Perps) ---
+    "ENA/USDT", "HYPE/USDT", "ONDO/USDT", "W/USDT", "ZRO/USDT", "POPCAT/USDT", "BRETT/USDT", "ME/USDT", "IO/USDT", "ZETA/USDT",
+    "BLAST/USDT", "ATH/USDT", "STRK/USDT", "AEVO/USDT", "STG/USDT", "NOT/USDT", "VIRTUAL/USDT", "AIXBT/USDT", "GOAT/USDT", "MOODENG/USDT"]
 
 CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
 
@@ -59,9 +73,7 @@ def _dt(ms: int) -> datetime:
 async def run_cycle(exchange, pipeline) -> int:
     step_ms = POLL_INTERVAL * 1000
     now_ms = int(time.time() * 1000)
-    # Aktuális 5 perces rácsra kerekített snapshot időpont
     target_ms = (now_ms // step_ms) * step_ms
-
     tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
 
     recs = []
