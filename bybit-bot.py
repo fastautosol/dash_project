@@ -139,6 +139,7 @@ async def main() -> None:
     try:
         while True:
             try:
+                print()
                 log.info("=" * 45)
                 n = await run_cycle(exchange, pipeline)
                 log.info("[CYCLE START] tickers=%d", n)
