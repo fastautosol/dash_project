@@ -30,95 +30,23 @@ CRYPTO_SYMBOLS = [
     "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT",
     "ADA/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "NEAR/USDT",
     "SUI/USDT", "AAVE/USDT", "RENDER/USDT", "INJ/USDT", "TAO/USDT",
-
-    # =========================================================
-    # 2. A BEMÁSOLT, BIZONYÍTOTTAN ÉLES CRYPTO TICKEREK (Top 15-ön felül)
-    # =========================================================
-    "HYPE/USDT",          # Hyperliquid AI/Tech (A bemásolt top volumen!)
-    "PURR/USDT",          # Purr
-    "ENS/USDT",           # Ethereum Name Service
-    "ICP/USDT",           # Internet Computer
-    "CAKE/USDT",          # PancakeSwap
-    "ZRO/USDT",           # LayerZero
-    "ATOM/USDT",          # Cosmos
-    "LDO/USDT",           # Lido DAO
-    "HNT/USDT",           # Helium
-    "CRV/USDT",           # Curve DAO
-    "SNX/USDT",           # Synthetix
-    "DYDX/USDT",          # dYdX
-    "DOGE/USDT",          # Dogecoin
-    "XPL/USDT",           # XPLA
-    "CRO/USDT",           # Cronos
-    "1000LUNC/USDT",      # LUNC Bybit-specifikus index
-    "PHA/USDT",           # Phala Network
-    "KAIA/USDT",          # Kaia
-    "PNUT/USDT",          # Peanut the Squirrel
-    "XDC/USDT",           # XDC Network
-    "FIDA/USDT",          # Bonfida
-    "RARE/USDT",          # SuperRare
-    "BICO/USDT",          # Biconomy
-    "COTI/USDT",          # COTI
-    "FLR/USDT",           # Flare
-    "ATH/USDT",           # Aethir
-    "1000PEPE/USDT",      # PEPE Bybit-specifikus 1000-es indexe
-    "BRETT/USDT",         # Brett
-    "JASMY/USDT",         # JasmyCoin
-    "GALA/USDT",          # Gala
-    "NOT/USDT",           # Notcoin
-    "HMSTR/USDT",         # Hamster Kombat
-    "BOME/USDT",          # BOOK OF MEME
-    "TLM/USDT",           # Alien Worlds
-    "ZIL/USDT",           # Zilliqa
-    "1000BONK/USDT",      # BONK Bybit-specifikus 1000-es indexe
-    "SHIB1000/USDT",      # SHIB Bybit-specifikus 1000-es indexe (Vigyázz, az adatsorban SHIB1000/USDT-ként szerepelt!)
-    "BEAM/USDT",          # Beam
-    "ALT/USDT",           # Altlayer
-    "VET/USDT",           # VeChain
-    "ZK/USDT",            # ZKsync
-    "W/USDT",             # Wormhole
-    "FLOW/USDT",          # Flow
-    "GRT/USDT",           # The Graph
-    "1000FLOKI/USDT",     # FLOKI Bybit-specifikus 1000-es indexe
-    "KAS/USDT",           # Kaspa
-    "KAVA/USDT",          # Kava
-    "POPCAT/USDT",        # Popcat
-    "STRK/USDT",          # Starknet
-    "SAND/USDT",          # The Sandbox
-    "SEI/USDT",           # Sei
-    "PYTH/USDT",          # Pyth Network
-    "HBAR/USDT",          # Hedera
-    "APE/USDT",           # ApeCoin
-    "POL/USDT",           # Polygon POL
-    "ALGO/USDT",          # Algorand
-    "OP/USDT",            # Optimism
-    "IMX/USDT",           # Immutable
-    "ENA/USDT",           # Ethena
-    "EIGEN/USDT",         # EigenLayer
-    "ARB/USDT",           # Arbitrum
-    "THETA/USDT",         # Theta Network
-    "WIF/USDT",           # dogwifhat
-    "XLM/USDT",           # Stellar
-    "XTZ/USDT",           # Tezos
-    "JUP/USDT",           # Jupiter
-    "WLD/USDT",           # Worldcoin
-    "STX/USDT",           # Stacks
-    "JTO/USDT",           # Jito
-    "ONDO/USDT",          # Ondo
-    "TIA/USDT",           # Celestia
-    "MNT/USDT",           # Mantle
-    "VIRTUAL/USDT",       # Virtuals Protocol
-    "ETHFI/USDT",         # ether.fi
-    "RUNE/USDT",          # THORChain
-    "FIL/USDT",           # Filecoin
-    "AXS/USDT",           # Axie Infinity
-    "LTC/USDT",           # Litecoin
-    "BCH/USDT",           # Bitcoin Cash
-    "XMR/USDT",           # Monero
-    "ZEC/USDT",           # Zcash
-    "DASH/USDT",          # Dash
-    "COMP/USDT"           # Compound
-]
-
+    "HYPE/USDT", "PURR/USDT", "ENS/USDT", "ICP/USDT", "CAKE/USDT",
+    "ZRO/USDT", "ATOM/USDT", "LDO/USDT", "HNT/USDT", "CRV/USDT",
+    "SNX/USDT", "DYDX/USDT", "DOGE/USDT", "XPL/USDT", "CRO/USDT",
+    "1000LUNC/USDT", "PHA/USDT", "KAIA/USDT", "PNUT/USDT", "XDC/USDT",
+    "FIDA/USDT", "RARE/USDT", "BICO/USDT", "COTI/USDT", "FLR/USDT",
+    "ATH/USDT", "1000PEPE/USDT", "BRETT/USDT", "JASMY/USDT", "GALA/USDT",
+    "NOT/USDT", "HMSTR/USDT", "BOME/USDT", "TLM/USDT", "ZIL/USDT",
+    "1000BONK/USDT", "SHIB1000/USDT", "BEAM/USDT", "ALT/USDT", "VET/USDT",
+    "ZK/USDT", "W/USDT", "FLOW/USDT", "GRT/USDT", "1000FLOKI/USDT",
+    "KAS/USDT", "KAVA/USDT", "POPCAT/USDT", "STRK/USDT", "SAND/USDT",
+    "SEI/USDT", "PYTH/USDT", "HBAR/USDT", "APE/USDT", "POL/USDT",
+    "ALGO/USDT", "OP/USDT", "IMX/USDT", "ENA/USDT", "EIGEN/USDT",
+    "ARB/USDT", "THETA/USDT", "WIF/USDT", "XLM/USDT", "XTZ/USDT",
+    "JUP/USDT", "WLD/USDT", "STX/USDT", "JTO/USDT", "ONDO/USDT",
+    "TIA/USDT", "MNT/USDT", "VIRTUAL/USDT", "ETHFI/USDT", "RUNE/USDT",
+    "FIL/USDT", "AXS/USDT", "LTC/USDT", "BCH/USDT", "XMR/USDT",
+    "ZEC/USDT", "DASH/USDT", "COMP/USDT", "TRX/USDT", "GRAM/USDT"]
 
 CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
 
