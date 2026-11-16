@@ -24,25 +24,78 @@ DB_PASS = os.getenv("DB_PASSWORD", "sql_pass")
 DB_URL  = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 CRYPTO_SYMBOLS = [
-    # --- TOP S Tier ---
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "NEAR/USDT", "SUI/USDT", "AAVE/USDT", "RENDER/USDT", "INJ/USDT", "TAO/USDT",
+    # =========================================================
+    # 1. A TE 15-ÖS SPOT/FUTURES PORTFÓLIÓD (S-TIER, Mindig aktív)
+    # =========================================================
+    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT",
+    "ADA/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "NEAR/USDT",
+    "SUI/USDT", "AAVE/USDT", "RENDER/USDT", "INJ/USDT", "TAO/USDT",
 
-    # --- TOP Alts & Layer-1s & Layer-2s (High Cap, TOP 50) ---
-    "DOGE/USDT", "SHIB1000/USDT", "1000PEPE/USDT", "WIF/USDT", "1000BONK/USDT", "1000FLOKI/USDT", "TRX/USDT", "LTC/USDT", 
-    "BCH/USDT", "LINK/USDT", "UNI/USDT",  "ICP/USDT", "APT/USDT", "ETC/USDT", "FIL/USDT", "KAS/USDT", "OM/USDT",
-    "SEI/USDT", "POL/USDT", "OP/USDT", "ARB/USDT", "GRT/USDT", "AAVE/USDT", "NEAR/USDT", "RNDR/USDT", "VET/USDT", "JUP/USDT",
-    "PYTH/USDT", "TIA/USDT", "RUNE/USDT", "STX/USDT", "LDO/USDT", "IMX/USDT", "FTM/USDT", "MNT/USDT", "ATOM/USDT", "THETA/USDT",
+    # =========================================================
+    # 2. KIEMELT AI, DEPIN ÉS TECH TOKENS (Nagy volumenű Bybit Perps)
+    # =========================================================
+    "HYPE/USDT",        # Hyperliquid AI/Tech (Óriási napi volumen)
+    "UNITREE/USDT",     # Unitree Robotics AI DePIN
+    "PIEVERSE/USDT",    # Pieverse (Új Metaverse)
+    "DGAI/USDT",        # Decentralized Game AI
+    "KORU/USDT",        # Koru Ecosystem
+    "ARIA/USDT",        # Aria AI (Korábbi ASTER/AERO helyett is aktív)
+    "KSTR/USDT",        # K-Star Ecosystem
+    "SOPH/USDT",        # Soph AI DePIN (23M+ USD turnover)
+    "VIRTUAL/USDT",     # Virtuals Protocol AI
+    "ZRO/USDT",         # LayerZero
+    "ENA/USDT",         # Ethena
+    "ONDO/USDT",        # Ondo Finance (RWA)
+    "FET/USDT",         # Artificial Superintelligence Alliance
+    "LDO/USDT",         # Lido DAO
+    "ICP/USDT",         # Internet Computer
+    "TIA/USDT",         # Celestia
+    "KAS/USDT",         # Kaspa
+    "PYTH/USDT",        # Pyth Network
+    "W/USDT",           # Wormhole
+    "STRK/USDT",        # Starknet
+    "FIL/USDT",         # Filecoin
+    "APT/USDT",         # Aptos
+    "ARB/USDT",         # Arbitrum
+    "OP/USDT",          # Optimism
+    "SEI/USDT",         # Sei Network
+    "OM/USDT",          # MANTRA (RWA)
+    "GRT/USDT",         # The Graph
+    "FTM/USDT",         # Fantom
 
-    # --- Top 50 - 100 + Bybit kedvencek (Mid-Cap, Nagy volumenűek) ---
-    "ALGO/USDT", "FLOW/USDT", "EGLD/USDT", "SAND/USDT", "MANA/USDT", "AXS/USDT", "APE/USDT", "GALA/USDT", "CRV/USDT", "LRC/USDT",
-    "ENJ/USDT", "ANKR/USDT", "MINA/USDT", "HBAR/USDT", "QNT/USDT", "CHZ/USDT", "FTT/USDT", "ZEC/USDT", "DASH/USDT", "XMR/USDT",
-    "XLM/USDT", "WAVES/USDT", "ROSE/USDT", "MKR/USDT", "COMP/USDT", "LDO/USDT", "RPL/USDT", "FXS/USDT", "DYDX/USDT", "PNDR/USDT",
-    "KAVA/USDT", "WOO/USDT", "GMT/USDT", "JASMY/USDT", "IOTA/USDT", "HOT/USDT", "ONE/USDT", "XEM/USDT", "CELO/USDT", "QTUM/USDT",
-    "BAT/USDT", "ONT/USDT", "ZIL/USDT", "OMG/USDT", "YFI/USDT", "SUSHI/USDT", "1INCH/USDT", "REI/USDT", "MASK/USDT", "LINA/USDT",
+    # =========================================================
+    # 3. KÖNYVTÁRI TOP MÉM COINOK (Kizárólag pontos, Bybit-specifikus Perps)
+    # =========================================================
+    "DOGE/USDT",
+    "1000PEPE/USDT",    # Szigorúan 1000-es szorzóval, ahogy Bybiten fut!
+    "WIF/USDT",
+    "1000BONK/USDT",    # Bybit határidős mém index!
+    "1000FLOKI/USDT",   # Bybit határidős mém index!
+    "POPCAT/USDT",
+    "BRETT/USDT",
+    "GOAT/USDT",
+    "PNUT/USDT",
+    "PUMPFUN/USDT",
+    "FARTCOIN/USDT",
+    "MOODENG/USDT",
+    "BOME/USDT",
+    "RARE/USDT",
+    "TRUMP/USDT",
+    "BIRB/USDT",
+    "MELANIA/USDT",
 
-    # --- Trendi & Új, nagy tőkeáramlású coinok (Perps) ---
-    "ENA/USDT", "HYPE/USDT", "ONDO/USDT", "W/USDT", "ZRO/USDT", "POPCAT/USDT", "BRETT/USDT", "ME/USDT", "IO/USDT", "ZETA/USDT",
-    "BLAST/USDT", "ATH/USDT", "STRK/USDT", "AEVO/USDT", "STG/USDT", "NOT/USDT", "VIRTUAL/USDT", "AIXBT/USDT", "GOAT/USDT", "MOODENG/USDT"]
+    # =========================================================
+    # 4. AKTÍV, JÓL TRADED KLASSZIKUS ÉS ALTKATEGÓRIÁS CRYPTOK
+    # =========================================================
+    "LTC/USDT", "BCH/USDT", "XLM/USDT", "XMR/USDT", "ZEC/USDT",
+    "DASH/USDT", "ETC/USDT", "UNI/USDT", "CRV/USDT", "CAKE/USDT",
+    "GALA/USDT", "SAND/USDT", "AXS/USDT", "JUP/USDT", "LIT/USDT",
+    "KAVA/USDT", "JASMY/USDT", "COMP/USDT", "FLOW/USDT", "ALGO/USDT",
+    "THETA/USDT", "DYDX/USDT", "CRO/USDT", "HNT/USDT", "IMX/USDT",
+    "ARK/USDT", "BICO/USDT", "FIDA/USDT", "WOO/USDT", "QTUM/USDT",
+    "YFI/USDT", "SUSHI/USDT", "1INCH/USDT", "MASK/USDT", "RAVE/USDT",
+    "ORDER/USDT", "MON/USDT", "SKR/USDT", "HUMA/USDT", "COOKIE/USDT",
+    "FLR/USDT", "BOMER/USDT", "ZK/USDT"]
 
 CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
 
