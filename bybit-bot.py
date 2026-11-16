@@ -16,19 +16,24 @@ log = logging.getLogger("bybit_bot")
 # =========================================================
 # 1. CONFIG
 # =========================================================
-DB_URL = "postgresql://sql_admin:sql_pass@postgresql:5432/n8n"
+DB_HOST = os.getenv("DB_HOST", "postgresql")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "n8n")
+DB_USER = os.getenv("DB_USER", "sql_admin")
+DB_PASS = os.getenv("DB_PASSWORD", "sql_pass")
+DB_URL  = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 CRYPTO_SYMBOLS = [
     "AAVE/USDT", "ADA/USDT", "ALGO/USDT", "APT/USDT", "ARB/USDT", "ASTER/USDT", "AVAX/USDT", "AXS/USDT", "BCH/USDT", "BNB/USDT", "BTC/USDT", "COMP/USDT",
     "CRV/USDT", "DASH/USDT", "DOGE/USDT", "DOT/USDT", "EGLD/USDT", "ENA/USDT", "ETC/USDT", "ETH/USDT", "FIL/USDT", "HBAR/USDT", "HYPE/USDT", "ICP/USDT",
     "INJ/USDT", "KAS/USDT", "LINK/USDT", "LIT/USDT", "LTC/USDT", "NEAR/USDT", "ONDO/USDT", "OP/USDT", "QNT/USDT", "PLUME/USDT", "POL/USDT", "PYTH/USDT",
     "RENDER/USDT", "RUNE/USDT", "SAND/USDT", "SOL/USDT", "SEI/USDT", "SUI/USDT", "TIA/USDT", "TAO/USDT", "VIRTUAL/USDT", "ZEC/USDT", "ZEN/USDT", "ZRO/USDT",
-    "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT",
-]
+    "UNI/USDT", "XPL/USDT", "XLM/USDT", "XMR/USDT", "XRP/USDT", "XTZ/USDT", "W/USDT"]
+
 CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
 
-POLL_INTERVAL = 300      # ciklusidő ÉS gyertyaméret (5m) — ugyanaz a konstans
-CLEANUP_HOURS = 72
+POLL_INTERVAL = 300
+CLEANUP_HOURS = 120      
 T_TICKER      = "bybit_tickers"
 
 def to_linear(symbol: str) -> str:
@@ -37,7 +42,6 @@ def to_linear(symbol: str) -> str:
 LINEAR_SYMBOLS = [to_linear(s) for s in CRYPTO_SYMBOLS]
 
 def _f(value, default=None):
-    """None / NaN / Inf safe float. Hiányzó adatra NULL megy, NEM 0.0."""
     try:
         if value is None:
             return default
@@ -46,19 +50,17 @@ def _f(value, default=None):
     except (TypeError, ValueError):
         return default
 
-
 def _dt(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=UTC)
-
 
 # =========================================================
 # 2. EGY CIKLUS: egyetlen fetch_tickers hívás
 # =========================================================
 async def run_cycle(exchange, pipeline) -> int:
-    # a LEZÁRT gyertya timestampje (5 perces rács, epoch-align)
     step_ms = POLL_INTERVAL * 1000
     now_ms = int(time.time() * 1000)
-    target_ms = (now_ms // step_ms) * step_ms - step_ms
+    # Aktuális 5 perces rácsra kerekített snapshot időpont
+    target_ms = (now_ms // step_ms) * step_ms
 
     tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
 
@@ -71,14 +73,19 @@ async def run_cycle(exchange, pipeline) -> int:
         funding = _f(info.get("fundingRate"))
         if funding is None:
             funding = _f(info.get("lastFundingRate"))
+
         recs.append({
             "symbol":         sym,
             "timestamp":      _dt(target_ms),
-            "close":          _f(tk.get("last")),        # close-only bar
+            "close":          _f(tk.get("last")),
             "mark_price":     _f(info.get("markPrice")),
             "index_price":    _f(info.get("indexPrice")),
+            "high_24h":       _f(info.get("highPrice24h")),
+            "low_24h":        _f(info.get("lowPrice24h")),
             "bid":            _f(info.get("bid1Price")),
             "ask":            _f(info.get("ask1Price")),
+            "bid1_size":      _f(info.get("bid1Size")),
+            "ask1_size":      _f(info.get("ask1Size")),
             "vwap":           _f(tk.get("vwap")),
             "turnover24h":    _f(info.get("turnover24h")),
             "prev_price_1h":  _f(info.get("prevPrice1h")),
@@ -92,30 +99,24 @@ async def run_cycle(exchange, pipeline) -> int:
         await asyncio.to_thread(pipeline.run, recs, table_name=T_TICKER, write_disposition="merge", primary_key=["symbol", "timestamp"])
     return len(recs)
 
-
 # =========================================================
-# 3. CLEANUP
+# 3. CLEANUP & INDEX
 # =========================================================
 async def cleanup(pipeline) -> None:
     threshold = datetime.now(UTC) - timedelta(hours=CLEANUP_HOURS)
-
     def _c():
         with pipeline.sql_client() as client:
-            for t in (T_TICKER, "bybit_ohlcv"):
-                try:
-                    tname = client.make_qualified_table_name(t)
-                    client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
-                except Exception:
-                    pass   # az ohlcv tábla lehet, hogy még nem létezik
+            tname = client.make_qualified_table_name(T_TICKER)
+            client.execute_sql(f"CREATE INDEX IF NOT EXISTS idx_bronze_tickers_ts ON {tname} (timestamp);")
+            client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
     try:
         await asyncio.to_thread(_c)
         log.info("[CLEANUP] %dh-nál régebbi adatok törölve", CLEANUP_HOURS)
     except Exception:
         log.exception("[CLEANUP] failed")
 
-
 # =========================================================
-# 4. MAIN — egyszerű loop, a régi delay-mintával
+# 4. MAIN
 # =========================================================
 async def main() -> None:
     exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
@@ -123,26 +124,27 @@ async def main() -> None:
     pipeline.abort_packages()
 
     last_cleanup = 0.0
-    while True:
-        try:
-            print()
-            log.info("=" *45)
-            n = await run_cycle(exchange, pipeline)
-            log.info("[CYCLE START] tickers=%d", n)
-            await asyncio.to_thread(run_bybit_silver_transformation)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            log.exception("[CYCLE] failed")
+    try:
+        while True:
+            try:
+                log.info("=" * 45)
+                n = await run_cycle(exchange, pipeline)
+                log.info("[CYCLE START] tickers=%d", n)
+                await asyncio.to_thread(run_bybit_silver_transformation)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                log.exception("[CYCLE] failed")
 
-        if time.time() - last_cleanup >= 3600:
-            await cleanup(pipeline)
-            last_cleanup = time.time()
+            if time.time() - last_cleanup >= 3600:
+                await cleanup(pipeline)
+                last_cleanup = time.time()
 
-        delay = POLL_INTERVAL - (time.time() % POLL_INTERVAL)
-        log.info("[WAIT] Next cycle in %.1f seconds.", delay)
-        await asyncio.sleep(delay)
-
+            delay = POLL_INTERVAL - (time.time() % POLL_INTERVAL)
+            log.info("[WAIT] Next cycle in %.1f seconds.", delay)
+            await asyncio.sleep(delay)
+    finally:
+        await exchange.close()
 
 if __name__ == "__main__":
     try:
