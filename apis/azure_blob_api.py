@@ -3,7 +3,6 @@ import io
 import json
 import logging
 import os
-import re
 import tarfile
 import threading
 import zipfile
@@ -69,17 +68,15 @@ def _json_bytes_to_arrow(raw_bytes: bytes) -> pa.Table:
 
 
 def _sanitize_column_names(table: pa.Table) -> pa.Table:
-    new_names, seen = [], set()
+    """Az üres vagy szóközös oszlopneveket (pl. CSV index oszlop) átnevezi, hogy a Postgres COPY ne hasaljon el."""
+    new_names = []
+    seen = set()
     for idx, name in enumerate(table.column_names):
-        clean = re.sub(r"[^0-9a-zA-Z]+", "_", (name or "").strip()).strip("_").lower()
+        clean = (name or "").strip()
         if not clean:
             clean = f"unnamed_col_{idx}"
-        if clean[0].isdigit():
-            clean = f"c_{clean}"
-        base, n = clean, 1
-        while clean in seen:
-            n += 1
-            clean = f"{base}_{n}"
+        if clean in seen:
+            clean = f"{clean}_{idx}"
         seen.add(clean)
         new_names.append(clean)
     return table.rename_columns(new_names)
