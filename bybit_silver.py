@@ -46,7 +46,10 @@ base AS (
         STDDEV_SAMP(px) OVER w20 AS bb_std,
         STDDEV_SAMP(r5) OVER w20 AS vol_20, -- realizált 5m volatilitás (%) ATR helyett
         AVG(GREATEST(px_diff, 0))  OVER w14 AS avg_gain_14,
-        AVG(GREATEST(-px_diff, 0)) OVER w14 AS avg_loss_14
+        AVG(GREATEST(-px_diff, 0)) OVER w14 AS avg_loss_14,
+        turnover24h - LAG(turnover24h, 12) OVER w AS vol_1h_delta,
+        100.0 * (turnover24h / NULLIF(LAG(turnover24h, 12) OVER w, 0) - 1) AS vol_1h_pct,
+        ((oi - LAG(oi, 12) OVER w) * px) / NULLIF(turnover24h, 0) AS oi_to_turnover_ratio
     FROM diffs
     WINDOW
         w14  AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 13 PRECEDING AND CURRENT ROW),
@@ -84,6 +87,9 @@ SELECT symbol, timestamp,
     ROUND(oi::numeric, 4) AS oi,
     ROUND(oi_chg_15m::numeric, 4) AS oi_chg_15m,
     ROUND(oi_chg_1h::numeric, 4)  AS oi_chg_1h,
+    ROUND(vol_1h_delta::numeric, 2) AS vol_1h_delta,
+    ROUND(vol_1h_pct::numeric, 4)   AS vol_1h_pct,
+    ROUND(oi_to_turnover_ratio::numeric, 6) AS oi_to_turnover_ratio,
     ROUND(turnover24h::numeric, 2) AS turnover24h,
     CURRENT_TIMESTAMP AS calculated_at
 FROM base
