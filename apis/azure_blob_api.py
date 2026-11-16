@@ -84,18 +84,20 @@ def _sanitize_column_names(table: pa.Table) -> pa.Table:
 
 def _append_metadata(table, source_name, blob_name, now_utc, archive_member=None):
     table = _sanitize_column_names(table)
-    meta_cols = ["data_source_meta", "source_file_name", "archive_member", "ingested_at"]
-    rename_map = {}
-    for name in table.column_names:
-        if name in meta_cols or name in ("_dlt_id", "_dlt_load_id"):
-            rename_map[name] = f"src_{name}"
+
+    meta_cols = {"data_source_meta", "source_file_name", "ingested_at", "_dlt_id", "_dlt_load_id"}
+    if archive_member is not None:
+        meta_cols.add("archive_member")
+
+    rename_map = {n: f"src_{n}" for n in table.column_names if n in meta_cols}
     if rename_map:
         table = table.rename_columns([rename_map.get(n, n) for n in table.column_names])
 
     n = table.num_rows
     table = table.append_column("data_source_meta", pa.repeat(pa.scalar(source_name, type=pa.string()), n))
     table = table.append_column("source_file_name", pa.repeat(pa.scalar(blob_name, type=pa.string()), n))
-    table = table.append_column("archive_member", pa.repeat(pa.scalar(archive_member, type=pa.string()), n))
+    if archive_member is not None:
+        table = table.append_column("archive_member", pa.repeat(pa.scalar(archive_member, type=pa.string()), n))
     table = table.append_column("ingested_at", pa.repeat(pa.scalar(now_utc, type=pa.timestamp("us", tz="UTC")), n))
     return table
 
