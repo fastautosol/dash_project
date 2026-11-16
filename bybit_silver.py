@@ -17,12 +17,8 @@ DST_TABLE     = "pg.silver.bybit_indicators"
 
 SILVER_SELECT = """
 WITH src AS (
-    SELECT symbol, timestamp, close, mark_price, high_24h, low_24h,
-           bid, ask, bid1_size, ask1_size, vwap,
-           funding, oi, turnover24h, price_24h_pcnt,
-           CASE WHEN mark_price IS NOT NULL
-                 AND ABS(close - mark_price) / NULLIF(mark_price, 0) > 0.003
-                THEN mark_price ELSE close END AS px
+    SELECT symbol, timestamp, close, mark_price, high_24h, low_24h, bid, ask, bid1_size, ask1_size, vwap, funding, oi, turnover24h, price_24h_pcnt,
+           CASE WHEN mark_price IS NOT NULL AND ABS(close - mark_price) / NULLIF(mark_price, 0) > 0.003 THEN mark_price ELSE close END AS px
     FROM pg.bronze.bybit_tickers
     WHERE timestamp >= ?
 ),
