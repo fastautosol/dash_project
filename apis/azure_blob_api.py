@@ -112,7 +112,7 @@ def _iter_arrow_batches(blob_name: str, stream: io.BytesIO, source_name: str) ->
     lower_name = blob_name.lower()
     now_utc = datetime.now(timezone.utc)
 
-    # 1. TAR / TAR.GZ / TGZ archívumok (pl. jsons.tar)
+    # ---------- TAR / TAR.GZ / TGZ ----------
     if lower_name.endswith((".tar", ".tar.gz", ".tgz")):
         with tarfile.open(fileobj=stream, mode="r:*") as tar:
             for member in tar:
@@ -126,7 +126,7 @@ def _iter_arrow_batches(blob_name: str, stream: io.BytesIO, source_name: str) ->
                     yield _append_metadata(table, source_name, blob_name, now_utc, archive_member=member.name)
         return
 
-    # 2. ZIP archívumok
+    # ---------- ZIP archívumok ----------
     if lower_name.endswith(".zip"):
         with zipfile.ZipFile(stream, mode="r") as zf:
             for member_name in zf.namelist():
@@ -137,7 +137,7 @@ def _iter_arrow_batches(blob_name: str, stream: io.BytesIO, source_name: str) ->
                     yield _append_metadata(table, source_name, blob_name, now_utc, archive_member=member_name)
         return
 
-    # 3. Egyedi fájlok (Parquet, CSV, JSON, Excel)
+    # ---------- Separate fájlok (Parquet, CSV, JSON, Excel) ----------
     if lower_name.endswith(".parquet"):
         table = pq.read_table(stream)
         
