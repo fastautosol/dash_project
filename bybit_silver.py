@@ -1,4 +1,4 @@
-# 2026.11.16  18.00
+# 2026.11.16  19.00
 import os
 import time
 import logging
@@ -34,7 +34,10 @@ diffs AS (
         100.0 * (px - LAG(px, 6)  OVER w) / NULLIF(LAG(px, 6)  OVER w, 0) AS r30,
         100.0 * (px - LAG(px, 12) OVER w) / NULLIF(LAG(px, 12) OVER w, 0) AS r1h,
         100.0 * (oi / NULLIF(LAG(oi, 3)  OVER w, 0) - 1) AS oi_chg_15m,
-        100.0 * (oi / NULLIF(LAG(oi, 12) OVER w, 0) - 1) AS oi_chg_1h
+        100.0 * (oi / NULLIF(LAG(oi, 12) OVER w, 0) - 1) AS oi_chg_1h,
+        turnover24h - LAG(turnover24h, 12) OVER w AS vol_1h_delta,
+        100.0 * (turnover24h / NULLIF(LAG(turnover24h, 12) OVER w, 0) - 1) AS vol_1h_pct,
+        ((oi - LAG(oi, 12) OVER w) * px) / NULLIF(turnover24h, 0) AS oi_to_turnover_ratio
     FROM src
     WINDOW w AS (PARTITION BY symbol ORDER BY timestamp)
 ),
@@ -46,10 +49,7 @@ base AS (
         STDDEV_SAMP(px) OVER w20 AS bb_std,
         STDDEV_SAMP(r5) OVER w20 AS vol_20, -- realizált 5m volatilitás (%) ATR helyett
         AVG(GREATEST(px_diff, 0))  OVER w14 AS avg_gain_14,
-        AVG(GREATEST(-px_diff, 0)) OVER w14 AS avg_loss_14,
-        turnover24h - LAG(turnover24h, 12) OVER w AS vol_1h_delta,
-        100.0 * (turnover24h / NULLIF(LAG(turnover24h, 12) OVER w, 0) - 1) AS vol_1h_pct,
-        ((oi - LAG(oi, 12) OVER w) * px) / NULLIF(turnover24h, 0) AS oi_to_turnover_ratio
+        AVG(GREATEST(-px_diff, 0)) OVER w14 AS avg_loss_14
     FROM diffs
     WINDOW
         w14  AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 13 PRECEDING AND CURRENT ROW),
