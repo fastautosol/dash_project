@@ -69,25 +69,20 @@ def _json_bytes_to_arrow(raw_bytes: bytes) -> pa.Table:
 
 
 def _sanitize_column_names(table: pa.Table) -> pa.Table:
-    """Az üres vagy szóközös oszlopneveket (pl. CSV index oszlop) átnevezi, hogy a Postgres COPY ne hasaljon el."""
-    new_names = []
-    seen = set()
+    new_names, seen = [], set()
     for idx, name in enumerate(table.column_names):
-        clean = (name or "").strip()
+        clean = re.sub(r"[^0-9a-zA-Z]+", "_", (name or "").strip()).strip("_").lower()
         if not clean:
             clean = f"unnamed_col_{idx}"
-        if clean in seen:
-            clean = f"{clean}_{idx}"
+        if clean[0].isdigit():
+            clean = f"c_{clean}"
+        base, n = clean, 1
+        while clean in seen:
+            n += 1
+            clean = f"{base}_{n}"
         seen.add(clean)
         new_names.append(clean)
     return table.rename_columns(new_names)
-
-
-def _times_to_string(table: pa.Table) -> pa.Table:
-    for i, field in enumerate(table.schema):
-        if pa.types.is_time(field.type):
-            table = table.set_column(i, field.name, table.column(i).cast(pa.string()))
-    return table
 
 
 def _append_metadata(table: pa.Table, source_name: str, blob_name: str, now_utc: datetime, archive_member: str | None = None) -> pa.Table:
@@ -144,9 +139,7 @@ def _iter_arrow_batches(blob_name: str, stream: io.BytesIO, source_name: str) ->
     elif lower_name.endswith(".csv"):
         utf8_stream = _decode_csv_bytes_to_utf8(stream.getvalue())
         table = pv.read_csv(utf8_stream, read_options=pv.ReadOptions(block_size=16 * 1024 * 1024), parse_options=pv.ParseOptions(newlines_in_values=True))
-        table = _times_to_string(table)
-        logger.info("[AZURE-DLT] schema: %s", table.schema)
-        
+       
     elif lower_name.endswith((".json", ".jsonl", ".ndjson")):
         table = _json_bytes_to_arrow(stream.getvalue())
         
