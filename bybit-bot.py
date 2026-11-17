@@ -73,7 +73,6 @@ CRYPTO_SYMBOLS = [
     "KSTR/USDT",          # Star DePIN
     "HUMA/USDT",          # Huma RWA (Kifejezetten nagy napi turnover!)
     "COOKIE/USDT",        # Cookie AI
-    "ZK/USDT",            # ZKsync
     "W/USDT",             # Wormhole
     "ME/USDT",            # Magic Eden Token
     "POPCAT/USDT",        # Popcat
@@ -96,18 +95,15 @@ CRYPTO_SYMBOLS = [
     "PORTAL/USDT",        # Ismételt biztos port
     "FLOW/USDT",          # Flow
     "GRT/USDT",           # The Graph
-    "GRASS/USDT",           # XPLA
-    "FIL/USDT",           # Filecoin
+    "GRASS/USDT",           # XPLA  
     "APT/USDT",           # Aptos
     "STRK/USDT",          # Starknet
-    "FIL/USDT",           # Filecoin
     "QTUM/USDT",          # Qtum
     "BAT/USDT",           # Basic Attention
     "ZIL/USDT",           # Zilliqa
     "SUSHI/USDT",         # SushiSwap
     "ETC/USDT",           # 1inch
     "MASK/USDT",          # Mask Network
-    "ZK/USDT"             # ZKsync ismét
 ]
 
 
