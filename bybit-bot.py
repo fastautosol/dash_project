@@ -73,9 +73,7 @@ CRYPTO_SYMBOLS = [
     "KSTR/USDT",          # Star DePIN
     "HUMA/USDT",          # Huma RWA (Kifejezetten nagy napi turnover!)
     "COOKIE/USDT",        # Cookie AI
-    "W/USDT",             # Wormhole
     "ME/USDT",            # Magic Eden Token
-    "POPCAT/USDT",        # Popcat
 
     # --- További éles határidős alts & láncok a 311-es listádból (likviditás és volumen alapon) ---
     "DATA/USDT",          # Streamr
@@ -85,22 +83,15 @@ CRYPTO_SYMBOLS = [
     "BASED/USDT",         # Based meme / DeFi
     "SENT/USDT",          # Sentinel
     "ORDER/USDT",         # Orderly Network
-    "FIDA/USDT",          # Bonfida
     "RESOLV/USDT",        # Resolv
     "PORTAL/USDT",        # Portal Web3 Game
     "MON/USDT",           # Mon Protocol
     "CYBER/USDT",         # CyberConnect
-    "JTO/USDT",           # Jito
     "JELLYJELLY/USDT",    # Jelly perp
-    "PORTAL/USDT",        # Ismételt biztos port
-    "FLOW/USDT",          # Flow
-    "GRT/USDT",           # The Graph
     "GRASS/USDT",           # XPLA  
     "APT/USDT",           # Aptos
-    "STRK/USDT",          # Starknet
     "QTUM/USDT",          # Qtum
     "BAT/USDT",           # Basic Attention
-    "ZIL/USDT",           # Zilliqa
     "SUSHI/USDT",         # SushiSwap
     "ETC/USDT",           # 1inch
     "MASK/USDT",          # Mask Network
