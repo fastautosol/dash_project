@@ -61,7 +61,7 @@ CRYPTO_SYMBOLS = [
     "MOODENG/USDT",       # Viral Meme
     "GOAT/USDT",          # AI Meme
     "USUAL/USDT",         # RWA/Stable yield perp
-    "BIOUSDT/USDT",       # Bio-Science AI / DePIN
+    "BIO/USDT",       # Bio-Science AI / DePIN
     "0G/USDT",            # Web3 modular AI
     "SOPH/USDT",          # Sophia AI DePIN
     "PIEVERSE/USDT",      # Pieverse
@@ -105,7 +105,7 @@ CRYPTO_SYMBOLS = [
     "BAT/USDT",           # Basic Attention
     "ZIL/USDT",           # Zilliqa
     "SUSHI/USDT",         # SushiSwap
-    "1INCH/USDT",         # 1inch
+    "ETC/USDT",           # 1inch
     "MASK/USDT",          # Mask Network
     "ZK/USDT"             # ZKsync ismét
 ]
