@@ -95,6 +95,7 @@ CRYPTO_SYMBOLS = [
     "SUSHI/USDT",         # SushiSwap
     "ETC/USDT",           # 1inch
     "MASK/USDT",          # Mask Network
+    "LAB/USDT"
 ]
 
 
