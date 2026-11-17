@@ -95,7 +95,6 @@ CRYPTO_SYMBOLS = [
     "FLOW/USDT",          # Flow
     "GRT/USDT",           # The Graph
     "XPL/USDT",           # XPLA
-    "OM/USDT",            # MANTRA
     "FIL/USDT",           # Filecoin
     "APT/USDT",           # Aptos
     "STRK/USDT",          # Starknet
