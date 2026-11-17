@@ -57,7 +57,7 @@ CRYPTO_SYMBOLS = [
     # =========================================================
     # --- Top volumenű mémek és új AI/DePIN slágerek ---
     "ORCA/USDT", "MORPHO/USDT", "LITE/USDT", "LIT/USDT", "QNT/USDT", "FLUID/USDT",
-    "PENDLE/USDT", "ASTER/USDT",
+    "PENDLE/USDT", "ASTER/USDT", "AERO/USDT",
     "PUMPFUN/USDT",       # Óriási forgalmú mém Launchpad perp
     "FARTCOIN/USDT",      # Meme
     "MOODENG/USDT",       # Viral Meme
