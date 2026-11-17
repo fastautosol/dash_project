@@ -56,7 +56,7 @@ CRYPTO_SYMBOLS = [
     # 3. ÚJ, EXTRA 50 DB JÓL TRADED, NAGY VOLUMENŰ CRYPTO (Szigorúan a kapott logodból!)
     # =========================================================
     # --- Top volumenű mémek és új AI/DePIN slágerek ---
-    "ORCA/USDT", "MORPHO/USDT"
+    "ORCA/USDT", "MORPHO/USDT", "LITE/USDT", "LIT/USDT",
     "PUMPFUN/USDT",       # Óriási forgalmú mém Launchpad perp
     "FARTCOIN/USDT",      # Meme
     "MOODENG/USDT",       # Viral Meme
