@@ -96,7 +96,7 @@ CRYPTO_SYMBOLS = [
     "PORTAL/USDT",        # Ismételt biztos port
     "FLOW/USDT",          # Flow
     "GRT/USDT",           # The Graph
-    "XPL/USDT",           # XPLA
+    "GRASS/USDT",           # XPLA
     "FIL/USDT",           # Filecoin
     "APT/USDT",           # Aptos
     "STRK/USDT",          # Starknet
