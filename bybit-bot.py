@@ -99,7 +99,6 @@ CRYPTO_SYMBOLS = [
     "APT/USDT",           # Aptos
     "STRK/USDT",          # Starknet
     "FIL/USDT",           # Filecoin
-    "JELLY/USDT",         # Jelly
     "QTUM/USDT",          # Qtum
     "BAT/USDT",           # Basic Attention
     "ZIL/USDT",           # Zilliqa
