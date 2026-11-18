@@ -28,6 +28,7 @@ def _money_set(amount: float, currency: str = "HUF") -> dict[str, dict[str, str]
 
 
 def _build_address(first_name: str, last_name: str, phone: str) -> dict[str, Any]:
+    
     city, zip_code = random.choice([
         ("Budapest", "1134"),
         ("Debrecen", "4025"),
@@ -35,9 +36,16 @@ def _build_address(first_name: str, last_name: str, phone: str) -> dict[str, Any
         ("Győr", "9021"),
         ("Pécs", "7621"),
         ("Miskolc", "3525"),
+        ("Nyíregyháza", "4400"),
+        ("Kecskemét", "6000"),
+        ("Székesfehérvár", "8000"),
+        ("Szombathely", "9700"),
     ])
-    street = f"{random.choice(['Váci út', 'Kossuth Lajos utca', 'Petőfi Sándor utca', 'Rákóczi út', 'Bajcsy-Zsilinszky út'])} {random.randint(1, 120)}."
-    company = random.choice([None, None, "Példa Kft.", "Alfa Logisztika Zrt.", "NextGen Trade Bt."])
+    
+    street = f"{random.choice(['Váci út', 'Kossuth Lajos utca', 'Petőfi Sándor utca', 'Rákóczi út', 'Bajcsy-Zsilinszky út', 'Andrássy út', 'Üllői út', 'Bartók Béla út', 'Széchenyi István tér', 'Dózsa György út'])} {random.randint(1, 120)}."
+    company = random.choice([None, None, "Példa Kft.", "Alfa Logisztika Zrt.", "NextGen Trade Bt.", "Sigma Gépészeti Kft.", "Delta Energetika Kft.",
+        "Omega Kereskedőház Kft.", "Zéta Bútor és Design Kft.", "Epsilon MedTech Kft."])
+    
     return {
         "first_name": first_name,
         "last_name": last_name,
@@ -64,6 +72,17 @@ def generate_mock_shopify_orders(count: int) -> list[dict[str, Any]]:
         {"product_id": 881002, "variant_id": 44100201, "sku": "DIG-N8N-002", "title": "n8n + PostgreSQL Sabloncsomag", "variant_title": "Pro csomag", "vendor": "DataFlow Kft.", "price": 59900.0, "grams": 0, "requires_shipping": False},
         {"product_id": 881003, "variant_id": 44100301, "sku": "SRV-AUD-003", "title": "AI Adat-Audit Konzultáció", "variant_title": "60 perces online", "vendor": "DataFlow Kft.", "price": 89000.0, "grams": 0, "requires_shipping": False},
         {"product_id": 881004, "variant_id": 44100401, "sku": "HW-SCN-004", "title": "Okos Raktár Vonalkód Olvasó", "variant_title": "USB + Bluetooth", "vendor": "ZebraTech", "price": 44900.0, "grams": 380, "requires_shipping": True},
+        {"product_id": 881005, "variant_id": 44100501, "sku": "DIG-DASH-005", "title": "Vezetői KPI Dashboard Sablon (Python Dash)", "variant_title": "Forráskód + Docker", "vendor": "DataFlow Kft.", "price": 74900.0, "grams": 0, "requires_shipping": False},
+        {"product_id": 881006, "variant_id": 44100601, "sku": "DIG-SQL-006", "title": "E-commerce Adattárház Séma Csomag", "variant_title": "PostgreSQL + dlt", "vendor": "DataFlow Kft.", "price": 49900.0, "grams": 0, "requires_shipping": False},
+        {"product_id": 881007, "variant_id": 44100701, "sku": "DIG-RAG-007", "title": "Céges Tudásbázis Prompt & RAG Kézikönyv", "variant_title": "E-book + JSON", "vendor": "DataFlow Kft.", "price": 24900.0, "grams": 0, "requires_shipping": False},
+        {"product_id": 881008, "variant_id": 44100801, "sku": "SRV-SETUP-008", "title": "VPS + Coolify Infrastruktúra Telepítés", "variant_title": "Kulcsrakész csomag", "vendor": "DataFlow Kft.", "price": 129000.0, "grams": 0, "requires_shipping": False},
+        {"product_id": 881009, "variant_id": 44100901, "sku": "SRV-TRN-009", "title": "n8n Csapat Workshop (3 óra)", "variant_title": "Online élő képzés", "vendor": "DataFlow Kft.", "price": 149000.0, "grams": 0, "requires_shipping": False},
+        {"product_id": 881010, "variant_id": 44101001, "sku": "HW-LBL-010", "title": "Hőérzékeny Címkenyomtató (GLS/Foxpost)", "variant_title": "100x150 mm", "vendor": "ZebraTech", "price": 62900.0, "grams": 1450, "requires_shipping": True},
+        {"product_id": 881011, "variant_id": 44101101, "sku": "HW-RLL-011", "title": "Termo Címketekercs (500 db/tekercs)", "variant_title": "6 tekercses csomag", "vendor": "PackPro", "price": 11900.0, "grams": 2100, "requires_shipping": True},
+        {"product_id": 881012, "variant_id": 44101201, "sku": "HW-NFC-012", "title": "Ipari NFC Munkaidő-nyilvántartó Terminál", "variant_title": "WiFi + PoE", "vendor": "IoT Hungary", "price": 84900.0, "grams": 520, "requires_shipping": True},
+        {"product_id": 881013, "variant_id": 44101301, "sku": "HW-CRD-013", "title": "Programozható NFC Belépőkártya (50 db)", "variant_title": "Fehér PVC", "vendor": "IoT Hungary", "price": 18900.0, "grams": 300, "requires_shipping": True},
+        {"product_id": 881014, "variant_id": 44101401, "sku": "HW-PDA-014", "title": "Androidos Raktári Adatgyűjtő Terminál", "variant_title": "4GB / 64GB", "vendor": "ZebraTech", "price": 179000.0, "grams": 460, "requires_shipping": True},
+        {"product_id": 881015, "variant_id": 44101501, "sku": "DIG-BIL-015", "title": "Billingo + Shopify Szinkronizáló Modul", "variant_title": "Éves licenc", "vendor": "DataFlow Kft.", "price": 69900.0, "grams": 0, "requires_shipping": False},
     ]
 
     landing_options = [
