@@ -193,7 +193,7 @@ def run_azure_blob_pipeline(req: AzureBlobRequest):
         logger.exception("[AZURE-DLT] HIBA (%s): %s", req.blob_name, e)
 
 
-@router.post("/")
+@router.post("/azure-blob")
 async def trigger_azure_blob_ingest(request: AzureBlobRequest, background_tasks: BackgroundTasks):
     if not blob_service_client:
         raise HTTPException(status_code=500, detail="Hiányzik az AZURE_CONNECTION_STRING környezeti változó.")
