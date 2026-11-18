@@ -16,7 +16,7 @@ import apis.crucix_api as crucix_api
 import apis.twitter_api as twitter_api
 import apis.eia_api as eia_api
 import apis.cryptonews_api as cryptonews_api
-import apis.azure_blob_api as azure_blob_api
+import apis.ingest_azureblob_api as azureblob_api
 import apis.ingest_rest_api as ingest_rest_api
 
 # ----- 1. Initialize Dash -----
@@ -67,7 +67,7 @@ app.layout = html.Div([
 server = FastAPI(title="Dash Demo App")
 
 # ----- 4. API routers -----
-server.include_router(azure_blob_api.router,    prefix="/api/rest",          tags=["Ingest Azure Blob"])
+server.include_router(azureblob_api.router,    prefix="/api/rest",          tags=["Ingest Azure Blob"])
 server.include_router(ingest_rest_api.router,   prefix="/api/rest",          tags=["Ingest Rest API"])
 server.include_router(crm_shopify_api.router,   prefix="/api/crm_shopify",   tags=["CRM Shopify"])
 server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tags=["Lufthansa"])
