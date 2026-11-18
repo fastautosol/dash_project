@@ -212,5 +212,5 @@ async def trigger_azure_blob_ingest(request: AzureBlobRequest, background_tasks:
     return {
         "status": "accepted",
         "message": f"Azure blob ingestion started in background for {request.blob_name}",
-        "target_table": f"bronze_azure_blob.{request.table_name}",
+        "target_table": f"bronze_api.{request.table_name}",
     }
