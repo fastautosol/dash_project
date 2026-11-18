@@ -1,0 +1,182 @@
+[
+    {
+        "message": "Kérjük, hogy a számlát ne a szállítási névre, hanem a cégünk hivatalos nevére (Alfa Logisztika Zrt., adószám: 12345678-2-41) állítsák ki. A könyvelőnk csak akkor tudja befogadni, ha a megjegyzés rovatban szerepel a PO-2026-884-es beszerzési hivatkozási számunk is.",
+        "intent": "invoice_modification"
+    },
+    {
+        "message": "Sajnos rendeléskor elírtam az adószámunk utolsó két számjegyét, a helyes adat: 23456789-2-42. Kérem, sztornózzák a díjbekérőt és küldjenek egy javított példányt a penzugy@betaepito.hu címre, hogy még ma elutalhassuk az összeget.",
+        "intent": "invoice_modification"
+    },
+    {
+        "message": "A cégünk alanyi adómentes státuszból átkerült ÁFA-körbe, így a számlázási adataink frissítésre szorulnak. Kérem, ellenőrizzék, hogy a kiállított végszámlán már az új székhelyünk (1134 Budapest, Váci út 45.) szerepel-e.",
+        "intent": "invoice_modification"
+    },
+    {
+        "message": "Bankkártyával fizettem a webshopban, de a számlán készpénzes fizetési mód szerepel. Szeretnék kérni egy javított számlát, mert a könyvelésünk nem tudja így lezárni a havi pénztárjelentést.",
+        "intent": "invoice_modification"
+    },
+    {
+        "message": "Lehetséges a mostani rendelésünket 15 napos átutalásos fizetéssel rendezni a díjbekérő ellenében? Állandó B2B partnerek vagyunk, és a belső jóváhagyási folyamatunk miatt csak utalással tudunk fizetni.",
+        "intent": "invoice_modification"
+    },
+    {
+        "message": "A letöltött PDF számlán a partner neve mellett lemaradt a Kft. cégforma, illetve az irányítószámot is elírtuk (6720 helyett 6722 a helyes). Kérem, módosítsák a bizonylatot és küldjék el újra e-mailben.",
+        "intent": "invoice_modification"
+    },
+    {
+        "message": "Két külön rendelést adtunk le ma délelőtt a raktári címkenyomtatókra és a tekercsekre. Megoldható, hogy a két tételt egyetlen összevont számlán szerepeltessék a könnyebb elszámolás érdekében?",
+        "intent": "invoice_modification"
+    },
+    {
+        "message": "Még nem kaptuk meg a Billingóból a végszámlát a tegnap kifizetett AI Adat-Audit Konzultációról. Kérem, küldjék el a bizonylatot a finance@epsilonmed.hu címre, mert holnap zárjuk a havi ÁFA-bevallást.",
+        "intent": "invoice_modification"
+    },
+    {
+        "message": "Jelenleg 1 darab Okos Raktár Vonalkód Olvasót rendeltünk tesztelésre, de a jövő hónapban a teljes debreceni logisztikai központunkat felszerelnénk. Tudnának adni egy egyedi B2B árajánlatot 18 darabra, mennyiségi kedvezménnyel?",
+        "intent": "custom_quote"
+    },
+    {
+        "message": "Érdeklődnék, hogy az Ipari NFC Munkaidő-nyilvántartó Terminálból és a hozzá tartozó belépőkártyákból tudnak-e csomagajánlatot készíteni 3 telephelyre. Összesen 4 terminálra és 150 darab programozható kártyára lenne szükségünk.",
+        "intent": "custom_quote"
+    },
+    {
+        "message": "Megvásároltuk az n8n + PostgreSQL Sabloncsomagot, de a csapatunknak szüksége lenne egy 5 fős, kifejezetten a mi ERP rendszerünkre szabott online workshopra is. Milyen díjazással tudnák vállalni a kihelyezett oktatást és a beüzemelést?",
+        "intent": "custom_quote"
+    },
+    {
+        "message": "Kereskedelmi partnerként szeretnénk rendszeresen vásárolni a Termo Címketekercsekből havi 40-50 csomagos mennyiségben. Kérem, küldjenek viszonteladói árlistát és tájékoztatást a raklapos szállítási feltételekről.",
+        "intent": "custom_quote"
+    },
+    {
+        "message": "A VPS + Coolify Infrastruktúra Telepítés csomag mellé szeretnénk kérni egy egyedi ajánlatot havi rendszeres karbantartásra és 24 órás hibaelhárítási SLA-ra. Kérem, vegyék fel velem a kapcsolatot telefonon a részletek egyeztetéséhez.",
+        "intent": "custom_quote"
+    },
+    {
+        "message": "Tervezzük 6 darab Androidos Raktári Adatgyűjtő Terminál beszerzését a nyíregyházi üzemünkbe. Van lehetőség arra, hogy a készülékeket előre felkonfigurálva, a saját belső raktári alkalmazásunkkal telepítve szállítsák le?",
+        "intent": "custom_quote"
+    },
+    {
+        "message": "Szeretnénk összekötni a meglévő egyedi webáruházunkat a Billingóval és egy vezetői KPI dashboarddal, de több mint 15 ezer rendelésünk van havonta. Kérnénk egy személyre szabott projektajánlatot a teljes adatpipeline kiépítésére.",
+        "intent": "custom_quote"
+    },
+    {
+        "message": "Közbeszerzési eljáráshoz lenne szükségünk 30 darab Hőérzékeny Címkenyomtatóra hivatalos, cégszerűen aláírt árajánlattal és 30 napos ajánlati kötöttséggel. Kinek tudom elküldeni a műszaki specifikációs táblázatot?",
+        "intent": "custom_quote"
+    },
+    {
+        "message": "Megvettük a Billingo + Shopify Szinkronizáló Modult, de a telepítésnél elakadtunk a webhook aláírás ellenőrzésénél. A logban 401-es hibakódot kapunk minden számlázási eseménynél, tudnának segíteni a beállításban?",
+        "intent": "technical_support"
+    },
+    {
+        "message": "A Hőérzékeny Címkenyomtatót sikeresen csatlakoztattuk USB-n, de a GLS 100x150 mm-es címkéi elcsúsznak nyomtatáskor, és két címke között mindig kidob egy üreset. Hol tudom kalibrálni az optikai szenzort?",
+        "intent": "technical_support"
+    },
+    {
+        "message": "Kérdésem lenne a Vezetői KPI Dashboard Sablonnal kapcsolatban: PostgreSQL 16-os verzióval is gond nélkül működik a mellékelt Docker Compose fájl, vagy módosítani kell az adatbázis-illesztőprogramot?",
+        "intent": "technical_support"
+    },
+    {
+        "message": "Az Ipari NFC Munkaidő-nyilvántartó Terminál nem látja az 5 GHz-es céges WiFi hálózatunkat, csak a vendég hálózatot érzékeli. Kizárólag 2.4 GHz-en kommunikál az eszköz, vagy frissíteni kell rajta a firmware-t?",
+        "intent": "technical_support"
+    },
+    {
+        "message": "A rendelés leadása után nem érkezett meg az e-mailben ígért letöltési link a KKV Automatizációs Blueprint PDF-hez és a mellékelt JSON sablonokhoz. A spam mappát is átnéztem, kérem küldjék el újra a hozzáférést.",
+        "intent": "technical_support"
+    },
+    {
+        "message": "Kompatibilis az Okos Raktár Vonalkód Olvasó a GS1-128-as logisztikai vonalkódokkal és a QR-kódokkal is, vagy külön be kell olvasni hozzá a konfigurációs füzetből a karakterkódolási parancsokat?",
+        "intent": "technical_support"
+    },
+    {
+        "message": "Az E-commerce Adattárház Séma Csomag dlt pipeline-ja futtatáskor memória-túlcsordulással leáll, amikor egy évre visszamenőleg próbáljuk betölteni a rendelési tételeket. Hogyan tudom beállítani a lapozást (chunking) a forráskódban?",
+        "intent": "technical_support"
+    },
+    {
+        "message": "Érdeklődnék, hogy az Androidos Raktári Adatgyűjtő Terminál támogatja-e a kesztyűs érintőképernyő-használatot hűtőházi környezetben, és jár-e hozzá SDK a vonalkód-olvasó gomb programozásához?",
+        "intent": "technical_support"
+    },
+    {
+        "message": "Ma reggel megérkezett a 2 darab Hőérzékeny Címkenyomtató, de az egyik készülék burkolata a saroknál be van repedve, és a hálózati adapter is hiányzik a dobozból. Kérem a sérült termék azonnali cseréjét.",
+        "intent": "complaint_damage"
+    },
+    {
+        "message": "Sajnos a tegnap átvett Okos Raktár Vonalkód Olvasó két óra használat után folyamatosan lecsatlakozik Bluetooth-ról, és nem veszi fel a töltést a dokkolóról. Szeretnénk élni a garanciális csere lehetőségével.",
+        "intent": "complaint_damage"
+    },
+    {
+        "message": "A megrendelt 6 tekercses Termo Címketekercs csomag helyett csak 1 darab tekercs volt a kartondobozban, pedig a szállítólevélen a teljes mennyiség szerepel. Kérem, sürgősen pótolják a hiányzó 5 tekercset, mert leállt a csomagolásunk!",
+        "intent": "complaint_damage"
+    },
+    {
+        "message": "A kézbesített NFC belépőkártyák közül 12 darabot egyáltalán nem olvas be a terminál, valószínűleg hibás a chip bennük. Hogyan tudjuk visszaküldeni a selejtes kártyákat és mikor kapunk helyettük működő példányokat?",
+        "intent": "complaint_damage"
+    },
+    {
+        "message": "Nagyon csalódottak vagyunk, mert az AI Adat-Audit Konzultációra a megbeszélt időpontban senki nem lépett be a meetingbe, és telefonon sem értünk el senkit. Kérjük a befizetett összeg visszatérítését vagy egy azonnali pótidőpontot.",
+        "intent": "complaint_damage"
+    },
+    {
+        "message": "Az Androidos Raktári Adatgyűjtő Terminál kijelzője pixelhibás, és a doboz láthatóan már fel volt bontva korábban, mert a védőfólia is hiányzott róla. Új készüléket fizettünk ki, ezért bontatlan csomagolású cserepéldányt kérünk.",
+        "intent": "complaint_damage"
+    },
+    {
+        "message": "Kétszer vonta le a rendszer a bankkártyámról a 74 900 Ft-os összeget a Vezetői KPI Dashboard Sablon vásárlásakor, mert az első fizetésnél időtúllépést írt ki az oldal. Kérem a duplán terhelt összeg azonnali visszautalását.",
+        "intent": "complaint_damage"
+    },
+    {
+        "message": "A futár úgy tette le a csomagot a raktárkapu elé az esőbe, hogy senki nem írta alá az átvételt, így a címketekercsek teljesen eláztak és használhatatlanná váltak. Csatoltam a fotókat a sérült csomagról, kérjük a kártérítést.",
+        "intent": "complaint_damage"
+    },
+    {
+        "message": "A rendelés leadásakor a régi irodánk címét adtam meg véletlenül (Pécs, Király utca 19.), de a csomagot a központi raktárunkba kérnénk (7630 Pécs, Koksz utca 4.). Ha még nem adták át a futárszolgálatnak, kérem módosítsák a szállítási címet.",
+        "intent": "delivery_logistics"
+    },
+    {
+        "message": "Mikor várható a tegnap leadott rendelésünk kiszállítása? A GLS nyomkövetési link még mindig csak azt mutatja, hogy a csomagadatok rögzítve lettek, nekünk viszont holnap reggelre feltétlenül szükségünk lenne a nyomtatóra.",
+        "intent": "delivery_logistics"
+    },
+    {
+        "message": "A raktárunk hétfőtől péntekig csak 8:00 és 15:30 között van nyitva, utána a portaszolgálat nem vehet át utánvétes vagy értékesebb műszaki csomagokat. Kérem, ezt tüntessék fel a futárnak szóló megjegyzésben!",
+        "intent": "delivery_logistics"
+    },
+    {
+        "message": "Lehetséges a rendelésünk személyes átvétele a budapesti telephelyükön még a mai napon? A futárszolgálat csak jövő hétre ígéri a kézbesítést, de a kollégánk délután arra jár autóval.",
+        "intent": "delivery_logistics"
+    },
+    {
+        "message": "Kérem, hogy a kiszállítás előtt legalább 30 perccel hívja a futár a raktárvezetőnket a +36 30 555 1234-es számon, mert a teherporta sorompóját csak ő tudja kinyitni.",
+        "intent": "delivery_logistics"
+    },
+    {
+        "message": "A webshopban az szerepelt, hogy az Ipari NFC Terminál azonnal elérhető raktárról, de a visszaigazolásban már 5-7 munkanapos szállítási idő van. Tudnának pontos információt adni arról, hogy mikor indul el a csomag?",
+        "intent": "delivery_logistics"
+    },
+    {
+        "message": "Kérjük, hogy a csomagot ne a székhelyünkre, hanem közvetlenül a győri fióktelepünkre (9021 Győr, Baross Gábor út 21., II. emelet) kézbesítsék, mert ott fogják használni az adatgyűjtő terminálokat.",
+        "intent": "delivery_logistics"
+    },
+    {
+        "message": "Köszönjük a villámgyors segítséget a Billingo és Shopify szinkronizáló beállításában! A technikus kolléga 15 perc alatt megoldotta a webhook hibát, azóta minden számla automatikusan és hiba nélkül készül el.",
+        "intent": "positive_feedback"
+    },
+    {
+        "message": "Nagyon elégedettek vagyunk az n8n + PostgreSQL sabloncsomaggal, rengeteg manuális Excel-másolgatástól szabadította meg a pénzügyi csapatunkat. Biztosan fogunk még rendelni tőletek a jövőben is!",
+        "intent": "positive_feedback"
+    },
+    {
+        "message": "A tegnap délután megrendelt címkenyomtatók és vonalkódolvasók ma reggel 9-kor már meg is érkeztek a raktárunkba. Külön köszönet a precíz csomagolásért és a mellékelt magyar nyelvű beüzemelési útmutatóért!",
+        "intent": "positive_feedback"
+    },
+    {
+        "message": "Az AI Adat-Audit Konzultáció minden forintját megérte, végre tisztán látjuk, hogyan tudjuk automatizálni a vevői reklamációk kezelését. Köszönjük a gyakorlatias, sallangmentes javaslatokat!",
+        "intent": "positive_feedback"
+    },
+    {
+        "message": "Tökéletesen működik az NFC munkaidő-nyilvántartó terminál mindkét telephelyünkön, a dolgozók is pillanatok alatt megszokták. Ritkán találkozni ilyen segítőkész B2B ügyfélszolgálattal.",
+        "intent": "positive_feedback"
+    },
+    {
+        "message": "Szuper lett a Vezetői KPI Dashboard sablon, már az első héten kiszúrtunk vele két olyan terméket, aminél a szállítási költség elvitte a árrést. Profi munka, ajánlani fogjuk más cégeknek is!",
+        "intent": "positive_feedback"
+    }
+]
