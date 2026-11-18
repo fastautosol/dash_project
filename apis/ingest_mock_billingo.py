@@ -22,11 +22,12 @@ def generate_mock_billingo_documents(count: int) -> list[dict[str, Any]]:
     documents = []
     today = datetime.now(timezone.utc).date()
 
+    base_id = random.randint(30000000, 89999999)
     for idx in range(count):
-        doc_id = 30000000 + idx
+        doc_id = base_id + idx
         doc_type = random.choice(["invoice", "invoice", "invoice", "proforma", "advance"])
         prefix = "PRO" if doc_type == "proforma" else "E-KCS"
-        invoice_number = f"{prefix}-2026-{1001 + idx}"
+        invoice_number = f"{prefix}-2026-{doc_id}"
 
         partner = random.choice(partners)
         days_ago = random.randint(0, 60)
