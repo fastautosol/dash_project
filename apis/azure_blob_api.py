@@ -1,4 +1,4 @@
-# 2026.11.16 12.00
+# 2026.11.18 12.00
 import io
 import json
 import logging
@@ -172,7 +172,7 @@ def run_azure_blob_pipeline(req: AzureBlobRequest):
         total_rows = 0
 
         with pipeline_lock:
-            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze_azure_blob")
+            pipeline = dlt.pipeline(pipeline_name="azure_blob_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze_api")
             pipeline.drop_pending_packages()
             
             @dlt.resource(name=req.table_name, write_disposition=req.write_disposition,
