@@ -67,7 +67,7 @@ app.layout = html.Div([
 server = FastAPI(title="Dash Demo App")
 
 # ----- 4. API routers -----
-server.include_router(azure_blob_api.router,    prefix="/api/azure-blob",    tags=["Ingest Azure Blob"])
+server.include_router(azure_blob_api.router,    prefix="/api/rest",          tags=["Ingest Azure Blob"])
 server.include_router(ingest_rest_api.router,   prefix="/api/rest",          tags=["Ingest Rest API"])
 server.include_router(crm_shopify_api.router,   prefix="/api/crm_shopify",   tags=["CRM Shopify"])
 server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tags=["Lufthansa"])
