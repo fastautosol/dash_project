@@ -1,4 +1,4 @@
-# 2026.11.18  10.00
+# 2026.11.18  18.00
 import logging
 import os
 import re
@@ -68,7 +68,7 @@ def run_dlt_ingest(records: list[dict[str, Any]], source_name: str, table_name: 
 
         with pipeline_lock:
             pipeline = dlt.pipeline(pipeline_name="rest_api_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze_api")
-            pipeline.drop_pending_packages()
+            pipeline.abort_packages() # old -> pipeline.drop_pending_packages()
 
             @dlt.resource(name=table_name, write_disposition=write_disposition, primary_key=primary_key if write_disposition == "merge" else None)
             def api_resource():
