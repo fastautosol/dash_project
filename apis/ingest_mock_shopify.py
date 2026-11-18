@@ -8,7 +8,7 @@ from typing import Any
 
 def _load_optional_tickets() -> list[dict[str, str]]:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(base_dir, "generated_tickets.json")
+    json_path = os.path.join(base_dir, "generated_tickets_hu.json")
     if os.path.exists(json_path):
         with open(json_path, "r", encoding="utf-8") as f:
             return json.load(f)
