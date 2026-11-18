@@ -1,15 +1,21 @@
+# 2026.11.18  18.00
 import random
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-
 def generate_mock_billingo_documents(count: int) -> list[dict[str, Any]]:
+    
     partners = [
         {"id": 10201, "name": "Alfa Logisztika Kft.", "taxcode": "12345678-2-41", "email": "penzugy@alfalog.hu", "city": "Budapest", "post_code": "1134", "address": "Váci út 45."},
         {"id": 10202, "name": "Beta Építőipari Zrt.", "taxcode": "23456789-2-42", "email": "szamla@betaepito.hu", "city": "Debrecen", "post_code": "4025", "address": "Piac utca 12."},
         {"id": 10203, "name": "Gamma Webkereskedelmi Bt.", "taxcode": "34567890-2-13", "email": "info@gammashop.hu", "city": "Szeged", "post_code": "6720", "address": "Kárász utca 8."},
         {"id": 10204, "name": "Delta Energetika Kft.", "taxcode": "45678901-2-08", "email": "iroda@deltaenergy.hu", "city": "Győr", "post_code": "9021", "address": "Baross Gábor út 21."},
         {"id": 10205, "name": "Omega Kereskedőház Kft.", "taxcode": "56789012-2-43", "email": "szamlaszolg@omegatrade.hu", "city": "Pécs", "post_code": "7621", "address": "Király utca 19."},
+        {"id": 10206, "name": "Sigma Gépészeti Kft.", "taxcode": "67890123-2-05", "email": "konyveles@sigmagep.hu", "city": "Miskolc", "post_code": "3525", "address": "Széchenyi István út 34."},
+        {"id": 10207, "name": "Kappa Agrár és Élelmiszer Zrt.", "taxcode": "78901234-2-09", "email": "penzugy@kappaagrar.hu", "city": "Nyíregyháza", "post_code": "4400", "address": "Kossuth tér 7."},
+        {"id": 10208, "name": "Zéta Bútor és Design Kft.", "taxcode": "89012345-2-07", "email": "szamlazas@zetabutor.hu", "city": "Székesfehérvár", "post_code": "8000", "address": "Fő utca 15."},
+        {"id": 10209, "name": "Lambda Nyomda és Csomagolás Kft.", "taxcode": "90123456-2-03", "email": "admin@lambdanyomda.hu", "city": "Kecskemét", "post_code": "6000", "address": "Rákóczi út 28."},
+        {"id": 10210, "name": "Epsilon MedTech Kft.", "taxcode": "11223344-2-42", "email": "finance@epsilonmed.hu", "city": "Budapest", "post_code": "1117", "address": "Budafoki út 56."},
     ]
 
     services = [
@@ -17,6 +23,12 @@ def generate_mock_billingo_documents(count: int) -> list[dict[str, Any]]:
         {"product_id": 502, "name": "Egyedi adatpipeline fejlesztés", "unit": "projekt", "net_unit_price": 450000.0, "vat": "27%"},
         {"product_id": 503, "name": "Rendszerintegrációs tanácsadás", "unit": "óra", "net_unit_price": 25000.0, "vat": "27%"},
         {"product_id": 504, "name": "n8n workflow karbantartás", "unit": "db", "net_unit_price": 45000.0, "vat": "27%"},
+        {"product_id": 505, "name": "Vezetői BI műszerfal (Dash) kiépítés", "unit": "projekt", "net_unit_price": 380000.0, "vat": "27%"},
+        {"product_id": 506, "name": "Webshop és számlázó API összekötés", "unit": "csomag", "net_unit_price": 290000.0, "vat": "27%"},
+        {"product_id": 507, "name": "PostgreSQL adattárház optimalizálás", "unit": "óra", "net_unit_price": 28000.0, "vat": "27%"},
+        {"product_id": 508, "name": "Automatikus kintlévőség-figyelő modul", "unit": "projekt", "net_unit_price": 220000.0, "vat": "27%"},
+        {"product_id": 509, "name": "Céges AI tudásbázis (RAG) bevezetés", "unit": "projekt", "net_unit_price": 650000.0, "vat": "27%"},
+        {"product_id": 510, "name": "Adat-audit és folyamatfelmérés", "unit": "alkalom", "net_unit_price": 95000.0, "vat": "27%"},
     ]
 
     documents = []
