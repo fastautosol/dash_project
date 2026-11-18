@@ -5,7 +5,6 @@ import re
 import threading
 from datetime import datetime, timezone
 from typing import Any, Literal
-
 import dlt
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -23,7 +22,7 @@ pipeline_lock = threading.Lock()
 os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_ID"] = "true"
 os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_LOAD_ID"] = "true"
 
-INGEST_API_KEY = os.getenv("INGEST_API_KEY", "change-me-in-env")
+INGEST_API_KEY = os.getenv("INGEST_API_KEY", "FAS")
 
 DB_CONFIG = {
     "host": os.getenv("POSTGRES_HOST", "postgresql"),
@@ -31,16 +30,13 @@ DB_CONFIG = {
     "database": os.getenv("POSTGRES_DB", "n8n"),
     "username": os.getenv("POSTGRES_USER", "sql_admin"),
     "password": os.getenv("POSTGRES_PASSWORD", "sql_pass"),
-    "connect_timeout": 15,
-}
+    "connect_timeout": 15}
 
 META_COLS = {"data_source_meta", "ingested_at", "_dlt_id", "_dlt_load_id"}
-
 
 def verify_api_key(x_api_key: str | None = Header(default=None)) -> None:
     if x_api_key != INGEST_API_KEY:
         raise HTTPException(status_code=401, detail="Érvénytelen vagy hiányzó X-API-Key.")
-
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
@@ -64,30 +60,17 @@ def _prepare_records(records: list[dict[str, Any]], source_name: str) -> list[di
     return prepared
 
 
-def run_dlt_ingest(
-    records: list[dict[str, Any]],
-    source_name: str,
-    table_name: str,
-    write_disposition: Literal["merge", "append", "replace"] = "merge",
-    primary_key: list[str] | str | None = "id",
-) -> None:
+def run_dlt_ingest(records: list[dict[str, Any]], source_name: str, table_name: str,
+    write_disposition: Literal["merge", "append", "replace"] = "merge", primary_key: list[str] | str | None = "id") -> None:
     try:
         rows = _prepare_records(records, source_name)
         logger.info("[API-DLT] Betöltés indul (%d sor): %s -> bronze_api.%s", len(rows), source_name, table_name)
 
         with pipeline_lock:
-            pipeline = dlt.pipeline(
-                pipeline_name="rest_api_ingest",
-                destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-                dataset_name="bronze_api",
-            )
+            pipeline = dlt.pipeline(pipeline_name="rest_api_ingest", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze_api")
             pipeline.drop_pending_packages()
 
-            @dlt.resource(
-                name=table_name,
-                write_disposition=write_disposition,
-                primary_key=primary_key if write_disposition == "merge" else None,
-            )
+            @dlt.resource(name=table_name, write_disposition=write_disposition, primary_key=primary_key if write_disposition == "merge" else None)
             def api_resource():
                 yield rows
 
@@ -100,7 +83,7 @@ def run_dlt_ingest(
         logger.exception("[API-DLT] HIBA (%s -> %s): %s", source_name, table_name, e)
 
 
-# --- Pydantic modellek ---
+# ---------- Pydantic modellek ----------
 class ShopifyIngestRequest(BaseModel):
     source_name: str = "shopify_admin_api"
     table_name: str = "shopify_orders"
@@ -121,7 +104,7 @@ class MockRequest(BaseModel):
     count: int = Field(default=50, ge=1, le=1000)
 
 
-# --- Shopify végpontok ---
+# ---------- Shopify végpontok ----------
 @router.post("/shopify")
 async def ingest_shopify_orders(request: ShopifyIngestRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(
@@ -130,8 +113,7 @@ async def ingest_shopify_orders(request: ShopifyIngestRequest, background_tasks:
         source_name=request.source_name,
         table_name=request.table_name,
         write_disposition=request.write_disposition,
-        primary_key=request.primary_key,
-    )
+        primary_key=request.primary_key)
     return {"status": "accepted", "records_received": len(request.orders), "target_table": f"bronze_api.{request.table_name}"}
 
 
@@ -153,8 +135,7 @@ async def ingest_billingo_documents(request: BillingoIngestRequest, background_t
         source_name=request.source_name,
         table_name=request.table_name,
         write_disposition=request.write_disposition,
-        primary_key=request.primary_key,
-    )
+        primary_key=request.primary_key)
     return {"status": "accepted", "records_received": len(request.data), "target_table": f"bronze_api.{request.table_name}"}
 
 
