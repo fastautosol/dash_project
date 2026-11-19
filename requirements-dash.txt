@@ -21,6 +21,7 @@ dlt
 dlt[postgres]
 pydantic
 pydantic-ai
+pydantic-ai-slim[mistral]
 requests
 scikit-learn
 databricks-sdk
