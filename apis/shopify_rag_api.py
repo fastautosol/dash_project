@@ -40,7 +40,7 @@ async def search_vectors(ctx: RunContext[asyncpg.Connection], query: str) -> str
 
 
 # ----- 4. Futás tesztelése -----
-@app.post("/test-rag", response_model=TicketResult)
+@router.post("/test-rag", response_model=TicketResult)
 async def test_rag(body: QueryIn):
     conn = await asyncpg.connect(host="postgresql", port=5432, database="n8n", user="sql_admin", password="sql_pass")
     try:
