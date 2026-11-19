@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pydantic_ai import Agent, RunContext
 from fastapi import APIRouter
 
-MISTRAL_API_KEY = os.environ["MISTRAL_API_KEY"]
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "mYhK6JLDugBGRQiVigUwzjVXX4fPropK")
 
 router = APIRouter()
 
