@@ -20,6 +20,7 @@ isodate
 dlt
 dlt[postgres]
 pydantic
+pydantic-ai
 requests
 scikit-learn
 databricks-sdk
