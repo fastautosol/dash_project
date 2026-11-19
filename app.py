@@ -14,7 +14,6 @@ import apis.opensky_api as opensky_api
 import apis.crucix_api as crucix_api
 import apis.twitter_api as twitter_api
 import apis.eia_api as eia_api
-import apis.cryptonews_api as cryptonews_api
 import apis.ingest_azureblob_api as azureblob_api
 import apis.ingest_rest_api as ingest_rest_api
 import apis.shopify_rag_api as shopify_rag_api
@@ -78,7 +77,6 @@ server.include_router(opensky_api.router,       prefix="/api/opensky",       tag
 server.include_router(crucix_api.router,        prefix="/api/crucix",        tags=["Crucix"])
 server.include_router(twitter_api.router,       prefix="/api/twitter",       tags=["Twitter"])
 server.include_router(eia_api.router,           prefix="/api/eia",           tags=["EIA Energy"])
-server.include_router(cryptonews_api.router,    prefix="/api/cryptonews",    tags=["Crypto News"])
 
 # ----- 5. Health endpoint -----
 @server.get("/health")
