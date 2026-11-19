@@ -22,7 +22,7 @@ class TicketResult(BaseModel):
     reply_hu: str
 
 # Már nincs szükség @agent.tool-ra, mert determinisztikusan keresünk előtte
-agent = Agent("mistral:mistral-small-latest", output_type=TicketResult,
+agent = Agent("mistral:ministral-8b-latest", output_type=TicketResult,
     system_prompt="Osztályozd az ügyfélüzenetet a megadott hasonló korábbi esetek alapján!")
 
 async def get_similar_examples(conn: asyncpg.Connection, query: str) -> str:
