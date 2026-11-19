@@ -29,3 +29,4 @@ youtube-transcript-api
 gridstatus
 azure-storage-blob
 fastexcel
+asyncpg
