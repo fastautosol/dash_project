@@ -37,33 +37,11 @@ CRYPTO_SYMBOLS = [
     "ALGO/USDT", "OP/USDT", "IMX/USDT", "ENA/USDT", "EIGEN/USDT", "ARB/USDT", "THETA/USDT", "WIF/USDT", "XLM/USDT", "XTZ/USDT",
     "JUP/USDT", "WLD/USDT", "STX/USDT", "JTO/USDT", "ONDO/USDT", "TIA/USDT", "MNT/USDT", "VIRTUAL/USDT", "ETHFI/USDT", "RUNE/USDT",
     "FIL/USDT", "AXS/USDT", "LTC/USDT", "BCH/USDT", "XMR/USDT", "ZEC/USDT", "DASH/USDT", "COMP/USDT", "TRX/USDT", "GRAM/USDT",
-
     "ORCA/USDT", "MORPHO/USDT", "LITE/USDT", "LIT/USDT", "QNT/USDT", "FLUID/USDT", "SYRUP/USDT", "PENDLE/USDT", "ASTER/USDT", "AERO/USDT", 
     "SPX/USDT", "LSK/USDT", "NBIS/USDT", "SKY/USDT", "PUMPFUN/USDT", "FARTCOIN/USDT", "MOODENG/USDT", "GOAT/USDT", "USUAL/USDT", "BIO/USDT",     
     "0G/USDT", "SOPH/USDT", "PIEVERSE/USDT", "DGAI/USDT", "KORU/USDT", "ARIA/USDT", "KSTR/USDT", "HUMA/USDT", "COOKIE/USDT", "ME/USDT",          
-
-    "DATA/USDT",          # Streamr
-    "RIVER/USDT",         # River Network
-    "O/USDT",             # O Network
-    "DUSK/USDT",          # Dusk Network
-    "BASED/USDT",         # Based meme / DeFi
-    "SENT/USDT",          # Sentinel
-    "ORDER/USDT",         # Orderly Network
-    "RESOLV/USDT",        # Resolv
-    "PORTAL/USDT",        # Portal Web3 Game
-    "MON/USDT",           # Mon Protocol
-    "CYBER/USDT",         # CyberConnect
-    "JELLYJELLY/USDT",    # Jelly perp
-    "GRASS/USDT",           # XPLA  
-    "APT/USDT",           # Aptos
-    "QTUM/USDT",          # Qtum
-    "BAT/USDT",           # Basic Attention
-    "SUSHI/USDT",         # SushiSwap
-    "ETC/USDT",           # 1inch
-    "MASK/USDT",          # Mask Network
-    "LAB/USDT"
-]
-
+    "DATA/USDT", "RIVER/USDT", "O/USDT", "DUSK/USDT", "BASED/USDT", "SENT/USDT", "ORDER/USDT", "RESOLV/USDT", "PORTAL/USDT", "MON/USDT",         
+    "CYBER/USDT", "JELLYJELLY/USDT", "GRASS/USDT", "APT/USDT", "QTUM/USDT", "BAT/USDT", "SUSHI/USDT", "ETC/USDT", "MASK/USDT", "LAB/USDT"]
 
 CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
 
