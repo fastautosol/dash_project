@@ -54,7 +54,7 @@ base AS (
         w100 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 99 PRECEDING AND CURRENT ROW)
 )
 SELECT symbol, timestamp,
-    ROUND(max_leverage::numeric, 2) AS max_leverage,
+    ROUND(max_leverage::numeric, 0) AS max_leverage,
     ROUND(close::numeric, 8) AS close,
     ROUND(px::numeric, 8) AS smart_close,
     ROUND(mark_price::numeric, 8) AS mark_price,
