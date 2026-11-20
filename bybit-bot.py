@@ -46,7 +46,7 @@ def _dt(ms: int) -> datetime:
 
 
 # =========================================================
-# 2. PIACI UNIVERZUM SZŰRÉSE (>= 25x USDT PERPETUAL)
+# 2. PIACI UNIVERZUM SZŰRÉSE (>= 20x USDT PERPETUAL)
 # =========================================================
 async def fetch_eligible_markets(exchange) -> dict[str, dict]:
     markets = await exchange.load_markets(reload=True)
