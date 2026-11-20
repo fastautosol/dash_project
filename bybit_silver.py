@@ -1,4 +1,4 @@
-# 2026.11.16  19.00
+# 2026.11.20  18.00
 import os
 import time
 import logging
@@ -17,7 +17,7 @@ DST_TABLE     = "pg.silver.bybit_indicators"
 
 SILVER_SELECT = """
 WITH src AS (
-    SELECT symbol, timestamp, close, mark_price, high_24h, low_24h, bid, ask, bid1_size, ask1_size, vwap, funding, oi, turnover24h, price_24h_pcnt,
+    SELECT symbol, timestamp, max_leverage, close, mark_price, high_24h, low_24h, bid, ask, bid1_size, ask1_size, vwap, funding, oi, turnover24h, price_24h_pcnt,
            CASE WHEN mark_price IS NOT NULL AND ABS(close - mark_price) / NULLIF(mark_price, 0) > 0.003 THEN mark_price ELSE close END AS px
     FROM pg.bronze.bybit_tickers
     WHERE timestamp >= ?
@@ -54,8 +54,9 @@ base AS (
         w100 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 99 PRECEDING AND CURRENT ROW)
 )
 SELECT symbol, timestamp,
-    ROUND(close::numeric, 8)      AS close,
-    ROUND(px::numeric, 8)         AS smart_close,
+    ROUND(max_leverage::numeric, 2) AS max_leverage,
+    ROUND(close::numeric, 8) AS close,
+    ROUND(px::numeric, 8) AS smart_close,
     ROUND(mark_price::numeric, 8) AS mark_price,
     ROUND(r5::numeric, 4)  AS r5,
     ROUND(r15::numeric, 4) AS r15,
