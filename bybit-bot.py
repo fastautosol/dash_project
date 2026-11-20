@@ -102,7 +102,7 @@ CRYPTO_SYMBOLS = [
 CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
 
 POLL_INTERVAL = 300
-CLEANUP_HOURS = 120      
+CLEANUP_HOURS = 240      
 T_TICKER      = "bybit_tickers"
 
 def to_linear(symbol: str) -> str:
