@@ -23,8 +23,8 @@ DB_USER = os.getenv("DB_USER", "sql_admin")
 DB_PASS = os.getenv("DB_PASSWORD", "sql_pass")
 DB_URL  = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-MIN_LEVERAGE       = 25.0
-MIN_TURNOVER       = 1_000_000.0  # USDT / 24h
+MIN_LEVERAGE       = 20.0
+MIN_TURNOVER       = 500_000  # USDT / 24h
 POLL_INTERVAL      = 300
 MARKET_REFRESH_SEC = 3600
 CLEANUP_HOURS      = 240
