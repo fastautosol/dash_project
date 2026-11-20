@@ -55,7 +55,7 @@ async def run_agent_with_retry(prompt: str, retries: int = 3) -> TicketResult:
             return result.output
         except Exception as e:
             if "429" in str(e) and attempt < retries - 1:
-                await asyncio.sleep(6 * (attempt + 1))
+                await asyncio.sleep(5 * (attempt + 1))
                 continue
             raise
 
@@ -74,7 +74,7 @@ async def test_rag(body: QueryIn):
         conn = await get_db_conn()
         vec = (await get_batch_embeddings([body.uzenet]))[0]
         pelda_esetek = await fetch_similar_examples(conn, vec)
-        await asyncio.sleep(1.2)
+        await asyncio.sleep(1.5)
 
         prompt = f"Hasonló korábbi esetek:\n{pelda_esetek}\n\nÚj ügyfélüzenet:\n{body.uzenet}"
         return await run_agent_with_retry(prompt)
@@ -102,7 +102,7 @@ async def multi_rag(body: BatchQueryIn):
         for item, vec in zip(body.items, vectors):
             try:
                 pelda_esetek = await fetch_similar_examples(conn, vec)
-                await asyncio.sleep(1.2)
+                await asyncio.sleep(1.5)
                 prompt = f"Hasonló korábbi esetek:\n{pelda_esetek}\n\nÚj ügyfélüzenet:\n{item.uzenet}"
                 classification = await run_agent_with_retry(prompt)
                 results.append(BatchTicketOut(order_id=item.order_id, uzenet=item.uzenet, result=classification))
