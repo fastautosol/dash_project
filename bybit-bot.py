@@ -23,36 +23,13 @@ DB_USER = os.getenv("DB_USER", "sql_admin")
 DB_PASS = os.getenv("DB_PASSWORD", "sql_pass")
 DB_URL  = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-CRYPTO_SYMBOLS = [
-    # =========================================================
-    # 1. A TE 15-ÖS SPOT/FUTURES PORTFÓLIÓD (S-TIER, Mindig aktív)
-    # =========================================================
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "NEAR/USDT",
-    "SUI/USDT", "AAVE/USDT", "RENDER/USDT", "INJ/USDT", "TAO/USDT", "HYPE/USDT", "PURR/USDT", "ENS/USDT", "ICP/USDT", "CAKE/USDT",
-    "ZRO/USDT", "ATOM/USDT", "LDO/USDT", "HNT/USDT", "CRV/USDT", "SNX/USDT", "DYDX/USDT", "DOGE/USDT", "XPL/USDT", "CRO/USDT",
-    "1000LUNC/USDT", "PHA/USDT", "KAIA/USDT", "PNUT/USDT", "XDC/USDT", "FIDA/USDT", "RARE/USDT", "BICO/USDT", "COTI/USDT", "FLR/USDT",
-    "ATH/USDT", "1000PEPE/USDT", "BRETT/USDT", "JASMY/USDT", "GALA/USDT", "NOT/USDT", "HMSTR/USDT", "BOME/USDT", "TLM/USDT", "ZIL/USDT",
-    "1000BONK/USDT", "SHIB1000/USDT", "BEAM/USDT", "ALT/USDT", "VET/USDT", "ZK/USDT", "W/USDT", "FLOW/USDT", "GRT/USDT", "1000FLOKI/USDT",
-    "KAS/USDT", "KAVA/USDT", "POPCAT/USDT", "STRK/USDT", "SAND/USDT", "SEI/USDT", "PYTH/USDT", "HBAR/USDT", "APE/USDT", "POL/USDT",
-    "ALGO/USDT", "OP/USDT", "IMX/USDT", "ENA/USDT", "EIGEN/USDT", "ARB/USDT", "THETA/USDT", "WIF/USDT", "XLM/USDT", "XTZ/USDT",
-    "JUP/USDT", "WLD/USDT", "STX/USDT", "JTO/USDT", "ONDO/USDT", "TIA/USDT", "MNT/USDT", "VIRTUAL/USDT", "ETHFI/USDT", "RUNE/USDT",
-    "FIL/USDT", "AXS/USDT", "LTC/USDT", "BCH/USDT", "XMR/USDT", "ZEC/USDT", "DASH/USDT", "COMP/USDT", "TRX/USDT", "GRAM/USDT",
-    "ORCA/USDT", "MORPHO/USDT", "LITE/USDT", "LIT/USDT", "QNT/USDT", "FLUID/USDT", "SYRUP/USDT", "PENDLE/USDT", "ASTER/USDT", "AERO/USDT", 
-    "SPX/USDT", "LSK/USDT", "NBIS/USDT", "SKY/USDT", "PUMPFUN/USDT", "FARTCOIN/USDT", "MOODENG/USDT", "GOAT/USDT", "USUAL/USDT", "BIO/USDT",     
-    "0G/USDT", "SOPH/USDT", "PIEVERSE/USDT", "DGAI/USDT", "KORU/USDT", "ARIA/USDT", "KSTR/USDT", "HUMA/USDT", "COOKIE/USDT", "ME/USDT",          
-    "DATA/USDT", "RIVER/USDT", "O/USDT", "DUSK/USDT", "BASED/USDT", "SENT/USDT", "ORDER/USDT", "RESOLV/USDT", "PORTAL/USDT", "MON/USDT",         
-    "CYBER/USDT", "JELLYJELLY/USDT", "GRASS/USDT", "APT/USDT", "QTUM/USDT", "BAT/USDT", "SUSHI/USDT", "ETC/USDT", "MASK/USDT", "LAB/USDT"]
+MIN_LEVERAGE       = 25.0
+MIN_TURNOVER       = 1_000_000.0  # USDT / 24h
+POLL_INTERVAL      = 300
+MARKET_REFRESH_SEC = 3600
+CLEANUP_HOURS      = 240
+T_TICKER           = "bybit_tickers"
 
-CRYPTO_SYMBOLS = list(dict.fromkeys(s.strip() for s in CRYPTO_SYMBOLS if s.strip()))
-
-POLL_INTERVAL = 300
-CLEANUP_HOURS = 240      
-T_TICKER      = "bybit_tickers"
-
-def to_linear(symbol: str) -> str:
-    return f"{symbol}:USDT"
-
-LINEAR_SYMBOLS = [to_linear(s) for s in CRYPTO_SYMBOLS]
 
 def _f(value, default=None):
     try:
@@ -63,31 +40,62 @@ def _f(value, default=None):
     except (TypeError, ValueError):
         return default
 
+
 def _dt(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=UTC)
 
+
 # =========================================================
-# 2. EGY CIKLUS: egyetlen fetch_tickers hívás
+# 2. PIACI UNIVERZUM SZŰRÉSE (>= 25x USDT PERPETUAL)
 # =========================================================
-async def run_cycle(exchange, pipeline) -> int:
+async def fetch_eligible_markets(exchange) -> dict[str, dict]:
+    markets = await exchange.load_markets(reload=True)
+    eligible = {}
+
+    for ccxt_sym, m in markets.items():
+        if (not m or not m.get("swap") or m.get("quote") != "USDT" or m.get("settle") != "USDT" or m.get("active") is False):
+            continue
+
+        info = m.get("info") or {}
+        lev = _f((info.get("leverageFilter") or {}).get("maxLeverage"), 0.0)
+        if lev < MIN_LEVERAGE:
+            continue
+
+        eligible[ccxt_sym] = {"symbol": f"{m['base']}/{m['quote']}", "max_leverage": lev}
+
+    return eligible
+
+
+# =========================================================
+# 3. EGY CIKLUS: összes linear ticker lekérése és szűrése
+# =========================================================
+async def run_cycle(exchange, pipeline, eligible_markets: dict[str, dict]) -> int:
     step_ms = POLL_INTERVAL * 1000
     now_ms = int(time.time() * 1000)
     target_ms = (now_ms // step_ms) * step_ms
-    tickers = await exchange.fetch_tickers(symbols=LINEAR_SYMBOLS)
+    ts = _dt(target_ms)
+
+    tickers = await exchange.fetch_tickers(params={"category": "linear"})
 
     recs = []
-    for sym in CRYPTO_SYMBOLS:
-        tk = tickers.get(to_linear(sym))
+    for ccxt_sym, meta in eligible_markets.items():
+        tk = tickers.get(ccxt_sym)
         if not tk:
             continue
-        info = tk.get("info", {}) or {}
+
+        info = tk.get("info") or {}
+        turnover = _f(info.get("turnover24h"), 0.0)
+        if turnover < MIN_TURNOVER:
+            continue
+
         funding = _f(info.get("fundingRate"))
         if funding is None:
             funding = _f(info.get("lastFundingRate"))
 
         recs.append({
-            "symbol":         sym,
-            "timestamp":      _dt(target_ms),
+            "symbol":         meta["symbol"],
+            "timestamp":      ts,
+            "max_leverage":   meta["max_leverage"],
             "close":          _f(tk.get("last")),
             "mark_price":     _f(info.get("markPrice")),
             "index_price":    _f(info.get("indexPrice")),
@@ -98,7 +106,7 @@ async def run_cycle(exchange, pipeline) -> int:
             "bid1_size":      _f(info.get("bid1Size")),
             "ask1_size":      _f(info.get("ask1Size")),
             "vwap":           _f(tk.get("vwap")),
-            "turnover24h":    _f(info.get("turnover24h")),
+            "turnover24h":    turnover,
             "prev_price_1h":  _f(info.get("prevPrice1h")),
             "price_24h_pcnt": _f(info.get("price24hPcnt")),
             "funding":        funding,
@@ -110,38 +118,56 @@ async def run_cycle(exchange, pipeline) -> int:
         await asyncio.to_thread(pipeline.run, recs, table_name=T_TICKER, write_disposition="merge", primary_key=["symbol", "timestamp"])
     return len(recs)
 
+
 # =========================================================
-# 3. CLEANUP & INDEX
+# 4. CLEANUP & INDEX
 # =========================================================
 async def cleanup(pipeline) -> None:
     threshold = datetime.now(UTC) - timedelta(hours=CLEANUP_HOURS)
+
     def _c():
         with pipeline.sql_client() as client:
             tname = client.make_qualified_table_name(T_TICKER)
             client.execute_sql(f"CREATE INDEX IF NOT EXISTS idx_bronze_tickers_ts ON {tname} (timestamp);")
             client.execute_sql(f"DELETE FROM {tname} WHERE timestamp < %s", (threshold,))
+
     try:
         await asyncio.to_thread(_c)
         log.info("[CLEANUP] %dh-nál régebbi adatok törölve", CLEANUP_HOURS)
     except Exception:
         log.exception("[CLEANUP] failed")
 
+
 # =========================================================
-# 4. MAIN
+# 5. MAIN
 # =========================================================
 async def main() -> None:
     exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
     pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
     pipeline.abort_packages()
 
+    eligible_markets: dict[str, dict] = {}
+    last_market_refresh = 0.0
     last_cleanup = 0.0
+
     try:
         while True:
             try:
                 print()
                 log.info("=" * 45)
-                n = await run_cycle(exchange, pipeline)
-                log.info("[CYCLE START] tickers=%d", n)
+
+                if not eligible_markets or (time.time() - last_market_refresh >= MARKET_REFRESH_SEC):
+                    try:
+                        eligible_markets = await fetch_eligible_markets(exchange)
+                        last_market_refresh = time.time()
+                        log.info("[MARKETS] Eligible >=%.0fx USDT swaps: %d", MIN_LEVERAGE, len(eligible_markets))
+                    except Exception:
+                        if not eligible_markets:
+                            raise
+                        log.exception("[MARKETS] Frissítés sikertelen, előző lista marad aktív")
+
+                n = await run_cycle(exchange, pipeline, eligible_markets)
+                log.info("[CYCLE START] saved_tickers=%d (eligible=%d)", n, len(eligible_markets))
                 await asyncio.to_thread(run_bybit_silver_transformation)
             except asyncio.CancelledError:
                 raise
@@ -157,6 +183,7 @@ async def main() -> None:
             await asyncio.sleep(delay)
     finally:
         await exchange.close()
+
 
 if __name__ == "__main__":
     try:
