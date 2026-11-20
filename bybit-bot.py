@@ -143,7 +143,7 @@ async def cleanup(pipeline) -> None:
 # =========================================================
 async def main() -> None:
     exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
-    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
+    pipeline = dlt.pipeline(pipeline_name="crypto_tickers_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
     pipeline.abort_packages()
 
     eligible_markets: dict[str, dict] = {}
