@@ -1,4 +1,4 @@
-# 2026.11.17  18.00
+# 2026.11.20  18.00
 import asyncio
 import math
 import time
@@ -27,55 +27,21 @@ CRYPTO_SYMBOLS = [
     # =========================================================
     # 1. A TE 15-ÖS SPOT/FUTURES PORTFÓLIÓD (S-TIER, Mindig aktív)
     # =========================================================
-    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT",
-    "ADA/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "NEAR/USDT",
-    "SUI/USDT", "AAVE/USDT", "RENDER/USDT", "INJ/USDT", "TAO/USDT",
+    "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", "ADA/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "NEAR/USDT",
+    "SUI/USDT", "AAVE/USDT", "RENDER/USDT", "INJ/USDT", "TAO/USDT", "HYPE/USDT", "PURR/USDT", "ENS/USDT", "ICP/USDT", "CAKE/USDT",
+    "ZRO/USDT", "ATOM/USDT", "LDO/USDT", "HNT/USDT", "CRV/USDT", "SNX/USDT", "DYDX/USDT", "DOGE/USDT", "XPL/USDT", "CRO/USDT",
+    "1000LUNC/USDT", "PHA/USDT", "KAIA/USDT", "PNUT/USDT", "XDC/USDT", "FIDA/USDT", "RARE/USDT", "BICO/USDT", "COTI/USDT", "FLR/USDT",
+    "ATH/USDT", "1000PEPE/USDT", "BRETT/USDT", "JASMY/USDT", "GALA/USDT", "NOT/USDT", "HMSTR/USDT", "BOME/USDT", "TLM/USDT", "ZIL/USDT",
+    "1000BONK/USDT", "SHIB1000/USDT", "BEAM/USDT", "ALT/USDT", "VET/USDT", "ZK/USDT", "W/USDT", "FLOW/USDT", "GRT/USDT", "1000FLOKI/USDT",
+    "KAS/USDT", "KAVA/USDT", "POPCAT/USDT", "STRK/USDT", "SAND/USDT", "SEI/USDT", "PYTH/USDT", "HBAR/USDT", "APE/USDT", "POL/USDT",
+    "ALGO/USDT", "OP/USDT", "IMX/USDT", "ENA/USDT", "EIGEN/USDT", "ARB/USDT", "THETA/USDT", "WIF/USDT", "XLM/USDT", "XTZ/USDT",
+    "JUP/USDT", "WLD/USDT", "STX/USDT", "JTO/USDT", "ONDO/USDT", "TIA/USDT", "MNT/USDT", "VIRTUAL/USDT", "ETHFI/USDT", "RUNE/USDT",
+    "FIL/USDT", "AXS/USDT", "LTC/USDT", "BCH/USDT", "XMR/USDT", "ZEC/USDT", "DASH/USDT", "COMP/USDT", "TRX/USDT", "GRAM/USDT",
 
-    # =========================================================
-    # 2. A BEMÁSOLT ÉS BIZONYÍTOTTAN ÉLES KORÁBBI CRYPTO TICKEREK (85 db)
-    # =========================================================
-    "HYPE/USDT", "PURR/USDT", "ENS/USDT", "ICP/USDT", "CAKE/USDT",
-    "ZRO/USDT", "ATOM/USDT", "LDO/USDT", "HNT/USDT", "CRV/USDT",
-    "SNX/USDT", "DYDX/USDT", "DOGE/USDT", "XPL/USDT", "CRO/USDT",
-    "1000LUNC/USDT", "PHA/USDT", "KAIA/USDT", "PNUT/USDT", "XDC/USDT",
-    "FIDA/USDT", "RARE/USDT", "BICO/USDT", "COTI/USDT", "FLR/USDT",
-    "ATH/USDT", "1000PEPE/USDT", "BRETT/USDT", "JASMY/USDT", "GALA/USDT",
-    "NOT/USDT", "HMSTR/USDT", "BOME/USDT", "TLM/USDT", "ZIL/USDT",
-    "1000BONK/USDT", "SHIB1000/USDT", "BEAM/USDT", "ALT/USDT", "VET/USDT",
-    "ZK/USDT", "W/USDT", "FLOW/USDT", "GRT/USDT", "1000FLOKI/USDT",
-    "KAS/USDT", "KAVA/USDT", "POPCAT/USDT", "STRK/USDT", "SAND/USDT",
-    "SEI/USDT", "PYTH/USDT", "HBAR/USDT", "APE/USDT", "POL/USDT",
-    "ALGO/USDT", "OP/USDT", "IMX/USDT", "ENA/USDT", "EIGEN/USDT",
-    "ARB/USDT", "THETA/USDT", "WIF/USDT", "XLM/USDT", "XTZ/USDT",
-    "JUP/USDT", "WLD/USDT", "STX/USDT", "JTO/USDT", "ONDO/USDT",
-    "TIA/USDT", "MNT/USDT", "VIRTUAL/USDT", "ETHFI/USDT", "RUNE/USDT",
-    "FIL/USDT", "AXS/USDT", "LTC/USDT", "BCH/USDT", "XMR/USDT",
-    "ZEC/USDT", "DASH/USDT", "COMP/USDT", "TRX/USDT", "GRAM/USDT",
+    "ORCA/USDT", "MORPHO/USDT", "LITE/USDT", "LIT/USDT", "QNT/USDT", "FLUID/USDT", "SYRUP/USDT", "PENDLE/USDT", "ASTER/USDT", "AERO/USDT", 
+    "SPX/USDT", "LSK/USDT", "NBIS/USDT", "SKY/USDT", "PUMPFUN/USDT", "FARTCOIN/USDT", "MOODENG/USDT", "GOAT/USDT", "USUAL/USDT", "BIO/USDT",     
+    "0G/USDT", "SOPH/USDT", "PIEVERSE/USDT", "DGAI/USDT", "KORU/USDT", "ARIA/USDT", "KSTR/USDT", "HUMA/USDT", "COOKIE/USDT", "ME/USDT",          
 
-    # =========================================================
-    # 3. ÚJ, EXTRA 50 DB JÓL TRADED, NAGY VOLUMENŰ CRYPTO (Szigorúan a kapott logodból!)
-    # =========================================================
-    # --- Top volumenű mémek és új AI/DePIN slágerek ---
-    "ORCA/USDT", "MORPHO/USDT", "LITE/USDT", "LIT/USDT", "QNT/USDT", "FLUID/USDT", "SYRUP/USDT",
-    "PENDLE/USDT", "ASTER/USDT", "AERO/USDT", "SPX/USDT", "LSK/USDT", "NBIS/USDT", "SKY/USDT",
-    "PUMPFUN/USDT",       # Óriási forgalmú mém Launchpad perp
-    "FARTCOIN/USDT",      # Meme
-    "MOODENG/USDT",       # Viral Meme
-    "GOAT/USDT",          # AI Meme
-    "USUAL/USDT",         # RWA/Stable yield perp
-    "BIO/USDT",       # Bio-Science AI / DePIN
-    "0G/USDT",            # Web3 modular AI
-    "SOPH/USDT",          # Sophia AI DePIN
-    "PIEVERSE/USDT",      # Pieverse
-    "DGAI/USDT",          # Game AI
-    "KORU/USDT",          # Koru
-    "ARIA/USDT",          # Aria AI
-    "KSTR/USDT",          # Star DePIN
-    "HUMA/USDT",          # Huma RWA (Kifejezetten nagy napi turnover!)
-    "COOKIE/USDT",        # Cookie AI
-    "ME/USDT",            # Magic Eden Token
-
-    # --- További éles határidős alts & láncok a 311-es listádból (likviditás és volumen alapon) ---
     "DATA/USDT",          # Streamr
     "RIVER/USDT",         # River Network
     "O/USDT",             # O Network
