@@ -14,7 +14,6 @@ services:
       context: .
       dockerfile: Dockerfile.bot
     image: custom-crypto-bot:latest
-    pull_policy: build
     container_name: crypto-alert-bot
     restart: unless-stopped
     environment:
