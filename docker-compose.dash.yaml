@@ -4,7 +4,6 @@ services:
       context: .
       dockerfile: Dockerfile.dash
     image: custom-dash-app:latest
-    pull_policy: build
     container_name: media-dash-app
     restart: unless-stopped
     expose:
