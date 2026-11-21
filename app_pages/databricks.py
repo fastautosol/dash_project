@@ -1,4 +1,4 @@
-# 2026.06.02  18.00
+# 2026.11.21  18.00
 # UNIFIED DATABRICKS DIAGNOSTICS + LAZY TABLE LOADING + SDK WARMUP
 
 import os
@@ -21,7 +21,7 @@ import pandas as pd
 # LOGGING & ENV
 # =================================================
 logging.basicConfig(level=logging.INFO)
-DBX_TOKEN = os.getenv("DB_API_KEY")
+DBX_TOKEN = os.getenv("DATABRICKS_API_KEY")
 DBX_HOST = 'https://dbc-9c577faf-b445.cloud.databricks.com/'
 DBX_HTTP_PATH = '/sql/1.0/warehouses/cbfc343eb927c998'
 WAREHOUSE_ID = 'cbfc343eb927c998'
