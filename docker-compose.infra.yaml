@@ -113,11 +113,14 @@ services:
 
 volumes:
   n8n-data:
-    driver: local
+    external: true
+    name: dwlrq6pww0hp7vthv3g7d8r2_n8n-data
   postgresql-data:
-    driver: local
+    external: true
+    name: dwlrq6pww0hp7vthv3g7d8r2_postgresql-data
   crucix-runs:
-    driver: local
+    external: true
+    name: dwlrq6pww0hp7vthv3g7d8r2_crucix-runs
 
 networks:
   n8n-shared-net:
