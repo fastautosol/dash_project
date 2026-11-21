@@ -1,4 +1,4 @@
-# 2026.11.20  18.00
+# 2026.11.21  12.00
 import os
 import time
 import logging
@@ -17,7 +17,7 @@ DST_TABLE     = "pg.silver.bybit_indicators"
 
 SILVER_SELECT = """
 WITH src AS (
-    SELECT symbol, timestamp, max_leverage, close, mark_price, high_24h, low_24h, bid, ask, bid1_size, ask1_size, vwap, funding, oi, turnover24h, price_24h_pcnt,
+    SELECT symbol, timestamp, COALESCE(asset_type, 'crypto') AS asset_type, max_leverage, close, mark_price, high_24h, low_24h, bid, ask, bid1_size, ask1_size, vwap, funding, oi, turnover24h, price_24h_pcnt,
            CASE WHEN mark_price IS NOT NULL AND ABS(close - mark_price) / NULLIF(mark_price, 0) > 0.003 THEN mark_price ELSE close END AS px
     FROM pg.bronze.bybit_tickers
     WHERE timestamp >= ?
@@ -53,7 +53,7 @@ base AS (
         w50  AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 49 PRECEDING AND CURRENT ROW),
         w100 AS (PARTITION BY symbol ORDER BY timestamp ROWS BETWEEN 99 PRECEDING AND CURRENT ROW)
 )
-SELECT symbol, timestamp,
+SELECT symbol, timestamp, asset_type,
     ROUND(max_leverage::numeric, 0) AS max_leverage,
     ROUND(close::numeric, 8) AS close,
     ROUND(px::numeric, 8) AS smart_close,
