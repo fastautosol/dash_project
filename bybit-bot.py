@@ -1,4 +1,4 @@
-# 2026.11.20  18.00
+# 2026.11.21  11.00
 import asyncio
 import math
 import time
@@ -24,7 +24,7 @@ DB_PASS = os.getenv("DB_PASSWORD", "sql_pass")
 DB_URL  = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 MIN_LEVERAGE       = 20.0
-MIN_TURNOVER       = 500_000  # USDT / 24h
+MIN_TURNOVER       = 500_000.0  # USDT / 24h
 POLL_INTERVAL      = 300
 MARKET_REFRESH_SEC = 3600
 CLEANUP_HOURS      = 240
@@ -45,8 +45,17 @@ def _dt(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=UTC)
 
 
+def _classify_asset_type(info: dict) -> str:
+    sym_type = str(info.get("symbolType") or "").strip().lower()
+    market_region = str(info.get("marketRegion") or "").strip()
+    underlying = str(info.get("underlyingTicker") or "").strip()
+    if sym_type in {"stock", "etf", "commodity", "forex", "tradfi"} or market_region or underlying:
+        return "tradfi"
+    return "crypto"
+
+
 # =========================================================
-# 2. PIACI UNIVERZUM SZŰRÉSE (>= 20x USDT PERPETUAL)
+# 2. PIACI UNIVERZUM SZŰRÉSE (>= MIN_LEVERAGE USDT PERPETUAL)
 # =========================================================
 async def fetch_eligible_markets(exchange) -> dict[str, dict]:
     markets = await exchange.load_markets(reload=True)
@@ -61,7 +70,7 @@ async def fetch_eligible_markets(exchange) -> dict[str, dict]:
         if lev < MIN_LEVERAGE:
             continue
 
-        eligible[ccxt_sym] = {"symbol": f"{m['base']}/{m['quote']}", "max_leverage": lev}
+        eligible[ccxt_sym] = {"symbol": f"{m['base']}/{m['quote']}", "asset_type": _classify_asset_type(info), "max_leverage": lev}
 
     return eligible
 
@@ -95,6 +104,7 @@ async def run_cycle(exchange, pipeline, eligible_markets: dict[str, dict]) -> in
         recs.append({
             "symbol":         meta["symbol"],
             "timestamp":      ts,
+            "asset_type":     meta["asset_type"],
             "max_leverage":   meta["max_leverage"],
             "close":          _f(tk.get("last")),
             "mark_price":     _f(info.get("markPrice")),
@@ -143,7 +153,7 @@ async def cleanup(pipeline) -> None:
 # =========================================================
 async def main() -> None:
     exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "linear"}})
-    pipeline = dlt.pipeline(pipeline_name="crypto_tickers_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
+    pipeline = dlt.pipeline(pipeline_name="crypto_candles_bybit", destination=dlt.destinations.postgres(credentials=DB_URL), dataset_name="bronze")
     pipeline.abort_packages()
 
     eligible_markets: dict[str, dict] = {}
@@ -160,7 +170,9 @@ async def main() -> None:
                     try:
                         eligible_markets = await fetch_eligible_markets(exchange)
                         last_market_refresh = time.time()
-                        log.info("[MARKETS] Eligible >=%.0fx USDT swaps: %d", MIN_LEVERAGE, len(eligible_markets))
+                        crypto_cnt = sum(1 for v in eligible_markets.values() if v["asset_type"] == "crypto")
+                        tradfi_cnt = len(eligible_markets) - crypto_cnt
+                        log.info("[MARKETS] Eligible >=%.0fx USDT swaps: %d (crypto=%d, tradfi=%d)", MIN_LEVERAGE, len(eligible_markets), crypto_cnt, tradfi_cnt)
                     except Exception:
                         if not eligible_markets:
                             raise
