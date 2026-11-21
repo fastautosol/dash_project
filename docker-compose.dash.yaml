@@ -1,0 +1,79 @@
+services:
+  media-dash-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dash
+    image: custom-dash-app:latest
+    pull_policy: build
+    container_name: media-dash-app
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      APP_MODULE: home:server
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-n8n}
+      DB_USER: ${SERVICE_USER_POSTGRES}
+      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      PYTHONUNBUFFERED: "1"
+      TZ: ${TZ:-Europe/Berlin}
+      UVICORN_WORKERS: 1
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    mem_limit: 1000m
+    cpus: 0.5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+  demo-dash-app:
+    image: custom-dash-app:latest
+    pull_policy: never
+    container_name: demo-dash-app
+    restart: unless-stopped
+    depends_on:
+      - media-dash-app
+    expose:
+      - "8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      APP_MODULE: app:server
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-n8n}
+      DB_USER: ${SERVICE_USER_POSTGRES}
+      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      CRUCIX_API_URL: http://crucix:3117/api/data
+      PYTHONUNBUFFERED: "1"
+      TZ: ${TZ:-Europe/Berlin}
+      UVICORN_WORKERS: 1
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    mem_limit: 1500m
+    cpus: 1.0
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+networks:
+  n8n-shared-net:
+    external: true
+    name: n8n-shared-net
