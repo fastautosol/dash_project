@@ -1,4 +1,4 @@
-# 2026.10.19  12.00
+# 2026.11.21  18.00
 import dash
 from dash import dcc, html, callback, Output, Input
 import dash_bootstrap_components as dbc
@@ -7,6 +7,7 @@ import pandas as pd
 import sys
 import platform
 import os
+import re
 import shutil
 import psutil
 from importlib.metadata import version, PackageNotFoundError
@@ -21,7 +22,7 @@ CARD_STYLE = {
 
 TABLE_STYLE = { "backgroundColor": "transparent", "--bs-table-bg": "transparent", "--bs-table-accent-bg": "transparent", "color": "white"}
 PACKAGES = ["fastapi", "fastmcp", "pandas", "dash", "duckdb", "ccxt", "scikit-learn", "SQLAlchemy", "dlt", "psycopg"]
-ALLOWED_PREFIXES = ("crypto", "n8n", "media-dash", "demo-dash", "postgresql") 
+ALLOWED_PREFIXES = ("crypto", "n8n", "media-dash", "demo-dash", "postgresql", "crucix") 
 
 def fetch_one_docker(c) -> dict:
     s = c.stats(stream=False)
@@ -33,7 +34,7 @@ def fetch_one_docker(c) -> dict:
     mem_limit = s["memory_stats"].get("limit", 0) / 1024 / 1024 / 1024 
     mem_pct   = round(s["memory_stats"].get("usage", 1) / s["memory_stats"].get("limit", 1) * 100, 1)
     
-    return {"ID":c.short_id, "Name": c.name.split("-dwlrq6pw")[0], # c.name[:30],
+    return {"ID":c.short_id, "Name": re.split(r"-[a-z0-9]{24}(?:-\d{8}T\d{6})?$", c.name)[0],
             "CPU %":f"{cpu_pct}%", "MEM Usage":f"{mem_usage:.1f} MiB", "MEM Limit": f"{mem_limit:.2f} GB", "MEM %":f"{mem_pct}%", "Status": c.status}
 
 def get_docker_stats() -> pd.DataFrame:
