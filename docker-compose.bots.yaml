@@ -1,0 +1,57 @@
+x-bot-env: &bot-env
+  DB_HOST: postgresql
+  DB_PORT: 5432
+  DB_NAME: ${POSTGRES_DB:-n8n}
+  DB_USER: ${SERVICE_USER_POSTGRES}
+  DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+  DATABASE_URL: postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgresql:5432/${POSTGRES_DB:-n8n}
+  PYTHONUNBUFFERED: "1"
+  TZ: ${TZ:-Europe/Berlin}
+
+services:
+  crypto-alert-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    image: custom-crypto-bot:latest
+    pull_policy: build
+    container_name: crypto-alert-bot
+    restart: unless-stopped
+    environment:
+      <<: *bot-env
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/crypto-alert}
+    command: ["python", "bybit-bot.py"]
+    mem_limit: 500m
+    cpus: 0.5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+  crypto-candles-bot:
+    image: custom-crypto-bot:latest
+    pull_policy: never
+    container_name: crypto-candles-bot
+    restart: unless-stopped
+    depends_on:
+      - crypto-alert-bot
+    environment:
+      <<: *bot-env
+    command: ["python", "candles-bot.py"]
+    mem_limit: 750m
+    cpus: 0.5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+networks:
+  n8n-shared-net:
+    external: true
+    name: n8n-shared-net 
