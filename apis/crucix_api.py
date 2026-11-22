@@ -33,36 +33,12 @@ DB_CONFIG = {
     "database": os.getenv("POSTGRES_DB") or os.getenv("DB_NAME", "n8n"),
     "username": os.getenv("POSTGRES_USER") or os.getenv("DB_USER", "sql_admin"),
     "password": os.getenv("POSTGRES_PASSWORD") or os.getenv("DB_PASSWORD", "sql_pass"),
-    "connect_timeout": 15,
-}
+    "connect_timeout": 15}
 
 session = requests.Session()
-session.mount(
-    "http://",
-    HTTPAdapter(
-        max_retries=Retry(
-            total=3,
-            connect=3,
-            read=3,
-            backoff_factor=1,
-            status_forcelist=[500, 502, 503, 504],
-            allowed_methods=["GET"],
-        )
-    ),
-)
-session.mount(
-    "https://",
-    HTTPAdapter(
-        max_retries=Retry(
-            total=3,
-            connect=3,
-            read=3,
-            backoff_factor=1,
-            status_forcelist=[500, 502, 503, 504],
-            allowed_methods=["GET"],
-        )
-    ),
-)
+adapter = HTTPAdapter(max_retries=Retry(total=3, connect=3, read=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504], allowed_methods=["GET"]))
+session.mount("http://", adapter)
+session.mount("https://", adapter)
 
 # Crucix dashboard typically exposes up to 50 news items and 50 Telegram/feed items.
 MAX_NEWS_ITEMS = 50
@@ -79,11 +55,8 @@ OSINT_COLUMNS = {
 }
 
 CRYPTO_KEYWORDS = [
-    "crypto", "bitcoin", "btc", "eth", "ethereum", "sol", "sui",
-    "meme", "defi", "rwa", "tokenization", "fed", "federal reserve",
-    "inflation", "interest rate", "treasury", "financial market",
-    "stock market", "oil price",
-]
+    "crypto", "bitcoin", "btc", "eth", "ethereum", "sol", "sui", "meme", "defi", "rwa", "tokenization", "fed", "federal reserve",
+    "inflation", "interest rate", "treasury", "financial market", "stock market", "oil price"]
 KEYWORD_RE = re.compile(r"\b(?:" + "|".join(re.escape(word) for word in CRYPTO_KEYWORDS) + r")\b", re.IGNORECASE)
 
 
@@ -318,62 +291,4 @@ async def trigger_crucix_pipeline(request: CrucixRequest, background_tasks: Back
         "max_items_per_group": request.max_items,
         "filter_keywords": request.filter_keywords,
         "destination": "bronze.osint_feeds",
-    }
-
-
-@router.get("/health")
-async def crucix_health():
-    try:
-        data = crucix_get()
-        fetched_at = datetime.now(timezone.utc).isoformat()
-        rows = build_feed_rows(data, fetched_at, max_items=MAX_NEWS_ITEMS, filter_keywords=False)
-        news_count = sum(1 for row in rows if row["kind"] != "telegram")
-        telegram_count = sum(1 for row in rows if row["kind"] == "telegram")
-
-        return {
-            "status": "ok",
-            "crucix_api_url": CRUCIX_API_URL,
-            "response_type": type(data).__name__,
-            "rows": {"osint_feeds": len(rows), "news": news_count, "telegram_feed_items": telegram_count},
-        }
-
-    except Exception as exc:
-        logger.exception("Crucix API nem érhető el")
-        raise HTTPException(status_code=502, detail=f"Crucix API hiba ({CRUCIX_API_URL}): {exc}") from exc
-
-
-@router.get("/preview")
-async def crucix_preview(
-    limit: int = 10,
-    filter_keywords: bool = False,
-):
-    try:
-        data = crucix_get()
-    except Exception as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Crucix API hiba ({CRUCIX_API_URL}): {exc}",
-        ) from exc
-
-    fetched_at = datetime.now(timezone.utc).isoformat()
-    rows = build_feed_rows(
-        data,
-        fetched_at,
-        max_items=MAX_NEWS_ITEMS,
-        filter_keywords=filter_keywords,
-    )
-
-    news_count = sum(1 for row in rows if row["kind"] != "telegram")
-    telegram_count = sum(1 for row in rows if row["kind"] == "telegram")
-
-    return {
-        "rows": {
-            "osint_feeds": len(rows),
-            "news": news_count,
-            "telegram_feed_items": telegram_count,
-        },
-        "osint_feeds": [
-            {key: value for key, value in row.items() if key != "raw_data"}
-            for row in rows[:max(0, limit)]
-        ],
     }
