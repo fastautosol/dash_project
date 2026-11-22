@@ -1,5 +1,7 @@
-# 2026.11.02 EIA Grid dashboard - US map (opensky_charts stilus)
+# 2026.11.22 EIA Grid dashboard - US map (opensky_charts stilus)
+import os
 import time
+import logging
 
 import dash
 import numpy as np
@@ -10,38 +12,67 @@ import dash_bootstrap_components as dbc
 from dash import html, Input, Output, callback, dcc, no_update
 from sqlalchemy import create_engine, text
 
+logger = logging.getLogger(__name__)
+
 # ----- 1. CONFIGURATION -----
-DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
-sql_engine = create_engine(DB_CONFIG, pool_size=5, max_overflow=10, pool_pre_ping=True, pool_recycle=1800,
-    connect_args={'connect_timeout': 5, 'keepalives': 1, 'keepalives_idle': 30, 'keepalives_interval': 10, 'keepalives_count': 5})
+PG_USER = os.getenv("POSTGRES_USER", "sql_admin")
+PG_PASS = os.getenv("POSTGRES_PASSWORD", "sql_pass")
+PG_HOST = os.getenv("POSTGRES_HOST", "postgresql")
+PG_PORT = os.getenv("POSTGRES_PORT", "5432")
+PG_DB = os.getenv("POSTGRES_DB", "n8n")
+
+DB_CONFIG = f"postgresql+psycopg://{PG_USER}:{PG_PASS}@{PG_HOST}:{PG_PORT}/{PG_DB}"
+sql_engine = create_engine(
+    DB_CONFIG,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    connect_args={
+        "connect_timeout": 5,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    },
+)
 
 dash.register_page(__name__, icon="fa-solid fa-bolt", name="EIA Grid", order=4)
 
-DAILY_TZ = "Eastern"                      # a napi (daily-*) EIA adat idozona-kulcsa
+DAILY_TZ = "Eastern"
 DEFAULT_RESPONDENT = "CISO"
-CORE = ["CISO", "ERCO", "PJM", "MISO"]    # az indexelt osszehasonlitashoz
+CORE = ["CISO", "ERCO", "PJM", "MISO"]
 CACHE_SECONDS = 60
-MAP_HEIGHT = 530                          # px; a jobb oldali ket kis chart egyutt ennyi
+MAP_HEIGHT = 530
 WEEKDAYS = {1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat", 7: "Sun"}
-FUEL_COLORS = {"Nuclear": "#a78bfa", "Coal": "#6b7280", "Natural gas": "#f59e0b", "Petroleum": "#92400e", "Other": "#9ca3af",
-               "Hydro": "#3b82f6", "Geothermal": "#14b8a6", "Wind": "#34d399", "Solar": "#facc15"}
-
-# terkep-metrikak: oszlop -> (cimke, szinskala, kozepre igazitott-e, formatum)
-MAP_METRICS = {
-    "growth_pct":     ("Demand growth, 30d vs same period last year (%)", "RdBu_r", True,  "{:+.1f}%"),
-    "carbon_free_pct": ("Carbon-free share, 30d (%)",                      "YlGn",   False, "{:.1f}%"),
-    "gas_pct":        ("Natural gas share, 30d (%)",                       "YlOrBr", False, "{:.1f}%"),
-    "fe_pct":         ("Day-ahead forecast error, 30d (abs %)",            "YlOrRd", False, "{:.2f}%"),
-    "net_export_pct": ("Net export, % of demand (30d)",                    "PuOr",   True,  "{:+.1f}%"),
-    "lmp_latest":     ("Latest day-ahead LMP ($/MWh)",                     "Plasma", False, "{:.1f}"),
+FUEL_COLORS = {
+    "Nuclear": "#a78bfa",
+    "Coal": "#6b7280",
+    "Natural gas": "#f59e0b",
+    "Petroleum": "#92400e",
+    "Other": "#9ca3af",
+    "Hydro": "#3b82f6",
+    "Geothermal": "#14b8a6",
+    "Wind": "#34d399",
+    "Solar": "#facc15",
 }
 
-# ---- Glass Card ----
+MAP_METRICS = {
+    "growth_pct":      ("Demand growth, 30d vs same period last year (%)", "RdBu_r", True,  "{:+.1f}%"),
+    "carbon_free_pct": ("Carbon-free share, 30d (%)",                      "YlGn",   False, "{:.1f}%"),
+    "gas_pct":         ("Natural gas share, 30d (%)",                       "YlOrBr", False, "{:.1f}%"),
+    "fe_pct":          ("Day-ahead forecast error, 30d (abs %)",            "YlOrRd", False, "{:.2f}%"),
+    "net_export_pct":  ("Net export, % of demand (30d)",                    "PuOr",   True,  "{:+.1f}%"),
+    "lmp_latest":      ("Latest day-ahead LMP ($/MWh)",                     "Plasma", False, "{:.1f}"),
+}
+
 CARD_STYLE = {
     "background": "rgba(255, 255, 255, 0.03)",
     "backdrop-filter": "blur(10px)",
-    "border-radius": "15px", "border": "1px solid rgba(255, 255, 255, 0.1)",
-    "padding": "15px", "width": "100%"
+    "border-radius": "15px",
+    "border": "1px solid rgba(255, 255, 255, 0.1)",
+    "padding": "15px",
+    "width": "100%",
 }
 
 # ----- 2. SQL -----
@@ -63,7 +94,6 @@ MIX_SQL = """
     WHERE respondent = :r AND "timezone" = :tz AND day >= CURRENT_DATE - CAST(:d AS integer)
     ORDER BY day, sort_order
 """
-# terkep: utolso 30 nap vs. az elozo evi azonos 30 napos ablak (365 nappal korabban)
 MAP_SQL = """
     WITH ld AS (SELECT MAX(day) AS d FROM silver.grid_daily WHERE "timezone" = :tz),
     cur AS (
@@ -104,7 +134,11 @@ LMP_LATEST_SQL = """
     WHERE t.lmp_avg IS NOT NULL
     GROUP BY t.respondent
 """
-DIM_SQL = "SELECT * FROM silver.dim_respondent ORDER BY is_core DESC, respondent_code"
+DIM_SQL = """
+    SELECT respondent_code, respondent_name, region, operator_type, iso_code, is_core, tz, datacenter_market, lat, lon
+    FROM silver.dim_respondent
+    ORDER BY is_core DESC, respondent_code
+"""
 
 
 def q(sql: str, **params) -> pd.DataFrame:
@@ -130,8 +164,8 @@ def make_card(title, content, is_graph=True, legend_bottom=False, md=4, height=2
     return dbc.Col([
         html.Div([
             html.H6(title, className="mb-1", style={"color": "#f59e0b", "fontWeight": "500"}),
-            dcc.Graph(figure=content, config={'displayModeBar': False}, style={"height": f"{height}px"})
-            if is_graph else html.Div(content, style={"height": f"{height}px", "overflowY": "auto"})
+            dcc.Graph(figure=content, config={"displayModeBar": False}, style={"height": f"{height}px"})
+            if is_graph else html.Div(content, style={"height": f"{height}px", "overflowY": "auto"}),
         ], style=CARD_STYLE)
     ], md=md)
 
@@ -140,18 +174,23 @@ TABLE_STYLE = {"backgroundColor": "transparent", "--bs-table-bg": "transparent",
 
 
 def make_table(df_table, small=True):
-    """dbc.Table.from_dataframe helyett kezzel epitett tabla, igy a dbc verziojatol fuggetlen."""
     head = html.Thead(html.Tr([html.Th(str(c)) for c in df_table.columns]))
     body = html.Tbody([html.Tr([html.Td("" if pd.isna(v) else str(v)) for v in row]) for row in df_table.itertuples(index=False)])
-    return dbc.Table([head, body], striped=False, hover=True, responsive=True, borderless=True,
-                     className="text-light small" if small else "text-light m-0", style=TABLE_STYLE)
+    return dbc.Table(
+        [head, body],
+        striped=False,
+        hover=True,
+        responsive=True,
+        borderless=True,
+        className="text-light small" if small else "text-light m-0",
+        style=TABLE_STYLE,
+    )
 
 
 _cache = {"ts": 0.0, "df": None}
 
 
 def load_map_data() -> pd.DataFrame:
-    """Respondensenkent 1 sor: dim (lat/lon/nev) + terkepes metrikak. CACHE_SECONDS-ig cache-elve."""
     now = time.time()
     if _cache["df"] is not None and now - _cache["ts"] < CACHE_SECONDS:
         return _cache["df"].copy()
@@ -159,7 +198,7 @@ def load_map_data() -> pd.DataFrame:
     df = q(DIM_SQL)
     for sql, params in ((MAP_SQL, dict(tz=DAILY_TZ)), (MIX_SUMMARY_SQL, dict(tz=DAILY_TZ)), (LMP_LATEST_SQL, {})):
         part = q(sql, **params)
-        if "respondent" not in part.columns:     # ures eredmeny -> csak NaN oszlopok
+        if "respondent" not in part.columns:
             continue
         df = df.merge(part, left_on="respondent_code", right_on="respondent", how="left").drop(columns=["respondent"])
     for c in ["avg_mw", *MAP_METRICS]:
@@ -173,7 +212,7 @@ def build_map(df: pd.DataFrame, metric: str, selected: str) -> go.Figure:
     fig = go.Figure()
 
     if "lat" not in df.columns or df["lat"].isna().all():
-        return empty_fig("silver.dim_respondent has no lat/lon - deploy the new eia_silver.py and re-run the silver step")
+        return empty_fig("silver.dim_respondent has no lat/lon - re-run the silver step")
 
     d = df.dropna(subset=["lat", "lon", "avg_mw"]).copy()
     if d.empty:
@@ -183,21 +222,40 @@ def build_map(df: pd.DataFrame, metric: str, selected: str) -> go.Figure:
     d["hover"] = [
         f"<b>{r.respondent_code}</b> · {r.respondent_name}<br>"
         f"Avg demand: {r.avg_mw:,.0f} MW<br>"
-        + "<br>".join(f"{MAP_METRICS[k][0].split(',')[0].split(' (')[0]}: {'–' if pd.isna(getattr(r, k)) else MAP_METRICS[k][3].format(getattr(r, k))}" for k in MAP_METRICS)
-        for r in d.itertuples()]
+        + "<br>".join(
+            f"{MAP_METRICS[k][0].split(',')[0].split(' (')[0]}: {'–' if pd.isna(getattr(r, k)) else MAP_METRICS[k][3].format(getattr(r, k))}"
+            for k in MAP_METRICS
+        )
+        for r in d.itertuples()
+    ]
 
-    # kijelolt respondent: halvany halo a buborek alatt
     sel = d[d["respondent_code"] == selected]
     if not sel.empty:
-        fig.add_trace(go.Scattermap(lat=sel["lat"], lon=sel["lon"], mode="markers", hoverinfo="skip",
-                                    marker=dict(size=sel["size"] + 14, color="rgba(245, 158, 11, 0.35)")))
+        fig.add_trace(
+            go.Scattermap(
+                lat=sel["lat"],
+                lon=sel["lon"],
+                mode="markers",
+                customdata=sel["respondent_code"],
+                hoverinfo="skip",
+                marker=dict(size=sel["size"] + 14, color="rgba(245, 158, 11, 0.35)"),
+            )
+        )
 
     has = d[d[metric].notna()]
     miss = d[d[metric].isna()]
-    if not miss.empty:   # nincs adat -> szurke
-        fig.add_trace(go.Scattermap(lat=miss["lat"], lon=miss["lon"], mode="markers", customdata=miss["respondent_code"],
-                                    hovertext=miss["hover"], hoverinfo="text",
-                                    marker=dict(size=miss["size"], color="rgba(156,163,175,0.55)")))
+    if not miss.empty:
+        fig.add_trace(
+            go.Scattermap(
+                lat=miss["lat"],
+                lon=miss["lon"],
+                mode="markers",
+                customdata=miss["respondent_code"],
+                hovertext=miss["hover"],
+                hoverinfo="text",
+                marker=dict(size=miss["size"], color="rgba(156,163,175,0.55)"),
+            )
+        )
     if not has.empty:
         vals = has[metric]
         if diverging:
@@ -206,30 +264,52 @@ def build_map(df: pd.DataFrame, metric: str, selected: str) -> go.Figure:
         else:
             lo, hi = float(np.nanpercentile(vals, 5)), float(np.nanpercentile(vals, 95))
             rng = dict(cmin=lo, cmax=hi if hi > lo else lo + 1e-6)
-        fig.add_trace(go.Scattermap(
-            lat=has["lat"], lon=has["lon"], mode="markers+text", customdata=has["respondent_code"],
-            text=has["respondent_code"], textposition="top right", textfont=dict(color="rgba(255,255,255,0.75)", size=9),
-            hovertext=has["hover"], hoverinfo="text",
-            marker=dict(size=has["size"], color=vals, colorscale=scale, opacity=0.85, **rng,
-                        colorbar=dict(title=dict(text=label.split(" (")[0].split(",")[0], font=dict(size=10, color="white")),
-                                      thickness=10, len=0.55, x=0.99, tickfont=dict(size=9, color="white")))))
+        fig.add_trace(
+            go.Scattermap(
+                lat=has["lat"],
+                lon=has["lon"],
+                mode="markers+text",
+                customdata=has["respondent_code"],
+                text=has["respondent_code"],
+                textposition="top right",
+                textfont=dict(color="rgba(255,255,255,0.75)", size=9),
+                hovertext=has["hover"],
+                hoverinfo="text",
+                marker=dict(
+                    size=has["size"],
+                    color=vals,
+                    colorscale=scale,
+                    opacity=0.85,
+                    **rng,
+                    colorbar=dict(
+                        title=dict(text=label.split(" (")[0].split(",")[0], font=dict(size=10, color="white")),
+                        thickness=10,
+                        len=0.55,
+                        x=0.99,
+                        tickfont=dict(size=9, color="white"),
+                    ),
+                ),
+            )
+        )
 
     fig.update_layout(
-        margin={"r": 0, "t": 0, "l": 0, "b": 0}, showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
-        uirevision="eia-map",   # frissitesnel / metrikavaltasnal megtartja a zoom/pan allast
-        map=dict(style="carto-darkmatter", center=dict(lat=38.5, lon=-96.5), zoom=3.1))
+        margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)",
+        uirevision="eia-map",
+        map=dict(style="carto-darkmatter", center=dict(lat=38.5, lon=-96.5), zoom=3.1),
+    )
     return fig
 
 
 # ----- 4. LAYOUT -----
 layout = dbc.Container([
-
     html.Div([
         html.H2("EIA Grid Dashboard", className="text-light fw-bold mb-0"),
-        html.P(id='eia-metrics-update', className="text-muted small"),
+        html.P(id="eia-metrics-update", className="text-muted small"),
     ], className="mb-3"),
 
-    dcc.Interval(id='eia-refresh', interval=600000),   # 10 perc: az adat 3 oranként / naponta frissül
+    dcc.Interval(id="eia-refresh", interval=600000),
 
     dbc.Row([
         dbc.Col(dbc.Select(id="eia-respondent", options=[{"label": DEFAULT_RESPONDENT, "value": DEFAULT_RESPONDENT}], value=DEFAULT_RESPONDENT), md=4),
@@ -237,38 +317,33 @@ layout = dbc.Container([
         dbc.Col(dbc.Select(id="eia-map-metric", options=[{"label": f"Map colour: {v[0]}", "value": k} for k, v in MAP_METRICS.items()], value="growth_pct"), md=6),
     ], className="g-3 mb-3"),
 
-    # ---- MAP (2x szeles, 2x magas) + jobbra 2 kis chart ----
     dbc.Row([
         dbc.Col(html.Div([
             html.H6("US Grid Map  (bubble size = avg demand, click = select)", className="mb-1", style={"color": "#f59e0b", "fontWeight": "500"}),
-            dcc.Graph(id="eia-map", config={'displayModeBar': False}, style={"height": f"{MAP_HEIGHT}px"}),
+            dcc.Graph(id="eia-map", config={"displayModeBar": False}, style={"height": f"{MAP_HEIGHT}px"}),
         ], style=CARD_STYLE), md=8),
         dbc.Col(dbc.Row(id="eia-side", className="g-3"), md=4),
     ], className="g-3 mb-3"),
 
-    # ---- 3 KIS CHART ----
     dbc.Row(id="eia-mini-charts", className="g-3 mb-3"),
-
-    # ---- 3 KIS TABLA ----
     dbc.Row(id="eia-mini-tables", className="g-3 mb-3"),
 
-    # ---- LOG TABLE ----
     html.Div([
         html.H5("Hourly Demand & Day-ahead LMP (latest 100)", className="mb-2", style={"color": "#f59e0b", "fontWeight": "500"}),
-        html.Div(id='eia-log-table', style={"height": "300px", "overflowY": "auto", "fontSize": "12px"})
-    ], style=CARD_STYLE)
-
+        html.Div(id="eia-log-table", style={"height": "300px", "overflowY": "auto", "fontSize": "12px"}),
+    ], style=CARD_STYLE),
 ], fluid=True)
 
 
-# ----- 5. DASHBOARD BUILDER (callbacktol fuggetlen, tesztelheto) -----
+# ----- 5. DASHBOARD BUILDER -----
 def build_dashboard(resp: str, days: int):
     hourly = q(HOURLY_SQL, r=resp, d=days)
     grid = q(GRID_SQL, tz=DAILY_TZ, d=days)
     mix = q(MIX_SQL, r=resp, tz=DAILY_TZ, d=days)
     try:
         mp = load_map_data()
-    except Exception:
+    except Exception as exc:
+        logger.warning("EIA map data betoltesi hiba: %s", exc)
         mp = pd.DataFrame(columns=["respondent_code", "growth_pct", "fe_pct", "carbon_free_pct"])
 
     if not hourly.empty:
@@ -281,7 +356,6 @@ def build_dashboard(resp: str, days: int):
 
     dem = hourly.dropna(subset=["demand_mwh"]) if not hourly.empty else hourly
 
-    # ---- jobb oldal: 2 chart a terkep mellett ----
     if dem.empty:
         fig = empty_fig(f"No hourly demand for {resp}")
     else:
@@ -295,11 +369,18 @@ def build_dashboard(resp: str, days: int):
         fig = empty_fig(f"No generation mix for {resp}")
     else:
         order = mx.drop_duplicates("fueltype_name").sort_values("sort_order")["fueltype_name"].tolist()
-        fig = px.area(mx, x="day", y="generation_mwh", color="fueltype_name", color_discrete_map=FUEL_COLORS,
-                      category_orders={"fueltype_name": order}, template="plotly_dark", labels={"day": "", "generation_mwh": "MWh"})
+        fig = px.area(
+            mx,
+            x="day",
+            y="generation_mwh",
+            color="fueltype_name",
+            color_discrete_map=FUEL_COLORS,
+            category_orders={"fueltype_name": order},
+            template="plotly_dark",
+            labels={"day": "", "generation_mwh": "MWh"},
+        )
     side.append(make_card(f"{resp} Generation Mix (daily MWh)", fig, legend_bottom=True, md=12, height=MAP_HEIGHT // 2 - 55))
 
-    # ---- 3 kis chart a terkep alatt ----
     mini_charts = []
     if dem.empty:
         fig = empty_fig("No data")
@@ -324,11 +405,12 @@ def build_dashboard(resp: str, days: int):
             s = grid[grid["respondent"] == r].sort_values("day").set_index("day")["demand_mwh"].rolling(7, min_periods=4).mean().dropna()
             if len(s) > 0 and s.iloc[0] != 0:
                 parts.append(pd.DataFrame({"day": s.index, "respondent": r, "index": s.values / s.iloc[0] * 100}))
-    fig = (px.line(pd.concat(parts), x="day", y="index", color="respondent", template="plotly_dark", labels={"day": "", "index": "start = 100"})
-           if parts else empty_fig("No data"))
+    fig = (
+        px.line(pd.concat(parts), x="day", y="index", color="respondent", template="plotly_dark", labels={"day": "", "index": "start = 100"})
+        if parts else empty_fig("No data")
+    )
     mini_charts.append(make_card("Demand Index (7d avg, start=100)", fig, legend_bottom=True))
 
-    # ---- 3 kis tabla (a terkep adataibol) ----
     def top(col, name, asc, n=25):
         if col not in mp.columns or mp[col].notna().sum() == 0:
             return pd.DataFrame(columns=["respondent", name])
@@ -343,12 +425,12 @@ def build_dashboard(resp: str, days: int):
         make_card("Carbon-free % (30d)", make_table(top("carbon_free_pct", "carbon_free_pct", False)), is_graph=False),
     ]
 
-    # ---- log ----
     if dem.empty:
         log_tbl = html.Div("No hourly data", className="text-muted")
     else:
         log = dem.sort_values("interval_start_utc", ascending=False).head(100)[
-            ["interval_start_utc", "demand_mwh", "lmp_avg", "ref_lmp", "congestion_avg", "ghg_avg"]].copy()
+            ["interval_start_utc", "demand_mwh", "lmp_avg", "ref_lmp", "congestion_avg", "ghg_avg"]
+        ].copy()
         log["interval_start_utc"] = log["interval_start_utc"].dt.strftime("%Y-%m-%d %H:%M")
         log_tbl = make_table(log.round(2), small=False)
 
@@ -359,22 +441,23 @@ def build_dashboard(resp: str, days: int):
 
 # ----- 6. CALLBACKS -----
 @callback(
-    Output('eia-respondent', 'options'),
-    Input('eia-refresh', 'n_intervals'),
+    Output("eia-respondent", "options"),
+    Input("eia-refresh", "n_intervals"),
 )
 def load_respondents(_):
     try:
         df = q("SELECT respondent_code, respondent_name FROM silver.dim_respondent ORDER BY is_core DESC, respondent_code")
-    except Exception:
+    except Exception as exc:
+        logger.warning("Respondent lista betoltesi hiba: %s", exc)
         return [{"label": r, "value": r} for r in CORE]
     return [{"label": f"{r.respondent_code} · {r.respondent_name}", "value": r.respondent_code} for r in df.itertuples()]
 
 
 @callback(
-    Output('eia-map', 'figure'),
-    Input('eia-refresh', 'n_intervals'),
-    Input('eia-map-metric', 'value'),
-    Input('eia-respondent', 'value'),
+    Output("eia-map", "figure"),
+    Input("eia-refresh", "n_intervals"),
+    Input("eia-map-metric", "value"),
+    Input("eia-respondent", "value"),
 )
 def update_map(_, metric, resp):
     try:
@@ -384,8 +467,8 @@ def update_map(_, metric, resp):
 
 
 @callback(
-    Output('eia-respondent', 'value'),
-    Input('eia-map', 'clickData'),
+    Output("eia-respondent", "value"),
+    Input("eia-map", "clickData"),
     prevent_initial_call=True,
 )
 def select_from_map(click):
@@ -398,17 +481,18 @@ def select_from_map(click):
 
 
 @callback(
-    Output('eia-metrics-update', 'children'),
-    Output('eia-side', 'children'),
-    Output('eia-mini-charts', 'children'),
-    Output('eia-mini-tables', 'children'),
-    Output('eia-log-table', 'children'),
-    Input('eia-refresh', 'n_intervals'),
-    Input('eia-respondent', 'value'),
-    Input('eia-days', 'value'),
+    Output("eia-metrics-update", "children"),
+    Output("eia-side", "children"),
+    Output("eia-mini-charts", "children"),
+    Output("eia-mini-tables", "children"),
+    Output("eia-log-table", "children"),
+    Input("eia-refresh", "n_intervals"),
+    Input("eia-respondent", "value"),
+    Input("eia-days", "value"),
 )
 def load_data_render(_, resp, days):
     try:
         return build_dashboard(resp or DEFAULT_RESPONDENT, int(days or 90))
     except Exception as exc:
-        return f"DB error: {exc}", [], [], [], None
+        logger.exception("EIA dashboard render hiba: %s", exc)
+        return f"DB error ({PG_HOST}:{PG_PORT}): {exc}", [], [], [], None
