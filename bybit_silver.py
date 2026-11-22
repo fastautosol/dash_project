@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # CONFIGURATION
 # ============================================================
-REFRESH_HOURS = 120    # újraszámolt ablak
+REFRESH_HOURS = 240    # újraszámolt ablak
 WARMUP_HOURS  = 12   # visszatekintés az SMA100 és RSI14 bemelegítéséhez (144 gyertya)
 SRC_TABLE     = "pg.bronze.bybit_tickers"
 DST_TABLE     = "pg.silver.bybit_indicators"
