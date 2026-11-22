@@ -1,4 +1,4 @@
-# 2026.11.21 18.00 Polars + DuckDB Optimized Multi-Charts
+# 2026.11.22 15.00 Polars + DuckDB Optimized Multi-Charts
 import polars as pl
 import duckdb
 import dash
@@ -122,12 +122,14 @@ layout = dbc.Container(
     Input("page-load-trigger", "children"),
     Input("lwc-timer", "n_intervals"),
     Input("indicator-selector", "value"),
-    prevent_initial_call=False,
+    prevent_initial_call=False
 )
 def load_all_charts(_, n, indicators):
     # 1. Egyetlen szupergyors bináris adatátvitel DuckDB-vel -> Azonnal Polars DataFrame lesz (.pl())
+
+    with duck_conn.cursor() as local_conn:
+		all_data_pl = local_conn.sql("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").pl()
             
-    all_data_pl = duck_conn.sql("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").pl()
     if all_data_pl.height == 0:
         return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
                         
