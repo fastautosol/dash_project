@@ -1,21 +1,31 @@
-# 2026.10.24  18.00
+# 2026.11.22  17.00
+import os
 import duckdb
 from sqlalchemy import create_engine, text
 from apis.lufthansa_airports import AIRPORTS
 
-DB_CONFIG = "postgresql+psycopg://sql_admin:sql_pass@postgresql:5432/n8n"
-sql_engine = create_engine(DB_CONFIG)
+PG_USER = os.getenv("POSTGRES_USER", "sql_admin")
+PG_PASS = os.getenv("POSTGRES_PASSWORD", "sql_pass")
+PG_HOST = os.getenv("POSTGRES_HOST", "postgresql")
+PG_PORT = os.getenv("POSTGRES_PORT", "5432")
+PG_DB = os.getenv("POSTGRES_DB", "n8n")
+
+DB_CONFIG = f"postgresql+psycopg://{PG_USER}:{PG_PASS}@{PG_HOST}:{PG_PORT}/{PG_DB}"
+PG_CONN = os.getenv("PG_CONN", f"dbname={PG_DB} user={PG_USER} password={PG_PASS} host={PG_HOST} port={PG_PORT}")
+sql_engine = create_engine(DB_CONFIG, pool_pre_ping=True)
+
 
 def run_gold_transformation():
-
     conn = duckdb.connect()
     try:
-        conn.execute("INSTALL postgres; LOAD postgres;")
-        conn.execute("ATTACH 'dbname=n8n user=sql_admin password=sql_pass host=postgresql port=5432' AS pg (TYPE POSTGRES);")
+        try:
+            conn.execute("LOAD postgres;")
+        except duckdb.IOException:
+            conn.execute("INSTALL postgres; LOAD postgres;")
+        conn.execute(f"ATTACH '{PG_CONN}' AS pg (TYPE POSTGRES);")
         conn.execute("CREATE SCHEMA IF NOT EXISTS pg.gold;")
 
-        # 1. gold.fact_lh_flights
-                # 1. gold.fact_lh_flights (JAVÍTOTT, repülési szabvány szerinti pontosság-számítással)
+        # 1. gold.fact_lh_flights (JAVÍTOTT, repülési szabvány szerinti pontosság-számítással)
         conn.execute("""
             CREATE OR REPLACE TABLE pg.gold.fact_lh_flights AS
             WITH calculated_delays AS (
@@ -31,17 +41,16 @@ def run_gold_transformation():
                 FROM pg.silver.fact_lh_flights
                 WHERE dep_sch_ts IS NOT NULL AND arr_sch_ts IS NOT NULL
             ),
-            final_metrics AS (SELECT  *, (dep_delay_min + arr_delay_min) AS total_delay_min FROM calculated_delays)
+            final_metrics AS (SELECT *, (dep_delay_min + arr_delay_min) AS total_delay_min FROM calculated_delays)
             SELECT 
                 *,
                 -- PONTOSSÁG: Ha az indulási ÉS érkezési késés is 15 percen belül volt (Nemzetközi turnus szabvány)
                 CASE WHEN dep_delay_min <= 15 AND arr_delay_min <= 15 THEN 1 ELSE 0 END AS is_ontime,
-                
+
                 -- KÉSÉS: Ha akár az indulás, akár az érkezés több mint 15 percet csúszott
                 CASE WHEN dep_delay_min > 15 OR arr_delay_min > 15 THEN 1 ELSE 0 END AS is_delayed
             FROM final_metrics;
         """)
-
 
         # 2. gold.dim_lh_schedule (ÚJ MENETRENDI DIMENZIÓTÁBLA)
         conn.execute("""
@@ -56,36 +65,38 @@ def run_gold_transformation():
                 destination AS arr_airport_code,
                 route_key,
                 sequence_number,
-                
+
                 -- Idő dimenzióhoz csatolható dátum ID
-                schedule_start_date AS flight_date_id, 
+                schedule_start_date AS flight_date_id,
                 schedule_end_date,
                 days_of_operation,
-                
+
                 aircraft_type,
                 aircraft_configuration,
                 registration,
                 service_type,
                 is_operating,
-                
+
                 departure_time_utc,
                 arrival_time_utc,
                 departure_time_lt,
                 arrival_time_lt,
-                
+
                 departure_terminal,
                 arrival_terminal,
                 marketing_flights,
-                
+
                 -- A Silver rétegben kinyert értékes JSON mezők
                 booking_classes,
                 e_ticket_indicator,
-                
+
                 -- Egyedi kompozit üzleti kulcs, ha a menetrendet és a járat tényadatot össze akarod kötni
                 (airline || '_' || flight_number || '_' || schedule_start_date::TEXT) AS business_flight_key,
-                
+
                 _ingested_at
-            FROM pg.silver.lh_schedule;
+            FROM pg.silver.lh_schedule
+            WHERE flight_key IS NOT NULL
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY flight_key ORDER BY _ingested_at DESC) = 1;
         """)
 
         # 3. gold.dim_lh_airports
@@ -98,7 +109,6 @@ def run_gold_transformation():
                 UNION
                 SELECT arr_airport_code AS airport_code FROM pg.gold.fact_lh_flights WHERE arr_airport_code IS NOT NULL
                 UNION
-                -- Itt a pg.gold.dim_lh_schedule táblát olvassuk, amiben már a tiszta oszlopnevek vannak!
                 SELECT dep_airport_code AS airport_code FROM pg.gold.dim_lh_schedule WHERE dep_airport_code IS NOT NULL
                 UNION
                 SELECT arr_airport_code AS airport_code FROM pg.gold.dim_lh_schedule WHERE arr_airport_code IS NOT NULL
@@ -131,7 +141,9 @@ def run_gold_transformation():
         conn.execute("""
             CREATE OR REPLACE TABLE pg.gold.dim_lh_date AS
             WITH bounds AS (
-                SELECT MIN(dep_sch_ts::DATE) AS min_date, MAX(dep_sch_ts::DATE) + INTERVAL '1 year' AS max_date
+                SELECT
+                    COALESCE(MIN(dep_sch_ts::DATE), CURRENT_DATE) AS min_date,
+                    COALESCE(MAX(dep_sch_ts::DATE), CURRENT_DATE) + INTERVAL '1 year' AS max_date
                 FROM pg.silver.fact_lh_flights
             ),
             date_range AS (
@@ -146,23 +158,19 @@ def run_gold_transformation():
         """)
         print("Gold réteg sikeresen frissítve a Postgres-ben!")
     finally:
-        conn.close() 
+        conn.close()
 
     # Postgres indexelés és megszorítások (Constraints) újjáépítése
-    with sql_engine.begin() as pg_conn:  
+    with sql_engine.begin() as pg_conn:
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_date ADD PRIMARY KEY (date_id);"))
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_airports ADD PRIMARY KEY (airport_code);"))
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_aircraft ADD PRIMARY KEY (aircraft_code);"))
-        
-        # Elsődleges kulcs hozzáadása az új menetrend dimenzióhoz
         pg_conn.execute(text("ALTER TABLE gold.dim_lh_schedule ADD PRIMARY KEY (schedule_id);"))
 
-        # Relációs indexek a Power BI beolvasás és csillagséma kapcsolatok gyorsítására
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_date ON gold.fact_lh_flights (flight_date_id);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_dep_air ON gold.fact_lh_flights (dep_airport_code);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_arr_air ON gold.fact_lh_flights (arr_airport_code);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_fact_aircraft ON gold.fact_lh_flights (equipment__aircraft_code);"))
-        
-        # Indexek az új menetrend táblára is a sémakapcsolatokhoz
+
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_sched_date ON gold.dim_lh_schedule (flight_date_id);"))
         pg_conn.execute(text("CREATE INDEX IF NOT EXISTS idx_sched_route ON gold.dim_lh_schedule (route_key);"))
