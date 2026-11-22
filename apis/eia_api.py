@@ -38,19 +38,7 @@ DEFAULT_RESPONDENTS = os.getenv(
 DEFAULT_TIMEZONE = os.getenv("EIA_TIMEZONE", "Eastern").split(",")
 
 session = requests.Session()
-session.mount(
-    "https://",
-    HTTPAdapter(
-        max_retries=Retry(
-            total=5,
-            connect=5,
-            read=5,
-            backoff_factor=3,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["GET"],
-        )
-    ),
-)
+session.mount("https://", HTTPAdapter(max_retries=Retry(total=5, connect=5, read=5, backoff_factor=3, status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"])))
 
 ENDPOINTS = {
     "eia_petroleum_spot": dict(route="petroleum/pri/spt", pk=["period", "series"], data=["value"]),
