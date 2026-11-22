@@ -56,6 +56,7 @@ services:
       TZ: ${TZ:-Europe/Berlin}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
       N8N_MIGRATE_FS_STORAGE_PATH: "true"
+      N8N_PROXY_HOPS: 1
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgresql
       DB_POSTGRESDB_PORT: 5432
