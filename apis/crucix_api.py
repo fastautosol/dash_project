@@ -3,18 +3,22 @@ import hashlib
 import logging
 import os
 import re
+import threading
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any
 
 import dlt
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 from apis.crucix_silver import run_osint_silver_transformation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+PIPELINE_LOCK = threading.Lock()
 
 # ---------------------------------------------------------------------
 # Configuration
@@ -24,12 +28,41 @@ CRUCIX_API_URL = os.getenv("CRUCIX_API_URL", "http://crucix:3117/api/data")
 REQUEST_TIMEOUT = 30
 
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "postgresql"),
-    "port": int(os.getenv("DB_PORT", "5432")),
-    "database": os.getenv("DB_NAME", "n8n"),
-    "username": os.getenv("DB_USER", "sql_admin"),
-    "password": os.getenv("DB_PASSWORD", "sql_pass"),
-    "connect_timeout": 15}
+    "host": os.getenv("POSTGRES_HOST") or os.getenv("DB_HOST", "postgresql"),
+    "port": int(os.getenv("POSTGRES_PORT") or os.getenv("DB_PORT", "5432")),
+    "database": os.getenv("POSTGRES_DB") or os.getenv("DB_NAME", "n8n"),
+    "username": os.getenv("POSTGRES_USER") or os.getenv("DB_USER", "sql_admin"),
+    "password": os.getenv("POSTGRES_PASSWORD") or os.getenv("DB_PASSWORD", "sql_pass"),
+    "connect_timeout": 15,
+}
+
+session = requests.Session()
+session.mount(
+    "http://",
+    HTTPAdapter(
+        max_retries=Retry(
+            total=3,
+            connect=3,
+            read=3,
+            backoff_factor=1,
+            status_forcelist=[500, 502, 503, 504],
+            allowed_methods=["GET"],
+        )
+    ),
+)
+session.mount(
+    "https://",
+    HTTPAdapter(
+        max_retries=Retry(
+            total=3,
+            connect=3,
+            read=3,
+            backoff_factor=1,
+            status_forcelist=[500, 502, 503, 504],
+            allowed_methods=["GET"],
+        )
+    ),
+)
 
 # Crucix dashboard typically exposes up to 50 news items and 50 Telegram/feed items.
 MAX_NEWS_ITEMS = 50
@@ -49,12 +82,15 @@ CRYPTO_KEYWORDS = [
     "crypto", "bitcoin", "btc", "eth", "ethereum", "sol", "sui",
     "meme", "defi", "rwa", "tokenization", "fed", "federal reserve",
     "inflation", "interest rate", "treasury", "financial market",
-    "stock market", "oil price"]
+    "stock market", "oil price",
+]
 KEYWORD_RE = re.compile(r"\b(?:" + "|".join(re.escape(word) for word in CRYPTO_KEYWORDS) + r")\b", re.IGNORECASE)
+
 
 class CrucixRequest(BaseModel):
     max_items: int = Field(default=50, ge=1, le=500)
     filter_keywords: bool = False
+
 
 # ---------------------------------------------------------------------
 # Crucix API and helpers
@@ -62,7 +98,7 @@ class CrucixRequest(BaseModel):
 
 def crucix_get() -> Any:
     """Fetch the current Crucix /api/data payload."""
-    response = requests.get(CRUCIX_API_URL, timeout=REQUEST_TIMEOUT, headers={"Accept": "application/json"})
+    response = session.get(CRUCIX_API_URL, timeout=REQUEST_TIMEOUT, headers={"Accept": "application/json"})
     response.raise_for_status()
     return response.json()
 
@@ -229,10 +265,17 @@ def run_crucix_pipeline(
 
         pipeline = dlt.pipeline(
             pipeline_name="crucix_osint_pipeline",
-            destination=destination or dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze")
+            destination=destination or dlt.destinations.postgres(credentials=DB_CONFIG),
+            dataset_name="bronze",
+        )
 
-        resource = dlt.resource(feed_rows, name="osint_feeds", write_disposition="merge", primary_key="record_id", columns=OSINT_COLUMNS)
-
+        resource = dlt.resource(
+            feed_rows,
+            name="osint_feeds",
+            write_disposition="merge",
+            primary_key="record_id",
+            columns=OSINT_COLUMNS,
+        )
 
         load_info = pipeline.run(resource)
         logger.info("Crucix DLT pipeline sikeres: %s", load_info)
@@ -245,17 +288,18 @@ def run_crucix_pipeline(
 
 
 def run_pipeline_background(max_items: int, filter_keywords: bool) -> None:
+    if not PIPELINE_LOCK.acquire(blocking=False):
+        logger.warning("A crucix_osint_pipeline már fut, újabb indítás kihagyva.")
+        return
+
     try:
         run_crucix_pipeline(max_items=max_items, filter_keywords=filter_keywords)
-    except Exception:
-        # The full exception has already been logged by run_crucix_pipeline.
-        pass
-        
-    try:
         run_osint_silver_transformation()
     except Exception:
-        # A silver hibát a run_osint_silver_transformation már logolta.
+        # A hibát a belső függvények már részletesen logolták.
         pass
+    finally:
+        PIPELINE_LOCK.release()
 
 
 # ---------------------------------------------------------------------
@@ -264,6 +308,9 @@ def run_pipeline_background(max_items: int, filter_keywords: bool) -> None:
 
 @router.post("/run")
 async def trigger_crucix_pipeline(request: CrucixRequest, background_tasks: BackgroundTasks):
+    if PIPELINE_LOCK.locked():
+        return {"status": "busy", "message": "Crucix pipeline már fut a háttérben"}
+
     background_tasks.add_task(run_pipeline_background, request.max_items, request.filter_keywords)
     return {
         "status": "accepted",
@@ -289,7 +336,7 @@ async def crucix_health():
             "response_type": type(data).__name__,
             "rows": {"osint_feeds": len(rows), "news": news_count, "telegram_feed_items": telegram_count},
         }
-        
+
     except Exception as exc:
         logger.exception("Crucix API nem érhető el")
         raise HTTPException(status_code=502, detail=f"Crucix API hiba ({CRUCIX_API_URL}): {exc}") from exc
