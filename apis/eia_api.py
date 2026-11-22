@@ -1,7 +1,8 @@
-# 2026.10.31 10.00 EIA + ISO LMP - POST /hourly & /daily
+# 2026.11.22 16.00 EIA + ISO LMP - POST /hourly & /daily
 import os
 import time
 import logging
+import threading
 from datetime import date, timedelta
 
 import dlt
@@ -15,19 +16,42 @@ from apis.eia_silver import run_eia_silver_transformation
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+HOURLY_LOCK = threading.Lock()
+DAILY_LOCK = threading.Lock()
+
 EIA_KEY = os.getenv("EIA_API_KEY", "YNAIaZXieTAUvQjk3JhfehqZW44ucqOzF9jutPhB")
 BASE = "https://api.eia.gov/v2"
 PAGE = 500
 
-DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 25}
-DEFAULT_RESPONDENTS = os.getenv("EIA_RESPONDENTS", "CISO,ERCO,PJM,MISO,SWPP,SOCO,DUK,TVA,FPL,FPC,TEC,NYIS,ISNE,AZPS,SRP,TEPC,NEVP,PGE,PACW,PACE,BPAT").split(",")
+DB_CONFIG = {
+    "host": os.getenv("POSTGRES_HOST", "postgresql"),
+    "port": int(os.getenv("POSTGRES_PORT", "5432")),
+    "database": os.getenv("POSTGRES_DB", "n8n"),
+    "username": os.getenv("POSTGRES_USER", "sql_admin"),
+    "password": os.getenv("POSTGRES_PASSWORD", "sql_pass"),
+    "connect_timeout": 25,
+}
+DEFAULT_RESPONDENTS = os.getenv(
+    "EIA_RESPONDENTS",
+    "CISO,ERCO,PJM,MISO,SWPP,SOCO,DUK,TVA,FPL,FPC,TEC,NYIS,ISNE,AZPS,SRP,TEPC,NEVP,PGE,PACW,PACE,BPAT",
+).split(",")
 DEFAULT_TIMEZONE = os.getenv("EIA_TIMEZONE", "Eastern").split(",")
 
 session = requests.Session()
-session.mount("https://", HTTPAdapter(max_retries=Retry(total=5, connect=5, read=5, backoff_factor=3, status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"])))
+session.mount(
+    "https://",
+    HTTPAdapter(
+        max_retries=Retry(
+            total=5,
+            connect=5,
+            read=5,
+            backoff_factor=3,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"],
+        )
+    ),
+)
 
-# ---------------------------------------------------------------- EIA ----------------------------------------------------------------
-# uses_respondent: respondent facet; uses_timezone: timezone facet (csak a daily-* route-okon letezik)
 ENDPOINTS = {
     "eia_petroleum_spot": dict(route="petroleum/pri/spt", pk=["period", "series"], data=["value"]),
     "eia_natgas_futures": dict(route="natural-gas/pri/fut", pk=["period", "series"], data=["value"]),
@@ -38,7 +62,6 @@ ENDPOINTS = {
     "eia_elec_hourly_demand": dict(route="electricity/rto/region-data", pk=["period", "respondent", "type"], data=["value"], uses_respondent=True, facets={"type": ["D"]}, frequency="hourly"),
 }
 
-# melyik vegpont melyik tablait futtatja
 HOURLY_EIA = ["eia_elec_hourly_demand"]
 DAILY_EIA = [k for k in ENDPOINTS if k not in HOURLY_EIA]
 
@@ -55,22 +78,30 @@ def build_facets(cfg: dict, respondents: list[str], timezone: list[str]) -> dict
 def eia_fetch(cfg: dict, facets: dict, start: str, end: str):
     offset = 0
     freq = cfg.get("frequency", "daily")
-    if freq == "hourly":  # orás adatnal YYYY-MM-DDTHH formatum kell (UTC)
+    if freq == "hourly":
         start, end = f"{start}T00", f"{end}T23"
     while True:
-        params = [("api_key", EIA_KEY), ("frequency", freq), ("start", start), ("end", end), ("sort[0][column]", "period"), ("sort[0][direction]", "asc"), ("offset", offset), ("length", PAGE)]
+        params = [
+            ("api_key", EIA_KEY),
+            ("frequency", freq),
+            ("start", start),
+            ("end", end),
+            ("sort[0][column]", "period"),
+            ("sort[0][direction]", "asc"),
+            ("offset", offset),
+            ("length", PAGE),
+        ]
         params += [(f"data[{i}]", c) for i, c in enumerate(cfg["data"])]
         for facet, values in facets.items():
             params += [(f"facets[{facet}][]", v) for v in values]
 
         r = session.get(f"{BASE}/{cfg['route']}/data/", params=params, timeout=(10, 240))
         if not r.ok:
-            raise Exception(f"EIA error {r.status_code} on {cfg['route']}: {r.text}")
+            raise RuntimeError(f"EIA error {r.status_code} on {cfg['route']}: {r.text}")
 
         rows = r.json()["response"].get("data", [])
-
         for row in rows:
-            for c in cfg["data"]:  # az EIA stringkent adja az ertekeket
+            for c in cfg["data"]:
                 row[c] = float(row[c]) if row.get(c) not in (None, "") else None
             yield row
 
@@ -97,28 +128,29 @@ def run_eia_pipeline(pipeline_name: str, names: list[str], days_back: int, respo
     end = date.today().isoformat()
     start = (date.today() - timedelta(days=days_back)).isoformat()
 
-    # tablankent kulon futas, hogy egy hibas route ne vigye el a tobbit
     for name in names:
         cfg = ENDPOINTS[name]
         try:
             facets = build_facets(cfg, respondents, timezone)
-            pipeline = dlt.pipeline(pipeline_name=pipeline_name, destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze")
+            pipeline = dlt.pipeline(
+                pipeline_name=pipeline_name,
+                destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+                dataset_name="bronze",
+            )
             info = pipeline.run(make_resource(name, cfg, facets, start, end))
             logger.info("EIA %s kesz: %s", name, info)
         except Exception as e:
             logger.exception("EIA %s hiba: %s", name, e)
 
 
-# ------------------------------------------------- ISO day-ahead orás LMP (gridstatus) -------------------------------------------------
 LMP_TABLE = "iso_lmp_hourly"
 LMP_PK = ["interval_start_utc", "iso", "location", "market"]
 LMP_MARKET = "DAY_AHEAD_HOURLY"
 
-# cls: gridstatus osztaly; respondent: megfelelo EIA respondent (osszekapcsolashoz);
-# pass_locations: a get_lmp kapja-e a helyszinlistat (CAISO-nal kotelezo), kulonben utolag szurunk
 ISO_LMP = {
     "CAISO": dict(cls="CAISO", respondent="CISO", pass_locations=True, locations=["TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND"]),
-    "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None)}
+    "NYISO": dict(cls="NYISO", respondent="NYIS", pass_locations=False, locations=None),
+}
 DEFAULT_ISOS = os.getenv("LMP_ISOS", "CAISO,NYISO").split(",")
 
 
@@ -143,7 +175,6 @@ def normalize_lmp(df, iso: str, cfg: dict) -> list[dict]:
     for col in ("lmp", "energy", "congestion", "loss"):
         out[col] = pd.to_numeric(df[col], errors="coerce") if col in df.columns else None
 
-    # CAISO uvegházgáz-komponens: a nyers oszlop neve verziotol fuggoen "ghg" vagy "mghg" lehet
     ghg_col = next((c for c in ("ghg", "mghg") if c in df.columns), None)
     out["ghg"] = pd.to_numeric(df[ghg_col], errors="coerce") if ghg_col else None
     if iso == "CAISO" and ghg_col is None:
@@ -182,10 +213,9 @@ def make_lmp_resource(iso: str, cfg: dict, start: str, end: str, locations: list
 def run_lmp_pipeline(days_back: int, isos: list[str] | None, locations: dict[str, list[str]] | None):
     isos = isos or DEFAULT_ISOS
     locations = locations or {}
-    end = date.today().isoformat()  # a holnapi DAM-ot a kovetkezo futas hozza be
+    end = (date.today() + timedelta(days=2)).isoformat()
     start = (date.today() - timedelta(days=days_back)).isoformat()
 
-    # ISO-nkent kulon futas, hogy egy hibas ISO ne vigye el a tobbit
     for iso in isos:
         cfg = ISO_LMP.get(iso)
         if not cfg:
@@ -193,7 +223,11 @@ def run_lmp_pipeline(days_back: int, isos: list[str] | None, locations: dict[str
             continue
         try:
             locs = locations.get(iso) or cfg["locations"]
-            pipeline = dlt.pipeline(pipeline_name="iso_lmp", destination=dlt.destinations.postgres(credentials=DB_CONFIG), dataset_name="bronze")
+            pipeline = dlt.pipeline(
+                pipeline_name="iso_lmp",
+                destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+                dataset_name="bronze",
+            )
             info = pipeline.run(make_lmp_resource(iso, cfg, start, end, locs))
             logger.info("LMP %s kesz: %s", iso, info)
         except Exception as e:
@@ -201,50 +235,64 @@ def run_lmp_pipeline(days_back: int, isos: list[str] | None, locations: dict[str
 
 
 class HourlyRequest(BaseModel):
-    days_back: int = 3                                  # 3 oranként futtatva ez bőven elég
-    respondents: list[str] | None = None                # None = DEFAULT_RESPONDENTS
-    timezone: list[str] | None = None                   # None = DEFAULT_TIMEZONE
-    isos: list[str] | None = None                       # None = DEFAULT_ISOS
-    locations: dict[str, list[str]] | None = None       # ISO-nkent helyszinlista
+    days_back: int = 3
+    respondents: list[str] | None = None
+    timezone: list[str] | None = None
+    isos: list[str] | None = None
+    locations: dict[str, list[str]] | None = None
 
 
 class DailyRequest(BaseModel):
-    days_back: int = 14                                 # az EIA utolag revidealja az adatot
-    tables: list[str] | None = None                     # None = mind a napi tablak
+    days_back: int = 14
+    tables: list[str] | None = None
     respondents: list[str] | None = None
     timezone: list[str] | None = None
 
 
 def run_hourly_job(days_back: int, respondents, timezone, isos, locations):
-    run_eia_pipeline("eia_hourly", HOURLY_EIA, days_back, respondents, timezone)
-    run_lmp_pipeline(days_back, isos, locations)
+    if not HOURLY_LOCK.acquire(blocking=False):
+        logger.warning("Az eia_hourly job mar fut, kihagyva.")
+        return
     try:
-        run_eia_silver_transformation(parts=("hourly"))
+        run_eia_pipeline("eia_hourly", HOURLY_EIA, days_back, respondents, timezone)
+        run_lmp_pipeline(days_back, isos, locations)
+        run_eia_silver_transformation(parts=("hourly",))
     except Exception as e:
-        logger.exception("EIA silver hiba: %s", e)
+        logger.exception("EIA hourly job hiba: %s", e)
+    finally:
+        HOURLY_LOCK.release()
 
 
 def run_daily_job(days_back: int, tables: list[str] | None, respondents, timezone):
-    names = [t for t in (tables or DAILY_EIA) if t in DAILY_EIA]
-    ignored = [t for t in (tables or []) if t not in DAILY_EIA]
-    if ignored:
-        logger.warning("/daily: ezek nem napi tablak, kihagyva (hasznald a /hourly vegpontot): %s", ignored)
-    if names:
-        run_eia_pipeline("eia_daily", names, days_back, respondents, timezone)
-        try:
-            run_eia_silver_transformation(parts=("daily"))
-        except Exception as e:
-            logger.exception("EIA silver hiba: %s", e)
+    if not DAILY_LOCK.acquire(blocking=False):
+        logger.warning("Az eia_daily job mar fut, kihagyva.")
+        return
+    try:
+        names = [t for t in (tables or DAILY_EIA) if t in DAILY_EIA]
+        ignored = [t for t in (tables or []) if t not in DAILY_EIA]
+        if ignored:
+            logger.warning("/daily: ezek nem napi tablak, kihagyva (hasznald a /hourly vegpontot): %s", ignored)
+        if names:
+            run_eia_pipeline("eia_daily", names, days_back, respondents, timezone)
+            run_eia_silver_transformation(parts=("daily",))
+    except Exception as e:
+        logger.exception("EIA daily job hiba: %s", e)
+    finally:
+        DAILY_LOCK.release()
 
 
 @router.post("/hourly")
 async def trigger_hourly(request: HourlyRequest, background_tasks: BackgroundTasks):
+    if HOURLY_LOCK.locked():
+        return {"status": "busy", "message": "hourly EIA + ISO LMP job is already running"}
     background_tasks.add_task(run_hourly_job, request.days_back, request.respondents, request.timezone, request.isos, request.locations)
     return {"status": "success", "message": "hourly EIA + ISO LMP gathering in background", "tables": HOURLY_EIA + ["iso_lmp_hourly"]}
 
 
 @router.post("/daily")
 async def trigger_daily(request: DailyRequest, background_tasks: BackgroundTasks):
+    if DAILY_LOCK.locked():
+        return {"status": "busy", "message": "daily EIA job is already running"}
     names = [t for t in (request.tables or DAILY_EIA) if t in DAILY_EIA]
     background_tasks.add_task(run_daily_job, request.days_back, request.tables, request.respondents, request.timezone)
     return {"status": "success", "message": "daily EIA gathering in background", "tables": names}
