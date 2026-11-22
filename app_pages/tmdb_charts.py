@@ -45,8 +45,7 @@ CARD_STYLE = {
     "border-radius": "15px",
     "border": "1px solid rgba(255, 255, 255, 0.1)",
     "padding": "15px",
-    "width": "100%",
-}
+    "width": "100%"}
 
 ACCENT = "#01b4e4"
 DASH_ID_TAG = "tmdb"
