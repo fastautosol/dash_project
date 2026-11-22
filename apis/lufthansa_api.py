@@ -17,6 +17,7 @@ import asyncio
 import requests
 import dlt
 import logging
+import threading
 from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks
 from dlt.pipeline.exceptions import PipelineStepFailed
@@ -27,6 +28,7 @@ logger = logging.getLogger("lufthansa_api")
 
 router = APIRouter()
 
+PIPELINE_LOCK = threading.Lock()
 DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
 LH_BASE_URL = "https://api.lufthansa.com/v1"
 MAX_CONCURRENT_REQUESTS = 4
@@ -401,14 +403,13 @@ async def fetch_lufthansa_data_async(flight_date: str):
         departure = row.get("Departure", {})
         scheduled = departure.get("Scheduled", {})
 
-        airline = operating.get("AirlineID")
-        flight_number = operating.get("FlightNumber")
-        flight_date_value = scheduled.get("Date")
-
-        if airline and flight_number and flight_date_value:
-            filtered["flight_key"] = f"{airline}_{flight_number}_{flight_date_value}"
-
-        clean_flights.append(filtered)
+        if isinstance(operating, dict) and isinstance(scheduled, dict):
+            airline = operating.get("AirlineID")
+            flight_number = operating.get("FlightNumber")
+            flight_date_value = scheduled.get("Date")
+            if airline and flight_number and flight_date_value:
+                filtered["flight_key"] = f"{airline}_{flight_number}_{flight_date_value}"
+                clean_flights.append(filtered)
 
     return clean_flights, schedule_data
 
@@ -418,45 +419,46 @@ async def fetch_lufthansa_data_async(flight_date: str):
 # ============================================================
 
 def run_dlt_pipeline(flight_date: str):
-    try:
-        logger.info("Starting background Lufthansa pipeline for date=%s", flight_date)
-        clean_flights, schedule_data = asyncio.run(fetch_lufthansa_data_async(flight_date))
-
-        if not clean_flights and not schedule_data:
-            logger.info("No data collected for date=%s", flight_date)
-            return
-
-        pipeline = get_pipeline()
-
-        if clean_flights:
-            try:
-                load_info = pipeline.run(flights_resource(clean_flights), write_disposition="merge", primary_key=["flight_key"])
-                logger.info("Flights DLT pipeline finished: %s", load_info)
-            except PipelineStepFailed as e:
-                logger.error("Flight DLT pipeline error, falling back to append: %s", e)
-                pipeline.drop_pending_packages()
-                load_info = pipeline.run(flights_resource(clean_flights), write_disposition="append")
-                logger.info("Flights DLT pipeline fallback finished: %s", load_info)
-
-        if schedule_data:
-            try:
-                load_info = pipeline.run(schedule_resource(schedule_data), write_disposition="merge", primary_key=["flight_key"])
-                logger.info("Schedule DLT pipeline finished: %s", load_info)  
-            except PipelineStepFailed as e:
-                logger.error("Schedule DLT pipeline error, falling back to append: %s", e)
-                pipeline.drop_pending_packages()
-                load_info = pipeline.run(schedule_resource(schedule_data), write_disposition="append")
-                logger.info("Schedule DLT pipeline fallback finished: %s", load_info)
+    with PIPELINE_LOCK:
+        try:
+            logger.info("Starting background Lufthansa pipeline for date=%s", flight_date)
+            clean_flights, schedule_data = asyncio.run(fetch_lufthansa_data_async(flight_date))
+    
+            if not clean_flights and not schedule_data:
+                logger.info("No data collected for date=%s", flight_date)
+                return
+    
+            pipeline = get_pipeline()
+    
+            if clean_flights:
+                try:
+                    load_info = pipeline.run(flights_resource(clean_flights), write_disposition="merge", primary_key=["flight_key"])
+                    logger.info("Flights DLT pipeline finished: %s", load_info)
+                except PipelineStepFailed as e:
+                    logger.error("Flight DLT pipeline error, falling back to append: %s", e)
+                    pipeline.drop_pending_packages()
+                    load_info = pipeline.run(flights_resource(clean_flights), write_disposition="append")
+                    logger.info("Flights DLT pipeline fallback finished: %s", load_info)
+    
+            if schedule_data:
+                try:
+                    load_info = pipeline.run(schedule_resource(schedule_data), write_disposition="merge", primary_key=["flight_key"])
+                    logger.info("Schedule DLT pipeline finished: %s", load_info)  
+                except PipelineStepFailed as e:
+                    logger.error("Schedule DLT pipeline error, falling back to append: %s", e)
+                    pipeline.drop_pending_packages()
+                    load_info = pipeline.run(schedule_resource(schedule_data), write_disposition="append")
+                    logger.info("Schedule DLT pipeline fallback finished: %s", load_info)
+                
+             # >>> SILVER -> GOLD TABLES
+            logger.info("Starting Silver transformation via DuckDB...")
+            run_silver_transformation()
+            logger.info("Starting Gold transformation and indexing...")
+            run_gold_transformation() 
+            logger.info("Lufthansa E2E pipeline finished successfully for date=%s", flight_date)
             
-         # >>> SILVER -> GOLD TABLES
-        logger.info("Starting Silver transformation via DuckDB...")
-        run_silver_transformation()
-        logger.info("Starting Gold transformation and indexing...")
-        run_gold_transformation() 
-        logger.info("Lufthansa E2E pipeline finished successfully for date=%s", flight_date)
-        
-    except Exception as e:
-        logger.exception("Lufthansa pipeline failed for date=%s: %s", flight_date, e)
+        except Exception as e:
+            logger.exception("Lufthansa pipeline failed for date=%s: %s", flight_date, e)
 
 
 # ============================================================
