@@ -19,7 +19,7 @@ router = APIRouter()
 HOURLY_LOCK = threading.Lock()
 DAILY_LOCK = threading.Lock()
 
-EIA_KEY = os.getenv("EIA_API_KEY", "YNAIaZXieTAUvQjk3JhfehqZW44ucqOzF9jutPhB")
+EIA_KEY = os.getenv("EIA_API_KEY")
 BASE = "https://api.eia.gov/v2"
 PAGE = 500
 
