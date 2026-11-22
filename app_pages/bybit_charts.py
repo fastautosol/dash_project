@@ -125,13 +125,12 @@ layout = dbc.Container(
     prevent_initial_call=False
 )
 def load_all_charts(_, n, indicators):
-    # 1. Egyetlen szupergyors bináris adatátvitel DuckDB-vel -> Azonnal Polars DataFrame lesz (.pl())
 
     with duck_conn.cursor() as local_conn:
-		all_data_pl = local_conn.sql("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").pl()
+	    all_data_pl = local_conn.sql("SELECT symbol, timestamp, open, high, low, close, volume FROM pg.bybit_data.bybit_candles").pl()
             
     if all_data_pl.height == 0:
-        return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
+    	return {sym: {"candles": [], "indicators": []} for sym in SYMBOLS}
                         
     parts = all_data_pl.partition_by("symbol", as_dict=True)
     result = {}
