@@ -1,12 +1,14 @@
-# 2026.10.05  18.00
-import requests
-import dlt
-import time
+# 2026.11.22  15.00
 import os
 import re
 import html
+import time
 import logging
+import threading
 from datetime import datetime, timedelta, timezone
+
+import dlt
+import requests
 from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 
@@ -14,13 +16,21 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.themoviedb.org/3"
 router = APIRouter()
-DB_CONFIG = {"host": "postgresql", "port": 5432, "database": "n8n", "username": "sql_admin", "password": "sql_pass", "connect_timeout": 15}
-TMDB_API_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2NmNhZGRhZmFlZTExMGU4ZDZiNzEzNjkxZTA4N2E5NiIsIm5iZiI6MTc5MTIwNjk4OC40NTIsInN1YiI6IjZhYzNhNjRjODU4MTM4MmU0OTQ1NWI2NSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.sJPOOZ-NQNlYCDPMqqe3ikQUxjK6USitksUuCB6qyFI"
+PIPELINE_LOCK = threading.Lock()
 
-# --- beállítások ---
-TMDB_MAX_CHANGE_DAYS = 14        # a /movie/changes legfeljebb 14 napos időszakot enged
-REQUEST_DELAY_SEC = 0.1          # TMDB rate limit biztonsági tartalék
-MAX_REVIEW_CHARS = 1500          # egy kritika max hossza a bronze rétegben
+DB_CONFIG = {
+    "host": os.getenv("POSTGRES_HOST", "postgresql"),
+    "port": int(os.getenv("POSTGRES_PORT", "5432")),
+    "database": os.getenv("POSTGRES_DB", "n8n"),
+    "username": os.getenv("POSTGRES_USER", "sql_admin"),
+    "password": os.getenv("POSTGRES_PASSWORD", "sql_pass"),
+    "connect_timeout": 15}
+
+TMDB_API_TOKEN = os.getenv("TMDB_API_KEY")
+
+TMDB_MAX_CHANGE_DAYS = 14
+REQUEST_DELAY_SEC = 0.1
+MAX_REVIEW_CHARS = 1500
 
 EMOJI_PATTERN = re.compile(
     "["
@@ -30,7 +40,14 @@ EMOJI_PATTERN = re.compile(
     "\U00002B00-\U00002BFF"
     "\U0000FE0F"
     "]+",
-    flags=re.UNICODE)
+    flags=re.UNICODE,
+)
+
+session = requests.Session()
+session.headers.update({
+    "accept": "application/json",
+    "Authorization": f"Bearer {TMDB_API_TOKEN}",
+})
 
 
 def clean_text(text: str) -> str:
@@ -44,15 +61,21 @@ def clean_text(text: str) -> str:
 
 
 class MovieRequest(BaseModel):
-    max_movies: int = 20
-    days_back: int = 7           # csak az első futásra számít, utána a dlt incremental állapota dönt
+    max_movies: int = 200
+    days_back: int = 7
 
 
 def tmdb_get(endpoint: str, params: dict | None = None) -> dict | None:
-    """GET a TMDB-re. 404 -> None (pl. törölt film), 429 -> várakozás és újrapróbálás."""
-    headers = {"accept": "application/json", "Authorization": f"Bearer {TMDB_API_TOKEN}"}
-    for attempt in range(3):
-        response = requests.get(f"{BASE_URL}/{endpoint}", headers=headers, params=params, timeout=30)
+    """GET a TMDB-re Session-nel; kezeli a 404, 429 és átmeneti 5xx hibákat."""
+    for attempt in range(4):
+        try:
+            response = session.get(f"{BASE_URL}/{endpoint}", params=params, timeout=30)
+        except requests.RequestException as exc:
+            wait = 2 ** attempt
+            logger.warning("TMDB hálózati hiba (/%s): %s, retry %ss múlva", endpoint, exc, wait)
+            time.sleep(wait)
+            continue
+
         if response.status_code == 200:
             return response.json()
         if response.status_code == 404:
@@ -62,54 +85,73 @@ def tmdb_get(endpoint: str, params: dict | None = None) -> dict | None:
             logger.warning("TMDB rate limit, várakozás %ss", wait)
             time.sleep(wait)
             continue
-        raise Exception(f"TMDB API error {response.status_code} on /{endpoint}: {response.text}")
-    raise Exception(f"TMDB API: túl sok újrapróbálás on /{endpoint}")
+        if response.status_code in (500, 502, 503, 504):
+            wait = 2 ** attempt
+            logger.warning("TMDB %s hiba (/%s), retry %ss múlva", response.status_code, endpoint, wait)
+            time.sleep(wait)
+            continue
+
+        raise RuntimeError(f"TMDB API error {response.status_code} on /{endpoint}: {response.text}")
+
+    raise RuntimeError(f"TMDB API: túl sok újrapróbálás on /{endpoint}")
 
 
-def get_changed_movie_ids(start_date: str, end_date: str, max_movies: int) -> list[int]:
-    """Lapozva (az API oldalanként 100 elemet ad)."""
-    ids, page = [], 1
+def get_changed_movie_ids(start_date: str, end_date: str, max_movies: int) -> tuple[list[int], int]:
+    """Visszaadja a módosult film ID-kat és az összes elérhető találat számát."""
+    ids, page, total_results = [], 1, 0
     while len(ids) < max_movies:
         data = tmdb_get("movie/changes", {"start_date": start_date, "end_date": end_date, "page": page})
         if not data:
             break
-        ids += [item["id"] for item in data.get("results", [])]
+        total_results = data.get("total_results", len(ids))
+        ids.extend(item["id"] for item in data.get("results", []) if not item.get("adult", False))
         if page >= data.get("total_pages", 1):
             break
         page += 1
-    return ids[:max_movies]
+    return ids[:max_movies], total_results
 
 
 def get_movie_details(movie_id: int) -> dict | None:
-    """Részletes adatok + user reviewk egy hívásban (append_to_response)."""
     return tmdb_get(f"movie/{movie_id}", {"append_to_response": "reviews,credits,keywords", "language": "en-US"})
 
 
-@dlt.resource(name="tmdb_movies_raw", write_disposition="merge", primary_key="movie_id", 
-    columns={"user_reviews": {"data_type": "json"},
-             "genres":       {"data_type": "json"},
-             "keywords":     {"data_type": "json"},
-             "top_cast":     {"data_type": "json"}})
-             
-def fetch_movies(max_movies: int = 20, updated_at=dlt.sources.incremental("updated_at")):
-    """Filmenként EGY sor: metaadatok + user_reviews (jsonb)."""
+@dlt.resource(
+    name="tmdb_movies_raw",
+    write_disposition="merge",
+    primary_key="movie_id",
+    columns={
+        "user_reviews": {"data_type": "json"},
+        "genres": {"data_type": "json"},
+        "keywords": {"data_type": "json"},
+        "top_cast": {"data_type": "json"},
+    },
+)
+def fetch_movies(max_movies: int = 200, updated_at=dlt.sources.incremental("updated_at")):
     now = datetime.now(timezone.utc)
     ingested_at = now.isoformat()
 
-    # kezdő dátum: az utolsó sikeres futás, de max. 14 nap vissza (TMDB korlát)
     start_dt = updated_at.last_value[:10]
     earliest = (now - timedelta(days=TMDB_MAX_CHANGE_DAYS)).strftime("%Y-%m-%d")
     start_dt = max(start_dt, earliest)
     end_dt = now.strftime("%Y-%m-%d")
 
-    movie_ids = get_changed_movie_ids(start_dt, end_dt, max_movies)
-    logger.info("%d módosult film a TMDB-n %s és %s között", len(movie_ids), start_dt, end_dt)
+    movie_ids, total_available = get_changed_movie_ids(start_dt, end_dt, max_movies)
+    truncated = total_available > len(movie_ids)
+    if truncated:
+        logger.warning(
+            "TMDB: %d/%d módosult film lekérve (%s..%s). Növeld a max_movies értéket, különben a maradék kimarad!",
+            len(movie_ids), total_available, start_dt, end_dt,
+        )
+    else:
+        logger.info("%d módosult film a TMDB-n %s és %s között", len(movie_ids), start_dt, end_dt)
+
+    # Ha csonkolva lett a lista, nem léptetjük előre a vízjelet a teljes időszakra
+    watermark_ts = f"{start_dt}T00:00:00+00:00" if truncated else ingested_at
 
     for movie_id in movie_ids:
         m = get_movie_details(movie_id)
         time.sleep(REQUEST_DELAY_SEC)
         if not m:
-            logger.info("Film %s nem érhető el (törölt?), kihagyva", movie_id)
             continue
 
         reviews = m.get("reviews", {}).get("results", [])
@@ -121,7 +163,7 @@ def fetch_movies(max_movies: int = 20, updated_at=dlt.sources.incremental("updat
             "revenue": m.get("revenue", 0),
             "release_date": m.get("release_date"),
             "vote_average": m.get("vote_average", 0.0),
-            "overview": clean_text(m.get("overview", "")),   
+            "overview": clean_text(m.get("overview", "")),
             "user_reviews": [clean_text(r["content"])[:MAX_REVIEW_CHARS] for r in reviews if r.get("content")],
             "original_title": m.get("original_title"),
             "original_language": m.get("original_language"),
@@ -138,39 +180,43 @@ def fetch_movies(max_movies: int = 20, updated_at=dlt.sources.incremental("updat
             "director": next((c["name"] for c in credits.get("crew", []) if c.get("job") == "Director"), None),
             "top_cast": [c["name"] for c in credits.get("cast", [])[:10]],
             "processed": False,
-            "updated_at": ingested_at,
+            "updated_at": watermark_ts,
         }
 
 
 def run_dlt_pipeline(max_movies: int, days_back: int):
-    """dlt futtatása és Postgresbe mentés"""
+    if not PIPELINE_LOCK.acquire(blocking=False):
+        logger.warning("A tmdb_data_pipeline már fut, újabb indítás kihagyva.")
+        return
+
     try:
         pipeline = dlt.pipeline(
             pipeline_name="tmdb_data_pipeline",
             destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-            dataset_name="bronze")
-
+            dataset_name="bronze",
+        )
         initial = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
         resource = fetch_movies(
             max_movies=max_movies,
-            updated_at=dlt.sources.incremental("updated_at", initial_value=initial))
-
+            updated_at=dlt.sources.incremental("updated_at", initial_value=initial),
+        )
         info = pipeline.run(resource)
         logger.info("dlt sikeresen végrehajtva: %s", info)
-
     except Exception as e:
-        logger.exception("pipeline hiba: %s", e)
+        logger.exception("TMDB pipeline hiba: %s", e)
+    finally:
+        PIPELINE_LOCK.release()
 
 
 @router.post("/")
 async def trigger_movie_fetch(request: MovieRequest, background_tasks: BackgroundTasks):
+    if PIPELINE_LOCK.locked():
+        return {"status": "busy", "message": "TMDB pipeline is already running"}
 
     background_tasks.add_task(run_dlt_pipeline, request.max_movies, request.days_back)
-
     return {"status": "success", "message": f"TMDB: max {request.max_movies} movie data gathering in background"}
 
 
-# --- kézi futtatás teszthez: python tmdb_api.py ---
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    run_dlt_pipeline(max_movies=20, days_back=7)
+    run_dlt_pipeline(max_movies=50, days_back=7)
