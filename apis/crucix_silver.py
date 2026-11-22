@@ -9,11 +9,9 @@ logger = logging.getLogger("osint_silver")
 SILVER_LOCK = threading.Lock()
 
 CRYPTO_KEYWORDS = [
-    "crypto", "bitcoin", "btc", "eth", "ethereum", "sol", "sui",
-    "meme", "defi", "rwa", "tokenization", "fed", "federal reserve",
-    "inflation", "interest rate", "treasury", "financial market",
-    "stock market", "oil price",
-]
+    "crypto", "bitcoin", "btc", "eth", "ethereum", "sol", "sui", "meme", "defi", "rwa", "tokenization", "fed", "federal reserve",
+    "inflation", "interest rate", "treasury", "financial market", "stock market", "oil price"]
+
 KEYWORD_PATTERN = r"\b(" + "|".join(re.escape(w) for w in CRYPTO_KEYWORDS) + r")\b"
 
 
