@@ -1,17 +1,23 @@
 # 2026.11.23  18.00
+import gzip
 import io
+import json
 import logging
+import math
 import os
 import re
+import tarfile
 import threading
 import unicodedata
+import zipfile
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 import dlt
 import httpx
-import pandas as pd
+import polars as pl
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
@@ -34,22 +40,21 @@ DB_CONFIG = {
     "database": os.getenv("POSTGRES_DB", "n8n"),
     "username": os.getenv("POSTGRES_USER", "sql_admin"),
     "password": os.getenv("POSTGRES_PASSWORD", "sql_pass"),
-    "connect_timeout": 15,
-}
+    "connect_timeout": 15}
 
 META_COLS = {"data_source_meta", "ingested_at", "_dlt_id", "_dlt_load_id"}
+MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024  # 100 MB limit kicsomagolás után
+SUPPORTED_DATA_EXTS = (".csv", ".xlsx", ".xls", ".json", ".jsonl", ".ndjson")
 
 # --- Táblaszintű zárolás ---
 _locks_guard = threading.Lock()
 _table_locks: dict[str, threading.Lock] = {}
-
 
 def _get_table_lock(table_name: str) -> threading.Lock:
     with _locks_guard:
         if table_name not in _table_locks:
             _table_locks[table_name] = threading.Lock()
         return _table_locks[table_name]
-
 
 def verify_api_key(x_api_key: str | None = Header(default=None)) -> None:
     if x_api_key != INGEST_API_KEY:
@@ -59,7 +64,7 @@ def verify_api_key(x_api_key: str | None = Header(default=None)) -> None:
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 
-# --- Kulcs-normalizálás (magyar ékezetek ASCII-sítása Excel/CSV fejlécekhez is) ---
+# --- Kulcs-normalizálás és adattisztítás ---
 def _strip_accents(text: str) -> str:
     nfkd = unicodedata.normalize("NFKD", text)
     return "".join(ch for ch in nfkd if not unicodedata.combining(ch))
@@ -77,10 +82,10 @@ def _sanitize_key(key: str, idx: int) -> str:
 
 
 def _normalize_value(val: Any) -> Any:
-    if val is None or (isinstance(val, float) and pd.isna(val)):
+    if val is None or (isinstance(val, float) and math.isnan(val)):
         return None
-    if isinstance(val, (pd.Timestamp, datetime)):
-        return None if pd.isna(val) else val.isoformat()
+    if isinstance(val, (datetime, date)):
+        return val.isoformat()
     if isinstance(val, dict):
         return {_sanitize_key(str(k), i): _normalize_value(v) for i, (k, v) in enumerate(val.items())}
     if isinstance(val, list):
@@ -99,13 +104,7 @@ def _prepare_records(records: list[dict[str, Any]], source_name: str) -> list[di
     return prepared
 
 
-def run_finance_dlt_ingest(
-    records: list[dict[str, Any]],
-    source_name: str,
-    table_name: str,
-    write_disposition: str = "merge",
-    primary_key: list[str] | str | None = None,
-) -> None:
+def run_finance_dlt_ingest(records: list[dict[str, Any]], source_name: str, table_name: str, write_disposition: str = "merge", primary_key: list[str] | str | None = None) -> None:
     if not records:
         logger.info("[FINANCE-DLT] Nincs betöltendő rekord (%s -> %s).", source_name, table_name)
         return
@@ -120,23 +119,15 @@ def run_finance_dlt_ingest(
             logger.warning("[FINANCE-DLT] Merge módhoz nincs primary_key megadva (%s) -> append módra váltás.", safe_table)
             effective_disposition = "append"
 
-        logger.info(
-            "[FINANCE-DLT] Betöltés indul (%d sor, mód=%s): %s -> bronze_api.%s",
-            len(rows), effective_disposition, source_name, safe_table,
-        )
+        logger.info("[FINANCE-DLT] Betöltés indul (%d sor, mód=%s): %s -> bronze_api.%s", len(rows), effective_disposition, source_name, safe_table)
 
         with table_lock:
-            pipeline = dlt.pipeline(
-                pipeline_name=f"finance_{safe_table}_ingest",
+            pipeline = dlt.pipeline(pipeline_name=f"finance_{safe_table}_ingest",
                 destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-                dataset_name="bronze_api",
-            )
+                dataset_name="bronze_api")
             pipeline.abort_packages()
 
-            resource_kwargs: dict[str, Any] = {
-                "name": safe_table,
-                "write_disposition": effective_disposition,
-            }
+            resource_kwargs: dict[str, Any] = {"name": safe_table, "write_disposition": effective_disposition}
             if primary_key and effective_disposition == "merge":
                 resource_kwargs["primary_key"] = primary_key
 
@@ -164,12 +155,7 @@ def _fetch_billingo_documents(api_key: str, days_back: int) -> list[dict[str, An
 
     with httpx.Client(timeout=45.0) as client:
         while True:
-            params = {
-                "page": page,
-                "per_page": 100,
-                "start_date": start_date,
-                "end_date": end_date,
-            }
+            params = {"page": page, "per_page": 100, "start_date": start_date, "end_date": end_date}
             resp = client.get(url, headers=headers, params=params)
             resp.raise_for_status()
             payload = resp.json()
@@ -182,7 +168,6 @@ def _fetch_billingo_documents(api_key: str, days_back: int) -> list[dict[str, An
 
 
 def _xml_to_dict(elem: ET.Element) -> Any:
-    # Namespace eltávolítása a tagekből
     children = list(elem)
     if not children:
         return (elem.text or "").strip()
@@ -223,12 +208,149 @@ def _fetch_szamlazzhu_by_numbers(agent_key: str, invoice_numbers: list[str]) -> 
                 logger.warning("[SZAMLAZZHU] Sikertelen lekérdezés (%s): %s", inv_num, parsed.get("hibauzenet"))
                 continue
 
-            # Tételek listává kényszerítése
             if isinstance(parsed, dict) and isinstance(parsed.get("tetelek"), dict):
                 raw_items = parsed["tetelek"].get("tetel", [])
                 parsed["tetelek"] = raw_items if isinstance(raw_items, list) else [raw_items]
             results.append(parsed)
     return results
+
+
+# --- Polars + Calamine + JSON + Archívum feldolgozó motor ---
+def _extract_json_records(raw_text: str, is_lines: bool = False) -> list[dict[str, Any]]:
+    if is_lines:
+        items = [json.loads(line) for line in raw_text.splitlines() if line.strip()]
+    else:
+        parsed = json.loads(raw_text)
+        if isinstance(parsed, list):
+            items = parsed
+        elif isinstance(parsed, dict):
+            list_candidates = [v for k, v in parsed.items() if k.lower() in {"data", "items", "records", "results", "rows"} and isinstance(v, list)]
+            if len(list_candidates) == 1:
+                items = list_candidates[0]
+            elif len(parsed) == 1 and isinstance(next(iter(parsed.values())), list):
+                items = next(iter(parsed.values()))
+            else:
+                items = [parsed]
+        else:
+            items = [{"value": parsed}]
+
+    return [item if isinstance(item, dict) else {"value": item} for item in items]
+
+
+def _detect_csv_separator(decoded_text: str) -> str:
+    first_line = decoded_text.splitlines()[0] if decoded_text.strip() else ""
+    counts = {sep: first_line.count(sep) for sep in (";", ",", "\t")}
+    best_sep = max(counts, key=lambda k: counts[k])
+    return best_sep if counts[best_sep] > 0 else ","
+
+
+def _clean_polars_df(df: pl.DataFrame) -> list[dict[str, Any]]:
+    if df.is_empty():
+        return []
+    df = df.filter(~pl.all_horizontal(pl.all().is_null()))
+    float_cols = [col for col, dtype in df.schema.items() if dtype in (pl.Float32, pl.Float64)]
+    if float_cols:
+        df = df.with_columns([pl.col(c).fill_nan(None) for c in float_cols])
+    return df.to_dicts()
+
+
+def _parse_single_file(content: bytes, filename: str, sheet_name: str = "") -> list[dict[str, Any]]:
+    lower_name = filename.lower()
+
+    if lower_name.endswith(".csv"):
+        for enc in ("utf-8-sig", "utf-8", "cp1250", "latin1"):
+            try:
+                text = content.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raise ValueError(f"Nem támogatott CSV karakterkódolás: {filename}")
+
+        if not text.strip():
+            return []
+
+        sep = _detect_csv_separator(text)
+        df = pl.read_csv(io.BytesIO(text.encode("utf-8")), separator=sep, infer_schema_length=10000, truncate_ragged_lines=True)
+        return _clean_polars_df(df)
+
+    if lower_name.endswith((".xlsx", ".xls")):
+        excel_kwargs: dict[str, Any] = {"engine": "calamine"}
+        clean_sheet = sheet_name.strip()
+        if clean_sheet:
+            if clean_sheet.isdigit():
+                idx = int(clean_sheet)
+                excel_kwargs["sheet_id"] = idx if idx >= 1 else 1
+            else:
+                excel_kwargs["sheet_name"] = clean_sheet
+        else:
+            excel_kwargs["sheet_id"] = 1
+
+        df = pl.read_excel(io.BytesIO(content), **excel_kwargs)
+        return _clean_polars_df(df)
+
+    if lower_name.endswith((".json", ".jsonl", ".ndjson")):
+        for enc in ("utf-8-sig", "utf-8", "cp1250"):
+            try:
+                text = content.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raise ValueError(f"Nem támogatott JSON karakterkódolás: {filename}")
+        return _extract_json_records(text, is_lines=lower_name.endswith((".jsonl", ".ndjson")))
+
+    raise ValueError(f"Nem támogatott fájlkiterjesztés: {filename}")
+
+
+def _is_ignored_archive_entry(entry_name: str) -> bool:
+    p = Path(entry_name)
+    return ("__MACOSX" in p.parts or p.name.startswith(".") or not p.name.lower().endswith(SUPPORTED_DATA_EXTS))
+
+
+def _parse_uploaded_payload(content: bytes, filename: str, sheet_name: str = "") -> list[dict[str, Any]]:
+    lower_name = filename.lower()
+
+    # ----- .tar / .tar.gz / .tgz archívum -----
+    if lower_name.endswith((".tar", ".tar.gz", ".tgz")):
+        records: list[dict[str, Any]] = []
+        total_unpacked = 0
+        with tarfile.open(fileobj=io.BytesIO(content), mode="r:*") as tf:
+            for member in tf.getmembers():
+                if not member.isfile() or _is_ignored_archive_entry(member.name):
+                    continue
+                total_unpacked += member.size
+                if total_unpacked > MAX_UNCOMPRESSED_BYTES:
+                    raise ValueError("A kicsomagolt archívum mérete meghaladja a 100 MB-os limitet.")
+                extracted = tf.extractfile(member)
+                if extracted:
+                    records.extend(_parse_single_file(extracted.read(), Path(member.name).name, sheet_name))
+        return records
+
+    # ----- Egyedi .gz fájl (pl. export.csv.gz vagy dump.json.gz) -----
+    if lower_name.endswith(".gz"):
+        decompressed = gzip.decompress(content)
+        if len(decompressed) > MAX_UNCOMPRESSED_BYTES:
+            raise ValueError("A kicsomagolt GZIP fájl mérete meghaladja a 100 MB-os limitet.")
+        inner_name = filename[:-3]
+        return _parse_single_file(decompressed, inner_name, sheet_name)
+
+    # ----- .zip archívum -----
+    if lower_name.endswith(".zip"):
+        records = []
+        total_unpacked = 0
+        with zipfile.ZipFile(io.BytesIO(content)) as zf:
+            for info in zf.infolist():
+                if info.is_dir() or _is_ignored_archive_entry(info.filename):
+                    continue
+                total_unpacked += info.file_size
+                if total_unpacked > MAX_UNCOMPRESSED_BYTES:
+                    raise ValueError("A kicsomagolt ZIP mérete meghaladja a 100 MB-os limitet.")
+                records.extend(_parse_single_file(zf.read(info.filename), Path(info.filename).name, sheet_name))
+        return records
+
+    # 4. Közvetlen adatfájl (.csv, .xlsx, .xls, .json, .jsonl, .ndjson)
+    return _parse_single_file(content, filename, sheet_name)
 
 
 # --- Request modellek ---
@@ -243,7 +365,7 @@ class SzamlazzHuSyncRequest(BaseModel):
     agent_key: str = Field(default_factory=lambda: os.getenv("SZAMLAZZHU_AGENT_KEY", ""))
     invoice_numbers: list[str] = Field(default_factory=list)
     table_name: str = "szamlazzhu_invoices"
-    records: list[dict[str, Any]] | None = None  # n8n Webhook / XML-export Push ág
+    records: list[dict[str, Any]] | None = None
 
 
 class FinanceMockRequest(BaseModel):
@@ -258,14 +380,12 @@ def _pull_and_ingest_billingo(req: BillingoSyncRequest) -> None:
     except Exception as e:
         logger.exception("[BILLINGO-PULL] Hiba: %s", e)
 
-
 @router.post("/billingo")
 async def sync_billingo(request: BillingoSyncRequest, background_tasks: BackgroundTasks):
     if request.records is None and not request.api_key:
         raise HTTPException(status_code=400, detail="Hiányzó Billingo api_key vagy records.")
     background_tasks.add_task(_pull_and_ingest_billingo, request)
     return {"status": "accepted", "provider": "billingo", "target_table": f"bronze_api.{request.table_name}"}
-
 
 @router.post("/billingo/mock")
 async def sync_billingo_mock(request: FinanceMockRequest, background_tasks: BackgroundTasks):
@@ -284,14 +404,12 @@ def _pull_and_ingest_szamlazzhu(req: SzamlazzHuSyncRequest) -> None:
     except Exception as e:
         logger.exception("[SZAMLAZZHU-PULL] Hiba: %s", e)
 
-
 @router.post("/szamlazzhu")
 async def sync_szamlazzhu(request: SzamlazzHuSyncRequest, background_tasks: BackgroundTasks):
     if request.records is None and (not request.agent_key or not request.invoice_numbers):
         raise HTTPException(status_code=400, detail="Add meg a records listát (webhook/export) vagy az agent_key + invoice_numbers mezőket.")
     background_tasks.add_task(_pull_and_ingest_szamlazzhu, request)
     return {"status": "accepted", "provider": "szamlazz.hu", "target_table": f"bronze_api.{request.table_name}"}
-
 
 @router.post("/szamlazzhu/mock")
 async def sync_szamlazzhu_mock(request: FinanceMockRequest, background_tasks: BackgroundTasks):
@@ -302,44 +420,11 @@ async def sync_szamlazzhu_mock(request: FinanceMockRequest, background_tasks: Ba
     return {"status": "accepted", "generated_records": len(mock_rows), "target_table": "bronze_api.szamlazzhu_invoices", "sample": mock_rows[:2]}
 
 
-# ---------- 3. UNIVERZÁLIS EXCEL / CSV FELDOLGOZÓ ----------
-def _parse_tabular_file(content: bytes, filename: str, sheet_name: str | int = 0) -> list[dict[str, Any]]:
-    lower_name = filename.lower()
-    buffer = io.BytesIO(content)
-
-    if lower_name.endswith(".csv"):
-        # Magyar CSV-k gyakran pontosvesszőt és UTF-8-SIG vagy Windows-1250 kódolást használnak
-        for enc in ("utf-8-sig", "utf-8", "cp1250", "latin1"):
-            try:
-                buffer.seek(0)
-                df = pd.read_csv(buffer, sep=None, engine="python", encoding=enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            raise ValueError("Nem támogatott CSV karakterkódolás.")
-    elif lower_name.endswith((".xlsx", ".xls")):
-        target_sheet: str | int = int(sheet_name) if isinstance(sheet_name, str) and sheet_name.isdigit() else sheet_name
-        df = pd.read_excel(buffer, sheet_name=target_sheet)
-    else:
-        raise ValueError("Csak .xlsx, .xls vagy .csv fájl tölthető fel.")
-
-    # Üres sorok eldobása és NaN/NaT -> None konverzió
-    df = df.dropna(how="all")
-    df = df.astype(object).where(pd.notnull(df), None)
-    return df.to_dict(orient="records")
-
-
+# ---------- 3. UNIVERZÁLIS FÁJLFELDOLGOZÓ (Polars + Calamine + JSON + Archívumok) ----------
 @router.post("/upload-file")
-async def upload_excel_or_csv(
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    table_name: str = Form(...),
-    primary_key: str = Form(default=""),
-    write_mode: str = Form(default="merge"),
-    sheet_name: str = Form(default="0"),
-    source_label: str = Form(default="excel_csv_upload"),
-):
+async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...), table_name: str = Form(...), primary_key: str = Form(default=""),
+    write_mode: str = Form(default="merge"), sheet_name: str = Form(default=""), source_label: str = Form(default="file_upload")):
+        
     if not file.filename:
         raise HTTPException(status_code=400, detail="Hiányzó fájlnév.")
 
@@ -348,24 +433,17 @@ async def upload_excel_or_csv(
         raise HTTPException(status_code=400, detail="Üres fájl.")
 
     try:
-        records = _parse_tabular_file(content, file.filename, sheet_name)
+        records = _parse_uploaded_payload(content, file.filename, sheet_name)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Fájlfeldolgozási hiba: {e}") from e
 
     if not records:
-        raise HTTPException(status_code=400, detail="A fájl nem tartalmaz adatokat.")
+        raise HTTPException(status_code=400, detail="A fájl nem tartalmaz feldolgozható rekordokat.")
 
     pk_list = [_sanitize_key(col, i) for i, col in enumerate(primary_key.split(",")) if col.strip()]
     safe_table = _sanitize_key(table_name, 0)
 
-    background_tasks.add_task(
-        run_finance_dlt_ingest,
-        records,
-        f"{source_label}:{file.filename}",
-        safe_table,
-        write_mode,
-        pk_list if pk_list else None,
-    )
+    background_tasks.add_task(run_finance_dlt_ingest, records, f"{source_label}:{file.filename}", safe_table, write_mode, pk_list if pk_list else None)
 
     return {
         "status": "accepted",
@@ -373,13 +451,12 @@ async def upload_excel_or_csv(
         "parsed_rows": len(records),
         "target_table": f"bronze_api.{safe_table}",
         "primary_key": pk_list or None,
-        "sample": records[:2],
-    }
+        "sample": records[:2]}
 
 
+# ---------- 4. BESZERZÉSI ÁRAK (COGS) MOCK ----------
 @router.post("/cogs/mock")
 async def sync_cogs_mock(background_tasks: BackgroundTasks):
-    """Beszerzési árak (COGS) mock betöltése a Gold rétegbeli árrésszámításhoz."""
     if not MOCK_ENABLED:
         raise HTTPException(status_code=404, detail="Mock modul nincs telepítve.")
     mock_rows = generate_mock_product_cogs()
