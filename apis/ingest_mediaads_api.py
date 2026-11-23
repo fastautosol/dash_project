@@ -1,4 +1,4 @@
-# 2026.11.23 12.00
+# 2026.11.23 14.00
 import json
 import logging
 import os
@@ -89,7 +89,7 @@ def run_ads_dlt_ingest(records: list[dict[str, Any]], source_name: str, table_na
             pipeline = dlt.pipeline(pipeline_name=f"ads_{table_name}_ingest",
                 destination=dlt.destinations.postgres(credentials=DB_CONFIG),
                 dataset_name="bronze_api")
-            pipeline.drop_pending_packages()
+            pipeline.abort_packages()
 
             @dlt.resource(name=table_name, write_disposition="merge", primary_key=primary_key)
             def ads_resource():
@@ -248,7 +248,7 @@ class AdsMockRequest(BaseModel):
 
 # --- Összetett Primary Key definíciók ---
 META_PK = ["date_start", "account_id", "campaign_id", "adset_id", "publisher_platform"]
-GOOGLE_PK = ["segments__date", "customer__id", "campaign__id", "ad_group__id"]
+GOOGLE_PK = ["segments__date", "customer__id", "campaign__id", "adgroup__id"]
 TIKTOK_PK = ["dimensions__stat_time_day", "advertiser_id", "dimensions__campaign_id", "dimensions__adgroup_id"]
 
 # ---------- 1. META ADS (Facebook + Instagram) ----------
