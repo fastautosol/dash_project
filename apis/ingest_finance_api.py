@@ -1,0 +1,387 @@
+# 2026.11.23  18.00
+import io
+import logging
+import os
+import re
+import threading
+import unicodedata
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+import dlt
+import httpx
+import pandas as pd
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile
+from pydantic import BaseModel, Field
+
+try:
+    from apis.ingest_finance_mock import (generate_mock_billingo_documents, generate_mock_product_cogs, generate_mock_szamlazzhu_invoices)
+    MOCK_ENABLED = True
+except ImportError:
+    MOCK_ENABLED = False
+
+logger = logging.getLogger("uvicorn.error")
+
+os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_ID"] = "true"
+os.environ["NORMALIZE__PARQUET_NORMALIZER__ADD_DLT_LOAD_ID"] = "true"
+
+INGEST_API_KEY = os.getenv("INGEST_API_KEY", "FAS")
+
+DB_CONFIG = {
+    "host": os.getenv("POSTGRES_HOST", "postgresql"),
+    "port": int(os.getenv("POSTGRES_PORT", "5432")),
+    "database": os.getenv("POSTGRES_DB", "n8n"),
+    "username": os.getenv("POSTGRES_USER", "sql_admin"),
+    "password": os.getenv("POSTGRES_PASSWORD", "sql_pass"),
+    "connect_timeout": 15,
+}
+
+META_COLS = {"data_source_meta", "ingested_at", "_dlt_id", "_dlt_load_id"}
+
+# --- Táblaszintű zárolás ---
+_locks_guard = threading.Lock()
+_table_locks: dict[str, threading.Lock] = {}
+
+
+def _get_table_lock(table_name: str) -> threading.Lock:
+    with _locks_guard:
+        if table_name not in _table_locks:
+            _table_locks[table_name] = threading.Lock()
+        return _table_locks[table_name]
+
+
+def verify_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    if x_api_key != INGEST_API_KEY:
+        raise HTTPException(status_code=401, detail="Érvénytelen vagy hiányzó X-API-Key.")
+
+
+router = APIRouter(dependencies=[Depends(verify_api_key)])
+
+
+# --- Kulcs-normalizálás (magyar ékezetek ASCII-sítása Excel/CSV fejlécekhez is) ---
+def _strip_accents(text: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in nfkd if not unicodedata.combining(ch))
+
+
+def _sanitize_key(key: str, idx: int) -> str:
+    ascii_key = _strip_accents((key or "").strip())
+    clean = re.sub(r"[^a-zA-Z0-9_]", "_", ascii_key).lower()
+    clean = re.sub(r"_+", "_", clean).strip("_")
+    if not clean:
+        clean = f"unnamed_col_{idx}"
+    if clean[0].isdigit():
+        clean = f"col_{clean}"
+    return f"src_{clean}" if clean in META_COLS else clean
+
+
+def _normalize_value(val: Any) -> Any:
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return None
+    if isinstance(val, (pd.Timestamp, datetime)):
+        return None if pd.isna(val) else val.isoformat()
+    if isinstance(val, dict):
+        return {_sanitize_key(str(k), i): _normalize_value(v) for i, (k, v) in enumerate(val.items())}
+    if isinstance(val, list):
+        return [_normalize_value(item) for item in val]
+    return val
+
+
+def _prepare_records(records: list[dict[str, Any]], source_name: str) -> list[dict[str, Any]]:
+    now_utc = datetime.now(timezone.utc).isoformat()
+    prepared = []
+    for row in records:
+        clean_row = {_sanitize_key(str(k), idx): _normalize_value(v) for idx, (k, v) in enumerate(row.items())}
+        clean_row["data_source_meta"] = source_name
+        clean_row["ingested_at"] = now_utc
+        prepared.append(clean_row)
+    return prepared
+
+
+def run_finance_dlt_ingest(
+    records: list[dict[str, Any]],
+    source_name: str,
+    table_name: str,
+    write_disposition: str = "merge",
+    primary_key: list[str] | str | None = None,
+) -> None:
+    if not records:
+        logger.info("[FINANCE-DLT] Nincs betöltendő rekord (%s -> %s).", source_name, table_name)
+        return
+
+    safe_table = _sanitize_key(table_name, 0)
+    table_lock = _get_table_lock(safe_table)
+
+    try:
+        rows = _prepare_records(records, source_name)
+        effective_disposition = write_disposition
+        if effective_disposition == "merge" and not primary_key:
+            logger.warning("[FINANCE-DLT] Merge módhoz nincs primary_key megadva (%s) -> append módra váltás.", safe_table)
+            effective_disposition = "append"
+
+        logger.info(
+            "[FINANCE-DLT] Betöltés indul (%d sor, mód=%s): %s -> bronze_api.%s",
+            len(rows), effective_disposition, source_name, safe_table,
+        )
+
+        with table_lock:
+            pipeline = dlt.pipeline(
+                pipeline_name=f"finance_{safe_table}_ingest",
+                destination=dlt.destinations.postgres(credentials=DB_CONFIG),
+                dataset_name="bronze_api",
+            )
+            pipeline.abort_packages()
+
+            resource_kwargs: dict[str, Any] = {
+                "name": safe_table,
+                "write_disposition": effective_disposition,
+            }
+            if primary_key and effective_disposition == "merge":
+                resource_kwargs["primary_key"] = primary_key
+
+            @dlt.resource(**resource_kwargs)
+            def finance_resource():
+                yield rows
+
+            info = pipeline.run(finance_resource())
+            info.raise_on_failed_jobs()
+
+        logger.info("[FINANCE-DLT] KÉSZ (%d sor): bronze_api.%s | %s", len(rows), safe_table, info)
+
+    except Exception as e:
+        logger.exception("[FINANCE-DLT] HIBA (%s -> %s): %s", source_name, safe_table, e)
+
+
+# --- Pull kliensek (Billingo v3 + Számlázz.hu Számla Agent) ---
+def _fetch_billingo_documents(api_key: str, days_back: int) -> list[dict[str, Any]]:
+    start_date = (datetime.now(timezone.utc) - timedelta(days=days_back)).date().isoformat()
+    end_date = datetime.now(timezone.utc).date().isoformat()
+    url = "https://api.billingo.hu/v3/documents"
+    headers = {"X-API-KEY": api_key, "Accept": "application/json"}
+    page = 1
+    results: list[dict[str, Any]] = []
+
+    with httpx.Client(timeout=45.0) as client:
+        while True:
+            params = {
+                "page": page,
+                "per_page": 100,
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+            resp = client.get(url, headers=headers, params=params)
+            resp.raise_for_status()
+            payload = resp.json()
+            batch = payload.get("data", [])
+            results.extend(batch)
+            if page >= payload.get("last_page", 1) or not batch:
+                break
+            page += 1
+    return results
+
+
+def _xml_to_dict(elem: ET.Element) -> Any:
+    # Namespace eltávolítása a tagekből
+    children = list(elem)
+    if not children:
+        return (elem.text or "").strip()
+    out: dict[str, Any] = {}
+    for child in children:
+        tag = child.tag.split("}", 1)[-1]
+        val = _xml_to_dict(child)
+        if tag in out:
+            if not isinstance(out[tag], list):
+                out[tag] = [out[tag]]
+            out[tag].append(val)
+        else:
+            out[tag] = val
+    return out
+
+
+def _fetch_szamlazzhu_by_numbers(agent_key: str, invoice_numbers: list[str]) -> list[dict[str, Any]]:
+    """Számlázz.hu Számla Agent XML lekérdezés konkrét számlaszámokra."""
+    url = "https://www.szamlazz.hu/szamla/"
+    results: list[dict[str, Any]] = []
+
+    with httpx.Client(timeout=45.0) as client:
+        for inv_num in invoice_numbers:
+            query_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+            <xmlszamlaxml xmlns="http://www.szamlazz.hu/xmlszamlaxml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <szamlaagentkulcs>{agent_key}</szamlaagentkulcs>
+                <szamlaszam>{inv_num}</szamlaszam>
+                <rendelesSzam></rendelesSzam>
+                <pdf>false</pdf>
+            </xmlszamlaxml>"""
+            files = {"action-szamla_agent_xml": ("query.xml", query_xml.encode("utf-8"), "text/xml")}
+            resp = client.post(url, files=files)
+            resp.raise_for_status()
+
+            root = ET.fromstring(resp.text)
+            parsed = _xml_to_dict(root)
+            if isinstance(parsed, dict) and parsed.get("sikeres") == "false":
+                logger.warning("[SZAMLAZZHU] Sikertelen lekérdezés (%s): %s", inv_num, parsed.get("hibauzenet"))
+                continue
+
+            # Tételek listává kényszerítése
+            if isinstance(parsed, dict) and isinstance(parsed.get("tetelek"), dict):
+                raw_items = parsed["tetelek"].get("tetel", [])
+                parsed["tetelek"] = raw_items if isinstance(raw_items, list) else [raw_items]
+            results.append(parsed)
+    return results
+
+
+# --- Request modellek ---
+class BillingoSyncRequest(BaseModel):
+    api_key: str = Field(default_factory=lambda: os.getenv("BILLINGO_API_KEY", ""))
+    days_back: int = Field(default=30, ge=1, le=365)
+    table_name: str = "billingo_documents"
+    records: list[dict[str, Any]] | None = None
+
+
+class SzamlazzHuSyncRequest(BaseModel):
+    agent_key: str = Field(default_factory=lambda: os.getenv("SZAMLAZZHU_AGENT_KEY", ""))
+    invoice_numbers: list[str] = Field(default_factory=list)
+    table_name: str = "szamlazzhu_invoices"
+    records: list[dict[str, Any]] | None = None  # n8n Webhook / XML-export Push ág
+
+
+class FinanceMockRequest(BaseModel):
+    count: int = Field(default=50, ge=1, le=1000)
+
+
+# ---------- 1. BILLINGO API v3 ----------
+def _pull_and_ingest_billingo(req: BillingoSyncRequest) -> None:
+    try:
+        rows = req.records if req.records is not None else _fetch_billingo_documents(req.api_key, req.days_back)
+        run_finance_dlt_ingest(rows, "billingo_api_v3", req.table_name, "merge", "id")
+    except Exception as e:
+        logger.exception("[BILLINGO-PULL] Hiba: %s", e)
+
+
+@router.post("/billingo")
+async def sync_billingo(request: BillingoSyncRequest, background_tasks: BackgroundTasks):
+    if request.records is None and not request.api_key:
+        raise HTTPException(status_code=400, detail="Hiányzó Billingo api_key vagy records.")
+    background_tasks.add_task(_pull_and_ingest_billingo, request)
+    return {"status": "accepted", "provider": "billingo", "target_table": f"bronze_api.{request.table_name}"}
+
+
+@router.post("/billingo/mock")
+async def sync_billingo_mock(request: FinanceMockRequest, background_tasks: BackgroundTasks):
+    if not MOCK_ENABLED:
+        raise HTTPException(status_code=404, detail="Mock modul nincs telepítve.")
+    mock_rows = generate_mock_billingo_documents(request.count)
+    background_tasks.add_task(run_finance_dlt_ingest, mock_rows, "billingo_mock_generator", "billingo_documents", "merge", "id")
+    return {"status": "accepted", "generated_records": len(mock_rows), "target_table": "bronze_api.billingo_documents", "sample": mock_rows[:2]}
+
+
+# ---------- 2. SZÁMLÁZZ.HU ----------
+def _pull_and_ingest_szamlazzhu(req: SzamlazzHuSyncRequest) -> None:
+    try:
+        rows = req.records if req.records is not None else _fetch_szamlazzhu_by_numbers(req.agent_key, req.invoice_numbers)
+        run_finance_dlt_ingest(rows, "szamlazzhu_agent", req.table_name, "merge", "szamlaszam")
+    except Exception as e:
+        logger.exception("[SZAMLAZZHU-PULL] Hiba: %s", e)
+
+
+@router.post("/szamlazzhu")
+async def sync_szamlazzhu(request: SzamlazzHuSyncRequest, background_tasks: BackgroundTasks):
+    if request.records is None and (not request.agent_key or not request.invoice_numbers):
+        raise HTTPException(status_code=400, detail="Add meg a records listát (webhook/export) vagy az agent_key + invoice_numbers mezőket.")
+    background_tasks.add_task(_pull_and_ingest_szamlazzhu, request)
+    return {"status": "accepted", "provider": "szamlazz.hu", "target_table": f"bronze_api.{request.table_name}"}
+
+
+@router.post("/szamlazzhu/mock")
+async def sync_szamlazzhu_mock(request: FinanceMockRequest, background_tasks: BackgroundTasks):
+    if not MOCK_ENABLED:
+        raise HTTPException(status_code=404, detail="Mock modul nincs telepítve.")
+    mock_rows = generate_mock_szamlazzhu_invoices(request.count)
+    background_tasks.add_task(run_finance_dlt_ingest, mock_rows, "szamlazzhu_mock_generator", "szamlazzhu_invoices", "merge", "szamlaszam")
+    return {"status": "accepted", "generated_records": len(mock_rows), "target_table": "bronze_api.szamlazzhu_invoices", "sample": mock_rows[:2]}
+
+
+# ---------- 3. UNIVERZÁLIS EXCEL / CSV FELDOLGOZÓ ----------
+def _parse_tabular_file(content: bytes, filename: str, sheet_name: str | int = 0) -> list[dict[str, Any]]:
+    lower_name = filename.lower()
+    buffer = io.BytesIO(content)
+
+    if lower_name.endswith(".csv"):
+        # Magyar CSV-k gyakran pontosvesszőt és UTF-8-SIG vagy Windows-1250 kódolást használnak
+        for enc in ("utf-8-sig", "utf-8", "cp1250", "latin1"):
+            try:
+                buffer.seek(0)
+                df = pd.read_csv(buffer, sep=None, engine="python", encoding=enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raise ValueError("Nem támogatott CSV karakterkódolás.")
+    elif lower_name.endswith((".xlsx", ".xls")):
+        target_sheet: str | int = int(sheet_name) if isinstance(sheet_name, str) and sheet_name.isdigit() else sheet_name
+        df = pd.read_excel(buffer, sheet_name=target_sheet)
+    else:
+        raise ValueError("Csak .xlsx, .xls vagy .csv fájl tölthető fel.")
+
+    # Üres sorok eldobása és NaN/NaT -> None konverzió
+    df = df.dropna(how="all")
+    df = df.astype(object).where(pd.notnull(df), None)
+    return df.to_dict(orient="records")
+
+
+@router.post("/upload-file")
+async def upload_excel_or_csv(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    table_name: str = Form(...),
+    primary_key: str = Form(default=""),
+    write_mode: str = Form(default="merge"),
+    sheet_name: str = Form(default="0"),
+    source_label: str = Form(default="excel_csv_upload"),
+):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Hiányzó fájlnév.")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Üres fájl.")
+
+    try:
+        records = _parse_tabular_file(content, file.filename, sheet_name)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Fájlfeldolgozási hiba: {e}") from e
+
+    if not records:
+        raise HTTPException(status_code=400, detail="A fájl nem tartalmaz adatokat.")
+
+    pk_list = [_sanitize_key(col, i) for i, col in enumerate(primary_key.split(",")) if col.strip()]
+    safe_table = _sanitize_key(table_name, 0)
+
+    background_tasks.add_task(
+        run_finance_dlt_ingest,
+        records,
+        f"{source_label}:{file.filename}",
+        safe_table,
+        write_mode,
+        pk_list if pk_list else None,
+    )
+
+    return {
+        "status": "accepted",
+        "filename": file.filename,
+        "parsed_rows": len(records),
+        "target_table": f"bronze_api.{safe_table}",
+        "primary_key": pk_list or None,
+        "sample": records[:2],
+    }
+
+
+@router.post("/cogs/mock")
+async def sync_cogs_mock(background_tasks: BackgroundTasks):
+    """Beszerzési árak (COGS) mock betöltése a Gold rétegbeli árrésszámításhoz."""
+    if not MOCK_ENABLED:
+        raise HTTPException(status_code=404, detail="Mock modul nincs telepítve.")
+    mock_rows = generate_mock_product_cogs()
+    background_tasks.add_task(run_finance_dlt_ingest, mock_rows, "cogs_mock_generator", "product_cogs", "merge", ["sku", "ervenyes_ettol"])
+    return {"status": "accepted", "generated_records": len(mock_rows), "target_table": "bronze_api.product_cogs", "sample": mock_rows}
