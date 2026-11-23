@@ -18,6 +18,7 @@ import apis.ingest_azureblob_api as azureblob_api
 import apis.ingest_mediaads_api as ingest_mediaads_api
 import apis.ingest_webshops_api as ingest_webshops_api
 import apis.ingest_finance_api as ingest_finance_api
+import apis.ingest_crm_api as ingest_crm_api
 import apis.shopify_rag_api as shopify_rag_api
 
 # ----- 1. Initialize Dash -----
@@ -69,6 +70,7 @@ server = FastAPI(title="Dash Demo App")
 
 # ----- 4. API routers -----
 server.include_router(azureblob_api.router,    prefix="/api/rest",           tags=["Ingest Azure Blob"])
+server.include_router(ingest_crm_api.router,   prefix="/api/crm",            tags=["Ingest CRM API"])
 server.include_router(ingest_finance_api.router,  prefix="/api/finance",     tags=["Ingest Finance API"])
 server.include_router(ingest_mediaads_api.router, prefix="/api/mediaads",    tags=["Ingest MediaAds API"])
 server.include_router(ingest_webshops_api.router, prefix="/api/webshops",    tags=["Ingest WebShops API"])
