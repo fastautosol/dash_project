@@ -13,7 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
 try:
-    from apis.ingest_mock_ads import (generate_mock_google_ads_insights, generate_mock_meta_insights, generate_mock_tiktok_insights)
+    from apis.ingest_media_mock_ads import (generate_mock_google_ads_insights, generate_mock_meta_insights, generate_mock_tiktok_insights)
     MOCK_ENABLED = True
 except ImportError:
     MOCK_ENABLED = False
