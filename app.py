@@ -16,6 +16,7 @@ import apis.twitter_api as twitter_api
 import apis.eia_api as eia_api
 import apis.ingest_azureblob_api as azureblob_api
 import apis.ingest_mediaads_api as ingest_mediaads_api
+import apis.ingest_webshops_api as ingest_webshops_api
 import apis.ingest_rest_api as ingest_rest_api
 import apis.shopify_rag_api as shopify_rag_api
 
@@ -70,6 +71,7 @@ server = FastAPI(title="Dash Demo App")
 server.include_router(azureblob_api.router,    prefix="/api/rest",           tags=["Ingest Azure Blob"])
 server.include_router(ingest_rest_api.router,   prefix="/api/rest",          tags=["Ingest Rest API"])
 server.include_router(ingest_mediaads_api.router, prefix="/api/mediaads",    tags=["Ingest MediaAds API"])
+server.include_router(ingest_webshops_api.router, prefix="/api/webshops",    tags=["Ingest WebShops API"])
 server.include_router(shopify_rag_api.router,   prefix="/api/shopify",       tags=["Shopify RAG"])
 server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tags=["Lufthansa"])
 server.include_router(serper_places.router,     prefix="/api/serper",        tags=["Serper Places"])
