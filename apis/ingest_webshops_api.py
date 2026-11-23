@@ -1,4 +1,4 @@
-# 2026.11.23
+# 2026.11.23  15.00
 import logging
 import os
 import re
@@ -13,12 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
 try:
-    from apis.ingest_mock_shopify import generate_mock_shopify_orders
-    from apis.ingest_webshops_mock import (
-        generate_mock_shoprenter_orders,
-        generate_mock_unas_orders,
-        generate_mock_woocommerce_orders,
-    )
+    from apis.ingest_webshops_mock import (generate_mock_shopify_orders, generate_mock_shoprenter_orders, generate_mock_unas_orders, generate_mock_woocommerce_orders)
     MOCK_ENABLED = True
 except ImportError:
     MOCK_ENABLED = False
@@ -36,8 +31,7 @@ DB_CONFIG = {
     "database": os.getenv("POSTGRES_DB", "n8n"),
     "username": os.getenv("POSTGRES_USER", "sql_admin"),
     "password": os.getenv("POSTGRES_PASSWORD", "sql_pass"),
-    "connect_timeout": 15,
-}
+    "connect_timeout": 15}
 
 META_COLS = {"data_source_meta", "ingested_at", "_dlt_id", "_dlt_load_id"}
 
@@ -80,12 +74,7 @@ def _prepare_records(records: list[dict[str, Any]], source_name: str) -> list[di
     return prepared
 
 
-def run_webshop_dlt_ingest(
-    records: list[dict[str, Any]],
-    source_name: str,
-    table_name: str,
-    primary_key: list[str] | str,
-) -> None:
+def run_webshop_dlt_ingest(records: list[dict[str, Any]], source_name: str, table_name: str, primary_key: list[str] | str) -> None:
     if not records:
         logger.info("[WEBSHOP-DLT] Nincs betöltendő rekord (%s -> %s).", source_name, table_name)
         return
@@ -96,18 +85,12 @@ def run_webshop_dlt_ingest(
         logger.info("[WEBSHOP-DLT] Betöltés indul (%d sor): %s -> bronze_api.%s", len(rows), source_name, table_name)
 
         with table_lock:
-            pipeline = dlt.pipeline(
-                pipeline_name=f"webshop_{table_name}_ingest",
+            pipeline = dlt.pipeline(pipeline_name=f"webshop_{table_name}_ingest",
                 destination=dlt.destinations.postgres(credentials=DB_CONFIG),
-                dataset_name="bronze_api",
-            )
+                dataset_name="bronze_api")
             pipeline.abort_packages()
 
-            @dlt.resource(
-                name=table_name,
-                write_disposition="merge",
-                primary_key=primary_key,
-            )
+            @dlt.resource(name=table_name, write_disposition="merge", primary_key=primary_key)
             def webshop_resource():
                 yield rows
 
