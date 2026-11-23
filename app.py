@@ -1,4 +1,4 @@
-# 2026.11.19  18.00
+# 2026.11.23  14.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
@@ -15,6 +15,7 @@ import apis.crucix_api as crucix_api
 import apis.twitter_api as twitter_api
 import apis.eia_api as eia_api
 import apis.ingest_azureblob_api as azureblob_api
+import apis.ingest_mediaads_api as ingest_mediaads_api
 import apis.ingest_rest_api as ingest_rest_api
 import apis.shopify_rag_api as shopify_rag_api
 
@@ -68,6 +69,7 @@ server = FastAPI(title="Dash Demo App")
 # ----- 4. API routers -----
 server.include_router(azureblob_api.router,    prefix="/api/rest",           tags=["Ingest Azure Blob"])
 server.include_router(ingest_rest_api.router,   prefix="/api/rest",          tags=["Ingest Rest API"])
+server.include_router(ingest_mediaads_api.router, prefix="/api/mediaads",    tags=["Ingest MediaAds API"])
 server.include_router(shopify_rag_api.router,   prefix="/api/shopify",       tags=["Shopify RAG"])
 server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tags=["Lufthansa"])
 server.include_router(serper_places.router,     prefix="/api/serper",        tags=["Serper Places"])
