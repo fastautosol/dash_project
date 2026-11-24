@@ -19,15 +19,15 @@ PG_ATTACH_DSN = (
 )
 
 INIT_FX_SQL = """
-CREATE SCHEMA IF NOT EXISTS silver_kkv;
+CREATE SCHEMA IF NOT EXISTS silver;
 
-CREATE TABLE IF NOT EXISTS silver_kkv.fx_rates (
+CREATE TABLE IF NOT EXISTS silver.fx_rates (
     currency        TEXT PRIMARY KEY,
     rate_to_huf     NUMERIC(12, 4) NOT NULL,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-INSERT INTO silver_kkv.fx_rates (currency, rate_to_huf)
+INSERT INTO silver.fx_rates (currency, rate_to_huf)
 VALUES ('HUF', 1.0000), ('EUR', 402.0000), ('USD', 375.0000)
 ON CONFLICT (currency) DO NOTHING;
 """
