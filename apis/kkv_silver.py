@@ -21,14 +21,14 @@ PG_ATTACH_DSN = (
 INIT_FX_STATEMENTS = [
     "CREATE SCHEMA IF NOT EXISTS silver;",
     """
-    CREATE TABLE IF NOT EXISTS silver.fx_rates (
+    CREATE TABLE IF NOT EXISTS silver.kkv_fx_rates (
         currency        TEXT PRIMARY KEY,
         rate_to_huf     NUMERIC(12, 4) NOT NULL,
         updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     """,
     """
-    INSERT INTO silver.fx_rates (currency, rate_to_huf)
+    INSERT INTO silver.kkv_fx_rates (currency, rate_to_huf)
     VALUES ('HUF', 1.0000), ('EUR', 402.0000), ('USD', 375.0000)
     ON CONFLICT (currency) DO NOTHING;
     """,
@@ -83,7 +83,7 @@ def _build_silver_table(
 def run_silver_transformation() -> dict[str, int]:
     """
     DuckDB CTAS alapú Bronze -> Silver transzformáció.
-    A nyers bronze_api táblákból 7 egységes, típusos, HUF-ra váltott silver táblát épít.
+    A nyers bronze_api táblákból 7 egységes, típusos, HUF-ra váltott silver.kkv_* táblát épít.
     """
     with _silver_lock:
         Path("/tmp/duckdb_silver_tmp").mkdir(parents=True, exist_ok=True)
@@ -104,7 +104,7 @@ def run_silver_transformation() -> dict[str, int]:
             summary: dict[str, int] = {}
 
             # ----------------------------------------------------------------
-            # 1. SILVER.AD_SPEND_DAILY
+            # 1. SILVER.KKV_AD_SPEND_DAILY
             # ----------------------------------------------------------------
             parts: list[str] = []
             if "meta_ads_insights" in cat:
@@ -162,7 +162,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(ROUND(COALESCE(val.purchase_value, 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS conversion_value_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.meta_ads_insights m
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     LEFT JOIN ({actions_sub}) act ON act._dlt_parent_id = m._dlt_id
                     LEFT JOIN ({values_sub}) val ON val._dlt_parent_id = m._dlt_id
                     WHERE TRY_CAST(m.date_start AS DATE) IS NOT NULL
@@ -207,7 +207,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(ROUND(COALESCE(TRY_CAST({c_cval} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS conversion_value_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.google_ads_insights g
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     WHERE TRY_CAST(g.segments__date AS DATE) IS NOT NULL
                     """
                 )
@@ -244,7 +244,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(ROUND(COALESCE(TRY_CAST({c_cval} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 402.0), 2) AS DECIMAL(14, 2)) AS conversion_value_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.tiktok_ads_insights t
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'EUR'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'EUR'))
                     WHERE TRY_CAST(LEFT(CAST(t.dimensions__stat_time_day AS VARCHAR), 10) AS DATE) IS NOT NULL
                     """
                 )
@@ -260,10 +260,10 @@ def run_silver_transformation() -> dict[str, int]:
                     NOW() AS refreshed_at
                 WHERE FALSE
             """
-            summary["ad_spend_daily"] = _build_silver_table(con, "ad_spend_daily", parts, empty_ads, "spend_date")
+            summary["kkv_ad_spend_daily"] = _build_silver_table(con, "kkv_ad_spend_daily", parts, empty_ads, "spend_date")
 
             # ----------------------------------------------------------------
-            # 2. SILVER.ORDERS
+            # 2. SILVER.KKV_ORDERS
             # ----------------------------------------------------------------
             parts = []
             if "shopify_orders" in cat:
@@ -318,7 +318,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(NULLIF(regexp_extract(COALESCE(CAST({c_land} AS VARCHAR), ''), 'utm_campaign=([^&]+)', 1), '') AS VARCHAR) AS utm_campaign,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.shopify_orders o
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -372,7 +372,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(NULLIF(TRIM(CAST({c_ucmp} AS VARCHAR)), '') AS VARCHAR) AS utm_campaign,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.unas_orders u
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -431,7 +431,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(NULLIF(TRIM(CAST({c_ucmp} AS VARCHAR)), '') AS VARCHAR) AS utm_campaign,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.shoprenter_orders s
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -501,7 +501,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(NULLIF(TRIM(meta.utm_campaign), '') AS VARCHAR) AS utm_campaign,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.woocommerce_orders w
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     LEFT JOIN ({wc_meta_sub}) meta ON meta._dlt_parent_id = w._dlt_id
                     """
                 )
@@ -520,10 +520,10 @@ def run_silver_transformation() -> dict[str, int]:
                     NOW() AS refreshed_at
                 WHERE FALSE
             """
-            summary["orders"] = _build_silver_table(con, "orders", parts, empty_orders, "order_date")
+            summary["kkv_orders"] = _build_silver_table(con, "kkv_orders", parts, empty_orders, "order_date")
 
             # ----------------------------------------------------------------
-            # 3. SILVER.ORDER_ITEMS
+            # 3. SILVER.KKV_ORDER_ITEMS
             # ----------------------------------------------------------------
             parts = []
             if "shopify_orders__line_items" in cat and "shopify_orders" in cat:
@@ -556,7 +556,7 @@ def run_silver_transformation() -> dict[str, int]:
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.shopify_orders__line_items li
                     JOIN pg.bronze_api.shopify_orders o ON o._dlt_id = li._dlt_parent_id
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -590,7 +590,7 @@ def run_silver_transformation() -> dict[str, int]:
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.unas_orders__items it
                     JOIN pg.bronze_api.unas_orders u ON u._dlt_id = it._dlt_parent_id
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -629,7 +629,7 @@ def run_silver_transformation() -> dict[str, int]:
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.{sr_items_tbl} op
                     JOIN pg.bronze_api.shoprenter_orders s ON s._dlt_id = op._dlt_parent_id
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -666,7 +666,7 @@ def run_silver_transformation() -> dict[str, int]:
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.woocommerce_orders__line_items li
                     JOIN pg.bronze_api.woocommerce_orders w ON w._dlt_id = li._dlt_parent_id
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -680,10 +680,10 @@ def run_silver_transformation() -> dict[str, int]:
                     NOW() AS refreshed_at
                 WHERE FALSE
             """
-            summary["order_items"] = _build_silver_table(con, "order_items", parts, empty_order_items, "order_date")
+            summary["kkv_order_items"] = _build_silver_table(con, "kkv_order_items", parts, empty_order_items, "order_date")
 
             # ----------------------------------------------------------------
-            # 4. SILVER.INVOICES
+            # 4. SILVER.KKV_INVOICES
             # ----------------------------------------------------------------
             parts = []
             if "billingo_documents" in cat:
@@ -729,7 +729,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(NULLIF(TRIM(CAST({c_ptax} AS VARCHAR)), '') AS VARCHAR) AS partner_tax_number,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.billingo_documents b
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -775,7 +775,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(NULLIF(TRIM(CAST({c_vado} AS VARCHAR)), '') AS VARCHAR) AS partner_tax_number,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.szamlazzhu_invoices s
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -790,10 +790,10 @@ def run_silver_transformation() -> dict[str, int]:
                     NULL::VARCHAR AS partner_tax_number, NOW() AS refreshed_at
                 WHERE FALSE
             """
-            summary["invoices"] = _build_silver_table(con, "invoices", parts, empty_invoices, "fulfillment_date")
+            summary["kkv_invoices"] = _build_silver_table(con, "kkv_invoices", parts, empty_invoices, "fulfillment_date")
 
             # ----------------------------------------------------------------
-            # 5. SILVER.INVOICE_ITEMS
+            # 5. SILVER.KKV_INVOICE_ITEMS
             # ----------------------------------------------------------------
             parts = []
             if "billingo_documents__items" in cat and "billingo_documents" in cat:
@@ -821,7 +821,7 @@ def run_silver_transformation() -> dict[str, int]:
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.billingo_documents__items it
                     JOIN pg.bronze_api.billingo_documents b ON b._dlt_id = it._dlt_parent_id
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -846,7 +846,7 @@ def run_silver_transformation() -> dict[str, int]:
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.szamlazzhu_invoices__tetelek t
                     JOIN pg.bronze_api.szamlazzhu_invoices s ON s._dlt_id = t._dlt_parent_id
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -858,10 +858,10 @@ def run_silver_transformation() -> dict[str, int]:
                     0::DECIMAL(14, 2) AS gross_amount_huf, NOW() AS refreshed_at
                 WHERE FALSE
             """
-            summary["invoice_items"] = _build_silver_table(con, "invoice_items", parts, empty_inv_items, "fulfillment_date")
+            summary["kkv_invoice_items"] = _build_silver_table(con, "kkv_invoice_items", parts, empty_inv_items, "fulfillment_date")
 
             # ----------------------------------------------------------------
-            # 6. SILVER.CRM_DEALS
+            # 6. SILVER.KKV_CRM_DEALS
             # ----------------------------------------------------------------
             parts = []
             if "hubspot_deals" in cat:
@@ -910,7 +910,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST({c_lost} AS VARCHAR) AS lost_reason,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.hubspot_deals h
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     WHERE COALESCE(TRY_CAST({c_arch} AS BOOLEAN), FALSE) IS FALSE
                     """
                 )
@@ -953,7 +953,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST({c_lost_r} AS VARCHAR) AS lost_reason,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.pipedrive_deals p
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
@@ -1007,7 +1007,7 @@ def run_silver_transformation() -> dict[str, int]:
                         NULL::VARCHAR AS lost_reason,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.minicrm_projects m
-                    LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_penz} AS VARCHAR), 'HUF'))
+                    LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_penz} AS VARCHAR), 'HUF'))
                     WHERE COALESCE(CAST({c_del} AS VARCHAR), '0') = '0'
                     """
                 )
@@ -1023,10 +1023,10 @@ def run_silver_transformation() -> dict[str, int]:
                     NULL::VARCHAR AS lost_reason, NOW() AS refreshed_at
                 WHERE FALSE
             """
-            summary["crm_deals"] = _build_silver_table(con, "crm_deals", parts, empty_crm, "deal_status")
+            summary["kkv_crm_deals"] = _build_silver_table(con, "kkv_crm_deals", parts, empty_crm, "deal_status")
 
             # ----------------------------------------------------------------
-            # 7. SILVER.PRODUCT_COGS
+            # 7. SILVER.KKV_PRODUCT_COGS
             # ----------------------------------------------------------------
             parts = []
             if "product_cogs" in cat:
@@ -1050,7 +1050,7 @@ def run_silver_transformation() -> dict[str, int]:
                                 ORDER BY TRY_CAST({c_ing} AS TIMESTAMPTZ) DESC NULLS LAST
                             ) AS rn
                         FROM pg.bronze_api.product_cogs c
-                        LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF'))
+                        LEFT JOIN pg.silver.kkv_fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF'))
                         WHERE NULLIF(TRIM(CAST(c.sku AS VARCHAR)), '') IS NOT NULL
                     ),
                     dedup AS (
@@ -1077,7 +1077,7 @@ def run_silver_transformation() -> dict[str, int]:
                     NOW() AS refreshed_at
                 WHERE FALSE
             """
-            summary["product_cogs"] = _build_silver_table(con, "product_cogs", parts, empty_cogs, "sku")
+            summary["kkv_product_cogs"] = _build_silver_table(con, "kkv_product_cogs", parts, empty_cogs, "sku")
 
             logger.info("[SILVER-DUCKDB] Transzformáció kész: %s", summary)
             return summary
