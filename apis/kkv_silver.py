@@ -14,7 +14,7 @@ PG_ATTACH_DSN = (
     f"dbname={os.getenv('POSTGRES_DB', 'n8n')} "
     f"user={os.getenv('POSTGRES_USER', 'sql_admin')} "
     f"password={os.getenv('POSTGRES_PASSWORD', 'sql_pass')} "
-    f"host={os.getenv('POSTGRES_HOST', 'postgres')} "
+    f"host={os.getenv('POSTGRES_HOST', 'postgresql')} "
     f"port={os.getenv('POSTGRES_PORT', '5432')}"
 )
 
