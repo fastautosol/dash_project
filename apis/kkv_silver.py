@@ -170,16 +170,17 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "google_ads_insights" in cat:
-                c_type = _col(cat, "google_ads_insights", "g", "campaign__advertising_channel_type", fallback="''")
+                c_type = _col(cat, "google_ads_insights", "g", "campaign__advertisingchanneltype", "campaign__advertising_channel_type", fallback="''")
                 c_acc = _col(cat, "google_ads_insights", "g", "customer__id", fallback="'0'")
                 c_cid = _col(cat, "google_ads_insights", "g", "campaign__id", fallback="'0'")
                 c_cname = _col(cat, "google_ads_insights", "g", "campaign__name")
-                c_aid = _col(cat, "google_ads_insights", "g", "ad_group__id", "adgroup__id", fallback="'0'")
-                c_aname = _col(cat, "google_ads_insights", "g", "ad_group__name", "adgroup__name")
-                c_curr = _col(cat, "google_ads_insights", "g", "customer__currency_code", fallback="'HUF'")
-                c_vviews = _col(cat, "google_ads_insights", "g", "metrics__video_views", fallback="0")
+                c_aid = _col(cat, "google_ads_insights", "g", "adgroup__id", "ad_group__id", fallback="'0'")
+                c_aname = _col(cat, "google_ads_insights", "g", "adgroup__name", "ad_group__name")
+                c_curr = _col(cat, "google_ads_insights", "g", "customer__currencycode", "customer__currency_code", fallback="'HUF'")
+                c_costm = _col(cat, "google_ads_insights", "g", "metrics__costmicros", "metrics__cost_micros", fallback="0")
+                c_vviews = _col(cat, "google_ads_insights", "g", "metrics__videoviews", "metrics__video_views", fallback="0")
                 c_conv = _col(cat, "google_ads_insights", "g", "metrics__conversions", fallback="0")
-                c_cval = _col(cat, "google_ads_insights", "g", "metrics__conversions_value", fallback="0")
+                c_cval = _col(cat, "google_ads_insights", "g", "metrics__conversionsvalue", "metrics__conversions_value", fallback="0")
 
                 parts.append(
                     f"""
@@ -197,8 +198,8 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST({c_aname} AS VARCHAR) AS adgroup_name,
                         TRY_CAST(g.segments__date AS DATE) AS spend_date,
                         CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS original_currency,
-                        CAST(ROUND(COALESCE(TRY_CAST(g.metrics__cost_micros AS DOUBLE), 0) / 1000000.0, 2) AS DECIMAL(14, 2)) AS spend_original,
-                        CAST(ROUND((COALESCE(TRY_CAST(g.metrics__cost_micros AS DOUBLE), 0) / 1000000.0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS spend_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_costm} AS DOUBLE), 0) / 1000000.0, 2) AS DECIMAL(14, 2)) AS spend_original,
+                        CAST(ROUND((COALESCE(TRY_CAST({c_costm} AS DOUBLE), 0) / 1000000.0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS spend_huf,
                         COALESCE(TRY_CAST(g.metrics__impressions AS BIGINT), 0) AS impressions,
                         COALESCE(TRY_CAST(g.metrics__clicks AS BIGINT), 0) AS clicks,
                         COALESCE(TRY_CAST({c_vviews} AS BIGINT), 0) AS video_views,
@@ -326,10 +327,12 @@ def run_silver_transformation() -> dict[str, int]:
                 c_pname = _col(cat, "unas_orders", "u", "payment__name")
                 c_sname = _col(cat, "unas_orders", "u", "shipping__name")
                 c_curr = _col(cat, "unas_orders", "u", "currency", fallback="'HUF'")
-                c_scost = _col(cat, "unas_orders", "u", "shipping__cost_gross", fallback="0")
+                c_snet = _col(cat, "unas_orders", "u", "sumpricenet", "sum_price_net", fallback="0")
+                c_sgross = _col(cat, "unas_orders", "u", "sumpricegross", "sum_price_gross", fallback="0")
+                c_scost = _col(cat, "unas_orders", "u", "shipping__costgross", "shipping__cost_gross", fallback="0")
                 c_mail = _col(cat, "unas_orders", "u", "customer__email")
                 c_cname = _col(cat, "unas_orders", "u", "customer__name")
-                c_taxn = _col(cat, "unas_orders", "u", "customer__tax_number")
+                c_taxn = _col(cat, "unas_orders", "u", "customer__taxnumber", "customer__tax_number")
                 c_city = _col(cat, "unas_orders", "u", "customer__city")
                 c_usrc = _col(cat, "unas_orders", "u", "utm__utm_source", fallback="'direct'")
                 c_umed = _col(cat, "unas_orders", "u", "utm__utm_medium", fallback="'none'")
@@ -355,9 +358,9 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST({c_pname} AS VARCHAR) AS payment_method,
                         CAST({c_sname} AS VARCHAR) AS shipping_method,
                         CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
-                        CAST(ROUND(COALESCE(TRY_CAST(u.sum_price_net AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_total_huf,
-                        CAST(ROUND((COALESCE(TRY_CAST(u.sum_price_gross AS DOUBLE), 0) - COALESCE(TRY_CAST(u.sum_price_net AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS tax_total_huf,
-                        CAST(ROUND(COALESCE(TRY_CAST(u.sum_price_gross AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_snet} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_total_huf,
+                        CAST(ROUND((COALESCE(TRY_CAST({c_sgross} AS DOUBLE), 0) - COALESCE(TRY_CAST({c_snet} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS tax_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_sgross} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_total_huf,
                         CAST(ROUND(COALESCE(TRY_CAST({c_scost} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS shipping_gross_huf,
                         0::DECIMAL(14, 2) AS discount_gross_huf,
                         CAST(LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS VARCHAR) AS customer_email,
@@ -374,25 +377,25 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "shoprenter_orders" in cat:
-                c_inv = _col(cat, "shoprenter_orders", "s", "invoice_id", "invoiceid")
-                c_inn = _col(cat, "shoprenter_orders", "s", "inner_id", "innerid")
-                c_cdat = _col(cat, "shoprenter_orders", "s", "date_created", "datecreated")
-                c_st = _col(cat, "shoprenter_orders", "s", "order_status__name", fallback="''")
-                c_pm = _col(cat, "shoprenter_orders", "s", "payment_method_name", "paymentmethodname")
-                c_sm = _col(cat, "shoprenter_orders", "s", "shipping_method_name", "shippingmethodname")
+                c_inv = _col(cat, "shoprenter_orders", "s", "invoiceid", "invoice_id")
+                c_inn = _col(cat, "shoprenter_orders", "s", "innerid", "inner_id")
+                c_cdat = _col(cat, "shoprenter_orders", "s", "datecreated", "date_created")
+                c_st = _col(cat, "shoprenter_orders", "s", "orderstatus__name", "order_status__name", fallback="''")
+                c_pm = _col(cat, "shoprenter_orders", "s", "paymentmethodname", "payment_method_name")
+                c_sm = _col(cat, "shoprenter_orders", "s", "shippingmethodname", "shipping_method_name")
                 c_curr = _col(cat, "shoprenter_orders", "s", "currency__code", fallback="'HUF'")
-                c_tnet = _col(cat, "shoprenter_orders", "s", "total_net", "totalnet", fallback="0")
-                c_ttax = _col(cat, "shoprenter_orders", "s", "total_tax", "totaltax", fallback="0")
-                c_stot = _col(cat, "shoprenter_orders", "s", "shipping_total", "shippingtotal", fallback="0")
+                c_tnet = _col(cat, "shoprenter_orders", "s", "totalnet", "total_net", fallback="0")
+                c_ttax = _col(cat, "shoprenter_orders", "s", "totaltax", "total_tax", fallback="0")
+                c_stot = _col(cat, "shoprenter_orders", "s", "shippingtotal", "shipping_total", fallback="0")
                 c_mail = _col(cat, "shoprenter_orders", "s", "email")
-                c_pcomp = _col(cat, "shoprenter_orders", "s", "payment_company", "paymentcompany")
+                c_pcomp = _col(cat, "shoprenter_orders", "s", "paymentcompany", "payment_company")
                 c_lname = _col(cat, "shoprenter_orders", "s", "lastname", fallback="''")
                 c_fname = _col(cat, "shoprenter_orders", "s", "firstname", fallback="''")
-                c_taxn = _col(cat, "shoprenter_orders", "s", "payment_tax_number", "paymenttaxnumber")
-                c_city = _col(cat, "shoprenter_orders", "s", "payment_city", "paymentcity")
-                c_usrc = _col(cat, "shoprenter_orders", "s", "utm_source", "utmsource", fallback="'direct'")
-                c_umed = _col(cat, "shoprenter_orders", "s", "utm_medium", "utmmedium", fallback="'none'")
-                c_ucmp = _col(cat, "shoprenter_orders", "s", "utm_campaign", "utmcampaign")
+                c_taxn = _col(cat, "shoprenter_orders", "s", "paymenttaxnumber", "payment_tax_number")
+                c_city = _col(cat, "shoprenter_orders", "s", "paymentcity", "payment_city")
+                c_usrc = _col(cat, "shoprenter_orders", "s", "utmsource", "utm_source", fallback="'direct'")
+                c_umed = _col(cat, "shoprenter_orders", "s", "utmmedium", "utm_medium", fallback="'none'")
+                c_ucmp = _col(cat, "shoprenter_orders", "s", "utmcampaign", "utm_campaign")
 
                 parts.append(
                     f"""
@@ -560,6 +563,8 @@ def run_silver_transformation() -> dict[str, int]:
             if "unas_orders__items" in cat and "unas_orders" in cat:
                 c_itid = _col(cat, "unas_orders__items", "it", "id", fallback="it._dlt_id")
                 c_curr = _col(cat, "unas_orders", "u", "currency", fallback="'HUF'")
+                c_pnet = _col(cat, "unas_orders__items", "it", "pricenet", "price_net", fallback="0")
+                c_pgross = _col(cat, "unas_orders__items", "it", "pricegross", "price_gross", fallback="0")
 
                 parts.append(
                     f"""
@@ -578,10 +583,10 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(UPPER(COALESCE(NULLIF(TRIM(CAST(it.sku AS VARCHAR)), ''), 'UNKNOWN')) AS VARCHAR) AS sku,
                         CAST(it.name AS VARCHAR) AS product_name,
                         CAST(COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
-                        CAST(ROUND(COALESCE(TRY_CAST(it.price_net AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_net_huf,
-                        CAST(ROUND(COALESCE(TRY_CAST(it.price_gross AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
-                        CAST(ROUND(COALESCE(TRY_CAST(it.price_net AS DOUBLE), 0) * COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_net_huf,
-                        CAST(ROUND(COALESCE(TRY_CAST(it.price_gross AS DOUBLE), 0) * COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_pnet} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_net_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_pgross} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_pnet} AS DOUBLE), 0) * COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_net_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_pgross} AS DOUBLE), 0) * COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.unas_orders__items it
                     JOIN pg.bronze_api.unas_orders u ON u._dlt_id = it._dlt_parent_id
@@ -590,15 +595,15 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             sr_items_tbl = (
-                "shoprenter_orders__order_products"
-                if "shoprenter_orders__order_products" in cat
-                else "shoprenter_orders__orderproducts"
+                "shoprenter_orders__orderproducts"
+                if "shoprenter_orders__orderproducts" in cat
+                else "shoprenter_orders__order_products"
             )
             if sr_items_tbl in cat and "shoprenter_orders" in cat:
-                c_cdat = _col(cat, "shoprenter_orders", "s", "date_created", "datecreated")
-                c_st = _col(cat, "shoprenter_orders", "s", "order_status__name", fallback="''")
+                c_cdat = _col(cat, "shoprenter_orders", "s", "datecreated", "date_created")
+                c_st = _col(cat, "shoprenter_orders", "s", "orderstatus__name", "order_status__name", fallback="''")
                 c_curr = _col(cat, "shoprenter_orders", "s", "currency__code", fallback="'HUF'")
-                c_gross = _col(cat, sr_items_tbl, "op", "gross_price", "grossprice", fallback="0")
+                c_gross = _col(cat, sr_items_tbl, "op", "grossprice", "gross_price", fallback="0")
 
                 parts.append(
                     f"""
@@ -732,7 +737,7 @@ def run_silver_transformation() -> dict[str, int]:
                 c_tip = _col(cat, "szamlazzhu_invoices", "s", "tipus", fallback="'SZ'")
                 c_telj = _col(cat, "szamlazzhu_invoices", "s", "teljesites", fallback="s.kelt")
                 c_fhat = _col(cat, "szamlazzhu_invoices", "s", "fizhat", fallback="NULL")
-                c_kdat = _col(cat, "szamlazzhu_invoices", "s", "kifizetes_datum", "kifizetesdatum", fallback="NULL")
+                c_kdat = _col(cat, "szamlazzhu_invoices", "s", "kifizetesdatum", "kifizetes_datum", fallback="NULL")
                 c_fiz = _col(cat, "szamlazzhu_invoices", "s", "fizetve", fallback="FALSE")
                 c_fmod = _col(cat, "szamlazzhu_invoices", "s", "fizmod")
                 c_dev = _col(cat, "szamlazzhu_invoices", "s", "devizanem", fallback="'HUF'")
@@ -868,8 +873,8 @@ def run_silver_transformation() -> dict[str, int]:
                 c_src = _col(cat, "hubspot_deals", "h", "properties__hs_analytics_source", fallback="'direct'")
                 c_curr = _col(cat, "hubspot_deals", "h", "properties__deal_currency_code", fallback="'HUF'")
                 c_amt = _col(cat, "hubspot_deals", "h", "properties__amount", fallback="0")
-                c_root_cdat = _col(cat, "hubspot_deals", "h", "created_at", "createdat", fallback="NULL")
-                c_root_udat = _col(cat, "hubspot_deals", "h", "updated_at", "updatedat", fallback="NULL")
+                c_root_cdat = _col(cat, "hubspot_deals", "h", "createdat", "created_at", fallback="NULL")
+                c_root_udat = _col(cat, "hubspot_deals", "h", "updatedat", "updated_at", fallback="NULL")
                 c_cdat = _col(cat, "hubspot_deals", "h", "properties__createdate", fallback=c_root_cdat)
                 c_udat = _col(cat, "hubspot_deals", "h", "properties__hs_lastmodifieddate", fallback=c_root_udat)
                 c_cldat = _col(cat, "hubspot_deals", "h", "properties__closedate", fallback="NULL")
@@ -956,14 +961,14 @@ def run_silver_transformation() -> dict[str, int]:
                 c_del = _col(cat, "minicrm_projects", "m", "deleted", fallback="'0'")
                 c_ceg = _col(cat, "minicrm_projects", "m", "cegnev")
                 c_kap = _col(cat, "minicrm_projects", "m", "kapcsolattarto")
-                c_fel = _col(cat, "minicrm_projects", "m", "felelos_nev", "felelosnev")
+                c_fel = _col(cat, "minicrm_projects", "m", "felelosnev", "felelos_nev")
                 c_st = _col(cat, "minicrm_projects", "m", "statusz", fallback="''")
                 c_for = _col(cat, "minicrm_projects", "m", "forras", fallback="'direct'")
                 c_penz = _col(cat, "minicrm_projects", "m", "penznem", fallback="'HUF'")
                 c_ert = _col(cat, "minicrm_projects", "m", "ertek", fallback="0")
-                c_cdat = _col(cat, "minicrm_projects", "m", "created_at", "createdat", fallback="NULL")
-                c_udat = _col(cat, "minicrm_projects", "m", "updated_at", "updatedat", fallback="NULL")
-                c_varh = _col(cat, "minicrm_projects", "m", "varhato_zaras", "varhatozaras", fallback="NULL")
+                c_cdat = _col(cat, "minicrm_projects", "m", "createdat", "created_at", fallback="NULL")
+                c_udat = _col(cat, "minicrm_projects", "m", "updatedat", "updated_at", fallback="NULL")
+                c_varh = _col(cat, "minicrm_projects", "m", "varhatozaras", "varhato_zaras", fallback="NULL")
 
                 parts.append(
                     f"""
