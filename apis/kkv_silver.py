@@ -1,4 +1,4 @@
-# 2026.11.24  17.00
+# 2026.11.24  18.00
 import logging
 import os
 import threading
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import duckdb
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger("silver_transformation")
 
 _silver_lock = threading.Lock()
 
@@ -36,13 +36,9 @@ INIT_FX_STATEMENTS = [
 
 
 def _load_bronze_catalog(con: duckdb.DuckDBPyConnection) -> dict[str, set[str]]:
-    """Lekérdezi a létező bronze_api táblákat és azok oszlopkészletét."""
     rows = con.execute(
-        """
-        SELECT table_name, column_name
-        FROM duckdb_columns()
-        WHERE database_name = 'pg' AND schema_name = 'bronze_api'
-        """
+        "SELECT table_name, column_name FROM duckdb_columns() "
+        "WHERE database_name = 'pg' AND schema_name = 'bronze_api'"
     ).fetchall()
 
     catalog: dict[str, set[str]] = {}
@@ -51,10 +47,11 @@ def _load_bronze_catalog(con: duckdb.DuckDBPyConnection) -> dict[str, set[str]]:
     return catalog
 
 
-def _col(catalog: dict[str, set[str]], table: str, alias: str, column: str, fallback: str = "NULL") -> str:
-    """Visszaadja az oszlophivatkozást, vagy a fallback értéket, ha a dlt még nem hozta létre az oszlopot."""
-    if column in catalog.get(table, set()):
-        return f"{alias}.{column}"
+def _col(catalog: dict[str, set[str]], table: str, alias: str, *columns: str, fallback: str = "NULL") -> str:
+    cols = catalog.get(table, set())
+    for column in columns:
+        if column in cols:
+            return f"{alias}.{column}"
     return fallback
 
 
@@ -65,8 +62,11 @@ def _build_silver_table(
     empty_fallback_sql: str,
     index_col: str | None = None,
 ) -> int:
-    """Újraépíti a cél Silver táblát (DROP + CREATE) és visszaadja a betöltött sorok számát."""
-    select_sql = " UNION ALL ".join(union_parts) if union_parts else empty_fallback_sql
+    select_sql = (
+        " UNION ALL ".join(f"({part.strip()})" for part in union_parts)
+        if union_parts
+        else empty_fallback_sql
+    )
 
     con.execute(f"CALL postgres_execute('pg', 'DROP TABLE IF EXISTS silver.{table_name} CASCADE;');")
     con.execute(f"CREATE TABLE pg.silver.{table_name} AS {select_sql};")
@@ -87,6 +87,7 @@ def run_silver_transformation() -> dict[str, int]:
     """
     with _silver_lock:
         Path("/tmp/duckdb_silver_tmp").mkdir(parents=True, exist_ok=True)
+
         con = duckdb.connect(":memory:")
         try:
             con.execute("SET memory_limit = '128MB';")
@@ -107,7 +108,7 @@ def run_silver_transformation() -> dict[str, int]:
             # ----------------------------------------------------------------
             parts: list[str] = []
             if "meta_ads_insights" in cat:
-                actions_cte = (
+                actions_sub = (
                     """
                     SELECT _dlt_parent_id, COALESCE(SUM(TRY_CAST(value AS DOUBLE)), 0) AS purchases
                     FROM pg.bronze_api.meta_ads_insights__actions
@@ -117,7 +118,7 @@ def run_silver_transformation() -> dict[str, int]:
                     if "meta_ads_insights__actions" in cat
                     else "SELECT NULL::VARCHAR AS _dlt_parent_id, 0.0 AS purchases WHERE FALSE"
                 )
-                values_cte = (
+                values_sub = (
                     """
                     SELECT _dlt_parent_id, COALESCE(SUM(TRY_CAST(value AS DOUBLE)), 0) AS purchase_value
                     FROM pg.bronze_api.meta_ads_insights__action_values
@@ -128,18 +129,16 @@ def run_silver_transformation() -> dict[str, int]:
                     else "SELECT NULL::VARCHAR AS _dlt_parent_id, 0.0 AS purchase_value WHERE FALSE"
                 )
 
-                c_pub = _col(cat, "meta_ads_insights", "m", "publisher_platform", "'meta_other'")
-                c_acc = _col(cat, "meta_ads_insights", "m", "account_id", "'0'")
-                c_cid = _col(cat, "meta_ads_insights", "m", "campaign_id", "'0'")
+                c_pub = _col(cat, "meta_ads_insights", "m", "publisher_platform", fallback="'meta_other'")
+                c_acc = _col(cat, "meta_ads_insights", "m", "account_id", fallback="'0'")
+                c_cid = _col(cat, "meta_ads_insights", "m", "campaign_id", fallback="'0'")
                 c_cname = _col(cat, "meta_ads_insights", "m", "campaign_name")
-                c_aid = _col(cat, "meta_ads_insights", "m", "adset_id", "'0'")
+                c_aid = _col(cat, "meta_ads_insights", "m", "adset_id", fallback="'0'")
                 c_aname = _col(cat, "meta_ads_insights", "m", "adset_name")
-                c_curr = _col(cat, "meta_ads_insights", "m", "account_currency", "'HUF'")
+                c_curr = _col(cat, "meta_ads_insights", "m", "account_currency", fallback="'HUF'")
 
                 parts.append(
                     f"""
-                    WITH meta_act AS ({actions_cte}),
-                         meta_val AS ({values_cte})
                     SELECT
                         CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_pub} AS VARCHAR), '')) IN ('facebook', 'instagram')
@@ -164,23 +163,23 @@ def run_silver_transformation() -> dict[str, int]:
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.meta_ads_insights m
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
-                    LEFT JOIN meta_act act ON act._dlt_parent_id = m._dlt_id
-                    LEFT JOIN meta_val val ON val._dlt_parent_id = m._dlt_id
+                    LEFT JOIN ({actions_sub}) act ON act._dlt_parent_id = m._dlt_id
+                    LEFT JOIN ({values_sub}) val ON val._dlt_parent_id = m._dlt_id
                     WHERE TRY_CAST(m.date_start AS DATE) IS NOT NULL
                     """
                 )
 
             if "google_ads_insights" in cat:
-                c_type = _col(cat, "google_ads_insights", "g", "campaign__advertising_channel_type", "''")
-                c_acc = _col(cat, "google_ads_insights", "g", "customer__id", "'0'")
-                c_cid = _col(cat, "google_ads_insights", "g", "campaign__id", "'0'")
+                c_type = _col(cat, "google_ads_insights", "g", "campaign__advertising_channel_type", fallback="''")
+                c_acc = _col(cat, "google_ads_insights", "g", "customer__id", fallback="'0'")
+                c_cid = _col(cat, "google_ads_insights", "g", "campaign__id", fallback="'0'")
                 c_cname = _col(cat, "google_ads_insights", "g", "campaign__name")
-                c_aid = _col(cat, "google_ads_insights", "g", "adgroup__id", "'0'")
-                c_aname = _col(cat, "google_ads_insights", "g", "adgroup__name")
-                c_curr = _col(cat, "google_ads_insights", "g", "customer__currency_code", "'HUF'")
-                c_vviews = _col(cat, "google_ads_insights", "g", "metrics__video_views", "0")
-                c_conv = _col(cat, "google_ads_insights", "g", "metrics__conversions", "0")
-                c_cval = _col(cat, "google_ads_insights", "g", "metrics__conversions_value", "0")
+                c_aid = _col(cat, "google_ads_insights", "g", "ad_group__id", "adgroup__id", fallback="'0'")
+                c_aname = _col(cat, "google_ads_insights", "g", "ad_group__name", "adgroup__name")
+                c_curr = _col(cat, "google_ads_insights", "g", "customer__currency_code", fallback="'HUF'")
+                c_vviews = _col(cat, "google_ads_insights", "g", "metrics__video_views", fallback="0")
+                c_conv = _col(cat, "google_ads_insights", "g", "metrics__conversions", fallback="0")
+                c_cval = _col(cat, "google_ads_insights", "g", "metrics__conversions_value", fallback="0")
 
                 parts.append(
                     f"""
@@ -213,15 +212,15 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "tiktok_ads_insights" in cat:
-                c_acc = _col(cat, "tiktok_ads_insights", "t", "advertiser_id", "'0'")
-                c_cid = _col(cat, "tiktok_ads_insights", "t", "dimensions__campaign_id", "'0'")
+                c_acc = _col(cat, "tiktok_ads_insights", "t", "advertiser_id", fallback="'0'")
+                c_cid = _col(cat, "tiktok_ads_insights", "t", "dimensions__campaign_id", fallback="'0'")
                 c_cname = _col(cat, "tiktok_ads_insights", "t", "metrics__campaign_name")
-                c_aid = _col(cat, "tiktok_ads_insights", "t", "dimensions__adgroup_id", "'0'")
+                c_aid = _col(cat, "tiktok_ads_insights", "t", "dimensions__adgroup_id", fallback="'0'")
                 c_aname = _col(cat, "tiktok_ads_insights", "t", "metrics__adgroup_name")
-                c_curr = _col(cat, "tiktok_ads_insights", "t", "currency", "'EUR'")
-                c_cpay = _col(cat, "tiktok_ads_insights", "t", "metrics__complete_payment", "NULL")
-                c_conv = _col(cat, "tiktok_ads_insights", "t", "metrics__conversion", "0")
-                c_cval = _col(cat, "tiktok_ads_insights", "t", "metrics__total_complete_payment_rate", "0")
+                c_curr = _col(cat, "tiktok_ads_insights", "t", "currency", fallback="'EUR'")
+                c_cpay = _col(cat, "tiktok_ads_insights", "t", "metrics__complete_payment", fallback="NULL")
+                c_conv = _col(cat, "tiktok_ads_insights", "t", "metrics__conversion", fallback="0")
+                c_cval = _col(cat, "tiktok_ads_insights", "t", "metrics__total_complete_payment_rate", fallback="0")
 
                 parts.append(
                     f"""
@@ -267,19 +266,19 @@ def run_silver_transformation() -> dict[str, int]:
             # ----------------------------------------------------------------
             parts = []
             if "shopify_orders" in cat:
-                c_canc = _col(cat, "shopify_orders", "o", "cancelled_at", "NULL")
-                c_fin = _col(cat, "shopify_orders", "o", "financial_status", "''")
-                c_ful = _col(cat, "shopify_orders", "o", "fulfillment_status", "''")
+                c_canc = _col(cat, "shopify_orders", "o", "cancelled_at", fallback="NULL")
+                c_fin = _col(cat, "shopify_orders", "o", "financial_status", fallback="''")
+                c_ful = _col(cat, "shopify_orders", "o", "fulfillment_status", fallback="''")
                 c_src = _col(cat, "shopify_orders", "o", "source_name")
-                c_curr = _col(cat, "shopify_orders", "o", "currency", "'HUF'")
-                c_tax = _col(cat, "shopify_orders", "o", "total_tax", "0")
-                c_sub = _col(cat, "shopify_orders", "o", "subtotal_price", "o.total_price")
-                c_disc = _col(cat, "shopify_orders", "o", "total_discounts", "0")
+                c_curr = _col(cat, "shopify_orders", "o", "currency", fallback="'HUF'")
+                c_tax = _col(cat, "shopify_orders", "o", "total_tax", fallback="0")
+                c_sub = _col(cat, "shopify_orders", "o", "subtotal_price", fallback="o.total_price")
+                c_disc = _col(cat, "shopify_orders", "o", "total_discounts", fallback="0")
                 c_mail = _col(cat, "shopify_orders", "o", "email")
                 c_comp = _col(cat, "shopify_orders", "o", "billing_address__company")
                 c_bname = _col(cat, "shopify_orders", "o", "billing_address__name")
                 c_city = _col(cat, "shopify_orders", "o", "billing_address__city")
-                c_land = _col(cat, "shopify_orders", "o", "landing_site", "''")
+                c_land = _col(cat, "shopify_orders", "o", "landing_site", fallback="''")
 
                 parts.append(
                     f"""
@@ -323,17 +322,17 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "unas_orders" in cat:
-                c_pstat = _col(cat, "unas_orders", "u", "payment__status", "''")
+                c_pstat = _col(cat, "unas_orders", "u", "payment__status", fallback="''")
                 c_pname = _col(cat, "unas_orders", "u", "payment__name")
                 c_sname = _col(cat, "unas_orders", "u", "shipping__name")
-                c_curr = _col(cat, "unas_orders", "u", "currency", "'HUF'")
-                c_scost = _col(cat, "unas_orders", "u", "shipping__cost_gross", "0")
+                c_curr = _col(cat, "unas_orders", "u", "currency", fallback="'HUF'")
+                c_scost = _col(cat, "unas_orders", "u", "shipping__cost_gross", fallback="0")
                 c_mail = _col(cat, "unas_orders", "u", "customer__email")
                 c_cname = _col(cat, "unas_orders", "u", "customer__name")
                 c_taxn = _col(cat, "unas_orders", "u", "customer__tax_number")
                 c_city = _col(cat, "unas_orders", "u", "customer__city")
-                c_usrc = _col(cat, "unas_orders", "u", "utm__utm_source", "'direct'")
-                c_umed = _col(cat, "unas_orders", "u", "utm__utm_medium", "'none'")
+                c_usrc = _col(cat, "unas_orders", "u", "utm__utm_source", fallback="'direct'")
+                c_umed = _col(cat, "unas_orders", "u", "utm__utm_medium", fallback="'none'")
                 c_ucmp = _col(cat, "unas_orders", "u", "utm__utm_campaign")
 
                 parts.append(
@@ -342,8 +341,8 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST('unas' AS VARCHAR) AS source_system,
                         CAST(u.key AS VARCHAR) AS order_id,
                         CAST(u.key AS VARCHAR) AS order_number,
-                        TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S') AT TIME ZONE 'Europe/Budapest' AS order_created_at,
-                        CAST(TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S') AS DATE) AS order_date,
+                        COALESCE(TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S'), TRY_CAST(u.date AS TIMESTAMP)) AT TIME ZONE 'Europe/Budapest' AS order_created_at,
+                        CAST(COALESCE(TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S'), TRY_CAST(u.date AS TIMESTAMP)) AS DATE) AS order_date,
                         CAST(CASE
                             WHEN LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%töröl%'
                               OR LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%sztornó%' THEN 'cancelled'
@@ -375,24 +374,25 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "shoprenter_orders" in cat:
-                c_inv = _col(cat, "shoprenter_orders", "s", "invoiceid")
-                c_inn = _col(cat, "shoprenter_orders", "s", "innerid")
-                c_st = _col(cat, "shoprenter_orders", "s", "order_status__name", "''")
-                c_pm = _col(cat, "shoprenter_orders", "s", "paymentmethodname")
-                c_sm = _col(cat, "shoprenter_orders", "s", "shippingmethodname")
-                c_curr = _col(cat, "shoprenter_orders", "s", "currency__code", "'HUF'")
-                c_tnet = _col(cat, "shoprenter_orders", "s", "totalnet", "0")
-                c_ttax = _col(cat, "shoprenter_orders", "s", "totaltax", "0")
-                c_stot = _col(cat, "shoprenter_orders", "s", "shippingtotal", "0")
+                c_inv = _col(cat, "shoprenter_orders", "s", "invoice_id", "invoiceid")
+                c_inn = _col(cat, "shoprenter_orders", "s", "inner_id", "innerid")
+                c_cdat = _col(cat, "shoprenter_orders", "s", "date_created", "datecreated")
+                c_st = _col(cat, "shoprenter_orders", "s", "order_status__name", fallback="''")
+                c_pm = _col(cat, "shoprenter_orders", "s", "payment_method_name", "paymentmethodname")
+                c_sm = _col(cat, "shoprenter_orders", "s", "shipping_method_name", "shippingmethodname")
+                c_curr = _col(cat, "shoprenter_orders", "s", "currency__code", fallback="'HUF'")
+                c_tnet = _col(cat, "shoprenter_orders", "s", "total_net", "totalnet", fallback="0")
+                c_ttax = _col(cat, "shoprenter_orders", "s", "total_tax", "totaltax", fallback="0")
+                c_stot = _col(cat, "shoprenter_orders", "s", "shipping_total", "shippingtotal", fallback="0")
                 c_mail = _col(cat, "shoprenter_orders", "s", "email")
-                c_pcomp = _col(cat, "shoprenter_orders", "s", "paymentcompany")
-                c_lname = _col(cat, "shoprenter_orders", "s", "lastname", "''")
-                c_fname = _col(cat, "shoprenter_orders", "s", "firstname", "''")
-                c_taxn = _col(cat, "shoprenter_orders", "s", "paymenttaxnumber")
-                c_city = _col(cat, "shoprenter_orders", "s", "paymentcity")
-                c_usrc = _col(cat, "shoprenter_orders", "s", "utmsource", "'direct'")
-                c_umed = _col(cat, "shoprenter_orders", "s", "utmmedium", "'none'")
-                c_ucmp = _col(cat, "shoprenter_orders", "s", "utmcampaign")
+                c_pcomp = _col(cat, "shoprenter_orders", "s", "payment_company", "paymentcompany")
+                c_lname = _col(cat, "shoprenter_orders", "s", "lastname", fallback="''")
+                c_fname = _col(cat, "shoprenter_orders", "s", "firstname", fallback="''")
+                c_taxn = _col(cat, "shoprenter_orders", "s", "payment_tax_number", "paymenttaxnumber")
+                c_city = _col(cat, "shoprenter_orders", "s", "payment_city", "paymentcity")
+                c_usrc = _col(cat, "shoprenter_orders", "s", "utm_source", "utmsource", fallback="'direct'")
+                c_umed = _col(cat, "shoprenter_orders", "s", "utm_medium", "utmmedium", fallback="'none'")
+                c_ucmp = _col(cat, "shoprenter_orders", "s", "utm_campaign", "utmcampaign")
 
                 parts.append(
                     f"""
@@ -400,8 +400,8 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST('shoprenter' AS VARCHAR) AS source_system,
                         CAST(s.id AS VARCHAR) AS order_id,
                         CAST(COALESCE(CAST({c_inv} AS VARCHAR), CAST({c_inn} AS VARCHAR)) AS VARCHAR) AS order_number,
-                        TRY_CAST(s.datecreated AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS order_created_at,
-                        TRY_CAST(s.datecreated AS DATE) AS order_date,
+                        TRY_CAST({c_cdat} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS order_created_at,
+                        TRY_CAST({c_cdat} AS DATE) AS order_date,
                         CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sztornó%'
                               OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%töröl%' THEN 'cancelled'
@@ -433,7 +433,7 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "woocommerce_orders" in cat:
-                wc_meta_cte = (
+                wc_meta_sub = (
                     """
                     SELECT
                         _dlt_parent_id,
@@ -448,22 +448,21 @@ def run_silver_transformation() -> dict[str, int]:
                     else "SELECT NULL::VARCHAR AS _dlt_parent_id, NULL::VARCHAR AS tax_number, NULL::VARCHAR AS utm_source, NULL::VARCHAR AS utm_medium, NULL::VARCHAR AS utm_campaign WHERE FALSE"
                 )
 
-                c_num = _col(cat, "woocommerce_orders", "w", "number", "w.id")
+                c_num = _col(cat, "woocommerce_orders", "w", "number", fallback="w.id")
                 c_pm = _col(cat, "woocommerce_orders", "w", "payment_method_title")
-                c_curr = _col(cat, "woocommerce_orders", "w", "currency", "'HUF'")
-                c_ttax = _col(cat, "woocommerce_orders", "w", "total_tax", "0")
-                c_stot = _col(cat, "woocommerce_orders", "w", "shipping_total", "0")
-                c_stax = _col(cat, "woocommerce_orders", "w", "shipping_tax", "0")
-                c_disc = _col(cat, "woocommerce_orders", "w", "discount_total", "0")
+                c_curr = _col(cat, "woocommerce_orders", "w", "currency", fallback="'HUF'")
+                c_ttax = _col(cat, "woocommerce_orders", "w", "total_tax", fallback="0")
+                c_stot = _col(cat, "woocommerce_orders", "w", "shipping_total", fallback="0")
+                c_stax = _col(cat, "woocommerce_orders", "w", "shipping_tax", fallback="0")
+                c_disc = _col(cat, "woocommerce_orders", "w", "discount_total", fallback="0")
                 c_mail = _col(cat, "woocommerce_orders", "w", "billing__email")
                 c_comp = _col(cat, "woocommerce_orders", "w", "billing__company")
-                c_lname = _col(cat, "woocommerce_orders", "w", "billing__last_name", "''")
-                c_fname = _col(cat, "woocommerce_orders", "w", "billing__first_name", "''")
+                c_lname = _col(cat, "woocommerce_orders", "w", "billing__last_name", fallback="''")
+                c_fname = _col(cat, "woocommerce_orders", "w", "billing__first_name", fallback="''")
                 c_city = _col(cat, "woocommerce_orders", "w", "billing__city")
 
                 parts.append(
                     f"""
-                    WITH wc_meta AS ({wc_meta_cte})
                     SELECT
                         CAST('woocommerce' AS VARCHAR) AS source_system,
                         CAST(w.id AS VARCHAR) AS order_id,
@@ -500,7 +499,7 @@ def run_silver_transformation() -> dict[str, int]:
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.woocommerce_orders w
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
-                    LEFT JOIN wc_meta meta ON meta._dlt_parent_id = w._dlt_id
+                    LEFT JOIN ({wc_meta_sub}) meta ON meta._dlt_parent_id = w._dlt_id
                     """
                 )
 
@@ -525,11 +524,11 @@ def run_silver_transformation() -> dict[str, int]:
             # ----------------------------------------------------------------
             parts = []
             if "shopify_orders__line_items" in cat and "shopify_orders" in cat:
-                c_canc = _col(cat, "shopify_orders", "o", "cancelled_at", "NULL")
-                c_fin = _col(cat, "shopify_orders", "o", "financial_status", "''")
-                c_ful = _col(cat, "shopify_orders", "o", "fulfillment_status", "''")
-                c_curr = _col(cat, "shopify_orders", "o", "currency", "'HUF'")
-                c_disc = _col(cat, "shopify_orders__line_items", "li", "total_discount", "0")
+                c_canc = _col(cat, "shopify_orders", "o", "cancelled_at", fallback="NULL")
+                c_fin = _col(cat, "shopify_orders", "o", "financial_status", fallback="''")
+                c_ful = _col(cat, "shopify_orders", "o", "fulfillment_status", fallback="''")
+                c_curr = _col(cat, "shopify_orders", "o", "currency", fallback="'HUF'")
+                c_disc = _col(cat, "shopify_orders__line_items", "li", "total_discount", fallback="0")
 
                 parts.append(
                     f"""
@@ -559,8 +558,8 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "unas_orders__items" in cat and "unas_orders" in cat:
-                c_itid = _col(cat, "unas_orders__items", "it", "id", "it._dlt_id")
-                c_curr = _col(cat, "unas_orders", "u", "currency", "'HUF'")
+                c_itid = _col(cat, "unas_orders__items", "it", "id", fallback="it._dlt_id")
+                c_curr = _col(cat, "unas_orders", "u", "currency", fallback="'HUF'")
 
                 parts.append(
                     f"""
@@ -568,7 +567,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST('unas' AS VARCHAR) AS source_system,
                         CAST(u.key AS VARCHAR) AS order_id,
                         CAST({c_itid} AS VARCHAR) AS line_item_id,
-                        CAST(TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S') AS DATE) AS order_date,
+                        CAST(COALESCE(TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S'), TRY_CAST(u.date AS TIMESTAMP)) AS DATE) AS order_date,
                         CAST(CASE
                             WHEN LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%töröl%'
                               OR LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%sztornó%' THEN 'cancelled'
@@ -590,9 +589,16 @@ def run_silver_transformation() -> dict[str, int]:
                     """
                 )
 
-            if "shoprenter_orders__orderproducts" in cat and "shoprenter_orders" in cat:
-                c_st = _col(cat, "shoprenter_orders", "s", "order_status__name", "''")
-                c_curr = _col(cat, "shoprenter_orders", "s", "currency__code", "'HUF'")
+            sr_items_tbl = (
+                "shoprenter_orders__order_products"
+                if "shoprenter_orders__order_products" in cat
+                else "shoprenter_orders__orderproducts"
+            )
+            if sr_items_tbl in cat and "shoprenter_orders" in cat:
+                c_cdat = _col(cat, "shoprenter_orders", "s", "date_created", "datecreated")
+                c_st = _col(cat, "shoprenter_orders", "s", "order_status__name", fallback="''")
+                c_curr = _col(cat, "shoprenter_orders", "s", "currency__code", fallback="'HUF'")
+                c_gross = _col(cat, sr_items_tbl, "op", "gross_price", "grossprice", fallback="0")
 
                 parts.append(
                     f"""
@@ -600,7 +606,7 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST('shoprenter' AS VARCHAR) AS source_system,
                         CAST(s.id AS VARCHAR) AS order_id,
                         CAST(op.id AS VARCHAR) AS line_item_id,
-                        TRY_CAST(s.datecreated AS DATE) AS order_date,
+                        TRY_CAST({c_cdat} AS DATE) AS order_date,
                         CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sztornó%'
                               OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%töröl%' THEN 'cancelled'
@@ -612,19 +618,19 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(op.name AS VARCHAR) AS product_name,
                         CAST(COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
                         CAST(ROUND(COALESCE(TRY_CAST(op.price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_net_huf,
-                        CAST(ROUND(COALESCE(TRY_CAST(op.gross_price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_gross} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
                         CAST(ROUND(COALESCE(TRY_CAST(op.price AS DOUBLE), 0) * COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_net_huf,
-                        CAST(ROUND(COALESCE(TRY_CAST(op.gross_price AS DOUBLE), 0) * COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_gross} AS DOUBLE), 0) * COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
                         NOW() AS refreshed_at
-                    FROM pg.bronze_api.shoprenter_orders__orderproducts op
+                    FROM pg.bronze_api.{sr_items_tbl} op
                     JOIN pg.bronze_api.shoprenter_orders s ON s._dlt_id = op._dlt_parent_id
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
                     """
                 )
 
             if "woocommerce_orders__line_items" in cat and "woocommerce_orders" in cat:
-                c_curr = _col(cat, "woocommerce_orders", "w", "currency", "'HUF'")
-                c_ltax = _col(cat, "woocommerce_orders__line_items", "li", "total_tax", "0")
+                c_curr = _col(cat, "woocommerce_orders", "w", "currency", fallback="'HUF'")
+                c_ltax = _col(cat, "woocommerce_orders__line_items", "li", "total_tax", fallback="0")
 
                 parts.append(
                     f"""
@@ -643,7 +649,13 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(li.name AS VARCHAR) AS product_name,
                         CAST(COALESCE(TRY_CAST(li.quantity AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
                         CAST(ROUND(COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_net_huf,
-                        CAST(ROUND((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * 1.27) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
+                        CAST(ROUND(
+                            CASE
+                                WHEN COALESCE(TRY_CAST(li.quantity AS DOUBLE), 0) > 0
+                                    THEN ((COALESCE(TRY_CAST(li.total AS DOUBLE), 0) + COALESCE(TRY_CAST({c_ltax} AS DOUBLE), 0)) / TRY_CAST(li.quantity AS DOUBLE))
+                                ELSE COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * 1.27
+                            END * COALESCE(fx.rate_to_huf, 1.0), 2
+                        ) AS DECIMAL(14, 2)) AS unit_gross_huf,
                         CAST(ROUND(COALESCE(TRY_CAST(li.total AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_net_huf,
                         CAST(ROUND((COALESCE(TRY_CAST(li.total AS DOUBLE), 0) + COALESCE(TRY_CAST({c_ltax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
                         NOW() AS refreshed_at
@@ -670,15 +682,15 @@ def run_silver_transformation() -> dict[str, int]:
             # ----------------------------------------------------------------
             parts = []
             if "billingo_documents" in cat:
-                c_canc = _col(cat, "billingo_documents", "b", "cancelled", "FALSE")
-                c_type = _col(cat, "billingo_documents", "b", "type", "'invoice'")
-                c_ful = _col(cat, "billingo_documents", "b", "fulfillment_date", "b.invoice_date")
-                c_due = _col(cat, "billingo_documents", "b", "due_date", "NULL")
-                c_paid = _col(cat, "billingo_documents", "b", "paid_date", "NULL")
-                c_pstat = _col(cat, "billingo_documents", "b", "payment_status", "'open'")
+                c_canc = _col(cat, "billingo_documents", "b", "cancelled", fallback="FALSE")
+                c_type = _col(cat, "billingo_documents", "b", "type", fallback="'invoice'")
+                c_ful = _col(cat, "billingo_documents", "b", "fulfillment_date", fallback="b.invoice_date")
+                c_due = _col(cat, "billingo_documents", "b", "due_date", fallback="NULL")
+                c_paid = _col(cat, "billingo_documents", "b", "paid_date", fallback="NULL")
+                c_pstat = _col(cat, "billingo_documents", "b", "payment_status", fallback="'open'")
                 c_pm = _col(cat, "billingo_documents", "b", "payment_method")
-                c_curr = _col(cat, "billingo_documents", "b", "currency", "'HUF'")
-                c_rate = _col(cat, "billingo_documents", "b", "conversion_rate", "NULL")
+                c_curr = _col(cat, "billingo_documents", "b", "currency", fallback="'HUF'")
+                c_rate = _col(cat, "billingo_documents", "b", "conversion_rate", fallback="NULL")
                 c_pname = _col(cat, "billingo_documents", "b", "partner__name")
                 c_ptax = _col(cat, "billingo_documents", "b", "partner__taxcode")
 
@@ -717,14 +729,14 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "szamlazzhu_invoices" in cat:
-                c_tip = _col(cat, "szamlazzhu_invoices", "s", "tipus", "'SZ'")
-                c_telj = _col(cat, "szamlazzhu_invoices", "s", "teljesites", "s.kelt")
-                c_fhat = _col(cat, "szamlazzhu_invoices", "s", "fizhat", "NULL")
-                c_kdat = _col(cat, "szamlazzhu_invoices", "s", "kifizetesdatum", "NULL")
-                c_fiz = _col(cat, "szamlazzhu_invoices", "s", "fizetve", "FALSE")
+                c_tip = _col(cat, "szamlazzhu_invoices", "s", "tipus", fallback="'SZ'")
+                c_telj = _col(cat, "szamlazzhu_invoices", "s", "teljesites", fallback="s.kelt")
+                c_fhat = _col(cat, "szamlazzhu_invoices", "s", "fizhat", fallback="NULL")
+                c_kdat = _col(cat, "szamlazzhu_invoices", "s", "kifizetes_datum", "kifizetesdatum", fallback="NULL")
+                c_fiz = _col(cat, "szamlazzhu_invoices", "s", "fizetve", fallback="FALSE")
                 c_fmod = _col(cat, "szamlazzhu_invoices", "s", "fizmod")
-                c_dev = _col(cat, "szamlazzhu_invoices", "s", "devizanem", "'HUF'")
-                c_arf = _col(cat, "szamlazzhu_invoices", "s", "arfolyam", "NULL")
+                c_dev = _col(cat, "szamlazzhu_invoices", "s", "devizanem", fallback="'HUF'")
+                c_arf = _col(cat, "szamlazzhu_invoices", "s", "arfolyam", fallback="NULL")
                 c_vnev = _col(cat, "szamlazzhu_invoices", "s", "vevo__nev")
                 c_vado = _col(cat, "szamlazzhu_invoices", "s", "vevo__adoszam")
 
@@ -745,7 +757,7 @@ def run_silver_transformation() -> dict[str, int]:
                         TRY_CAST({c_fhat} AS DATE) AS due_date,
                         TRY_CAST({c_kdat} AS DATE) AS paid_date,
                         CAST(CASE
-                            WHEN LOWER(COALESCE(CAST({c_fiz} AS VARCHAR), 'false')) = 'true' THEN 'paid'
+                            WHEN COALESCE(TRY_CAST({c_fiz} AS BOOLEAN), FALSE) THEN 'paid'
                             WHEN TRY_CAST({c_fhat} AS DATE) < CURRENT_DATE THEN 'overdue'
                             ELSE 'open'
                         END AS VARCHAR) AS payment_status,
@@ -780,10 +792,10 @@ def run_silver_transformation() -> dict[str, int]:
             # ----------------------------------------------------------------
             parts = []
             if "billingo_documents__items" in cat and "billingo_documents" in cat:
-                c_ful = _col(cat, "billingo_documents", "b", "fulfillment_date", "b.invoice_date")
-                c_pid = _col(cat, "billingo_documents__items", "it", "product_id", "'UNKNOWN'")
-                c_curr = _col(cat, "billingo_documents", "b", "currency", "'HUF'")
-                c_rate = _col(cat, "billingo_documents", "b", "conversion_rate", "NULL")
+                c_ful = _col(cat, "billingo_documents", "b", "fulfillment_date", fallback="b.invoice_date")
+                c_pid = _col(cat, "billingo_documents__items", "it", "product_id", fallback="'UNKNOWN'")
+                c_curr = _col(cat, "billingo_documents", "b", "currency", fallback="'HUF'")
+                c_rate = _col(cat, "billingo_documents", "b", "conversion_rate", fallback="NULL")
 
                 parts.append(
                     rf"""
@@ -809,10 +821,10 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "szamlazzhu_invoices__tetelek" in cat and "szamlazzhu_invoices" in cat:
-                c_telj = _col(cat, "szamlazzhu_invoices", "s", "teljesites", "s.kelt")
-                c_azon = _col(cat, "szamlazzhu_invoices__tetelek", "t", "azonosito", "'UNKNOWN'")
-                c_dev = _col(cat, "szamlazzhu_invoices", "s", "devizanem", "'HUF'")
-                c_arf = _col(cat, "szamlazzhu_invoices", "s", "arfolyam", "NULL")
+                c_telj = _col(cat, "szamlazzhu_invoices", "s", "teljesites", fallback="s.kelt")
+                c_azon = _col(cat, "szamlazzhu_invoices__tetelek", "t", "azonosito", fallback="'UNKNOWN'")
+                c_dev = _col(cat, "szamlazzhu_invoices", "s", "devizanem", fallback="'HUF'")
+                c_arf = _col(cat, "szamlazzhu_invoices", "s", "arfolyam", fallback="NULL")
 
                 parts.append(
                     f"""
@@ -848,19 +860,19 @@ def run_silver_transformation() -> dict[str, int]:
             # ----------------------------------------------------------------
             parts = []
             if "hubspot_deals" in cat:
-                c_arch = _col(cat, "hubspot_deals", "h", "archived", "FALSE")
-                c_dname = _col(cat, "hubspot_deals", "h", "properties__dealname", "''")
+                c_arch = _col(cat, "hubspot_deals", "h", "archived", fallback="FALSE")
+                c_dname = _col(cat, "hubspot_deals", "h", "properties__dealname", fallback="''")
                 c_owner = _col(cat, "hubspot_deals", "h", "properties__hubspot_owner_id")
-                c_stage = _col(cat, "hubspot_deals", "h", "properties__dealstage", "''")
-                c_prob = _col(cat, "hubspot_deals", "h", "properties__hs_deal_stage_probability", "0")
-                c_src = _col(cat, "hubspot_deals", "h", "properties__hs_analytics_source", "'direct'")
-                c_curr = _col(cat, "hubspot_deals", "h", "properties__deal_currency_code", "'HUF'")
-                c_amt = _col(cat, "hubspot_deals", "h", "properties__amount", "0")
-                c_h_created = _col(cat, "hubspot_deals", "h", "createdat", "NULL")
-                c_h_updated = _col(cat, "hubspot_deals", "h", "updatedat", "NULL")
-                c_cdat = _col(cat, "hubspot_deals", "h", "properties__createdate", c_h_created)
-                c_udat = _col(cat, "hubspot_deals", "h", "properties__hs_lastmodifieddate", c_h_updated)
-                c_cldat = _col(cat, "hubspot_deals", "h", "properties__closedate", "NULL")
+                c_stage = _col(cat, "hubspot_deals", "h", "properties__dealstage", fallback="''")
+                c_prob = _col(cat, "hubspot_deals", "h", "properties__hs_deal_stage_probability", fallback="0")
+                c_src = _col(cat, "hubspot_deals", "h", "properties__hs_analytics_source", fallback="'direct'")
+                c_curr = _col(cat, "hubspot_deals", "h", "properties__deal_currency_code", fallback="'HUF'")
+                c_amt = _col(cat, "hubspot_deals", "h", "properties__amount", fallback="0")
+                c_root_cdat = _col(cat, "hubspot_deals", "h", "created_at", "createdat", fallback="NULL")
+                c_root_udat = _col(cat, "hubspot_deals", "h", "updated_at", "updatedat", fallback="NULL")
+                c_cdat = _col(cat, "hubspot_deals", "h", "properties__createdate", fallback=c_root_cdat)
+                c_udat = _col(cat, "hubspot_deals", "h", "properties__hs_lastmodifieddate", fallback=c_root_udat)
+                c_cldat = _col(cat, "hubspot_deals", "h", "properties__closedate", fallback="NULL")
                 c_lost = _col(cat, "hubspot_deals", "h", "properties__closed_lost_reason")
 
                 parts.append(
@@ -882,8 +894,8 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_src} AS VARCHAR)), ''), 'direct')) AS VARCHAR) AS lead_source,
                         CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
                         CAST(ROUND(COALESCE(TRY_CAST({c_amt} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
-                        COALESCE(TRY_CAST({c_cdat} AS TIMESTAMPTZ), TRY_CAST({c_h_created} AS TIMESTAMPTZ)) AS created_at,
-                        COALESCE(TRY_CAST({c_udat} AS TIMESTAMPTZ), TRY_CAST({c_h_updated} AS TIMESTAMPTZ)) AS updated_at,
+                        COALESCE(TRY_CAST({c_cdat} AS TIMESTAMPTZ), TRY_CAST({c_root_cdat} AS TIMESTAMPTZ)) AS created_at,
+                        COALESCE(TRY_CAST({c_udat} AS TIMESTAMPTZ), TRY_CAST({c_root_udat} AS TIMESTAMPTZ)) AS updated_at,
                         CAST(TRY_CAST({c_cldat} AS TIMESTAMPTZ) AS DATE) AS expected_close_date,
                         CASE
                             WHEN LOWER(COALESCE(CAST({c_stage} AS VARCHAR), '')) IN ('closedwon', 'closedlost')
@@ -902,14 +914,12 @@ def run_silver_transformation() -> dict[str, int]:
                 c_org = _col(cat, "pipedrive_deals", "p", "org_id__name")
                 c_per = _col(cat, "pipedrive_deals", "p", "person_id__name")
                 c_usr = _col(cat, "pipedrive_deals", "p", "user_id__name")
-                c_stg = _col(cat, "pipedrive_deals", "p", "stage_id", "'0'")
-                c_prob = _col(cat, "pipedrive_deals", "p", "probability", "0")
-                c_curr = _col(cat, "pipedrive_deals", "p", "currency", "'HUF'")
-                c_add = _col(cat, "pipedrive_deals", "p", "add_time", "NULL")
-                c_upd = _col(cat, "pipedrive_deals", "p", "update_time", "NULL")
-                c_exp = _col(cat, "pipedrive_deals", "p", "expected_close_date", "NULL")
-                c_won = _col(cat, "pipedrive_deals", "p", "won_time", "NULL")
-                c_lost_t = _col(cat, "pipedrive_deals", "p", "lost_time", "NULL")
+                c_stg = _col(cat, "pipedrive_deals", "p", "stage_id", fallback="'0'")
+                c_prob = _col(cat, "pipedrive_deals", "p", "probability", fallback="0")
+                c_curr = _col(cat, "pipedrive_deals", "p", "currency", fallback="'HUF'")
+                c_exp = _col(cat, "pipedrive_deals", "p", "expected_close_date", fallback="NULL")
+                c_won = _col(cat, "pipedrive_deals", "p", "won_time", fallback="NULL")
+                c_lost_t = _col(cat, "pipedrive_deals", "p", "lost_time", fallback="NULL")
                 c_lost_r = _col(cat, "pipedrive_deals", "p", "lost_reason")
 
                 parts.append(
@@ -931,8 +941,8 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST('direct' AS VARCHAR) AS lead_source,
                         CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
                         CAST(ROUND(COALESCE(TRY_CAST(p.value AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
-                        TRY_CAST({c_add} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
-                        TRY_CAST({c_upd} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
+                        TRY_CAST(p.add_time AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
+                        TRY_CAST(p.update_time AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
                         TRY_CAST({c_exp} AS DATE) AS expected_close_date,
                         COALESCE(TRY_CAST({c_won} AS DATE), TRY_CAST({c_lost_t} AS DATE)) AS closed_date,
                         CAST({c_lost_r} AS VARCHAR) AS lost_reason,
@@ -943,17 +953,17 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "minicrm_projects" in cat:
-                c_del = _col(cat, "minicrm_projects", "m", "deleted", "'0'")
+                c_del = _col(cat, "minicrm_projects", "m", "deleted", fallback="'0'")
                 c_ceg = _col(cat, "minicrm_projects", "m", "cegnev")
                 c_kap = _col(cat, "minicrm_projects", "m", "kapcsolattarto")
-                c_fel = _col(cat, "minicrm_projects", "m", "felelosnev")
-                c_st = _col(cat, "minicrm_projects", "m", "statusz", "''")
-                c_for = _col(cat, "minicrm_projects", "m", "forras", "'direct'")
-                c_penz = _col(cat, "minicrm_projects", "m", "penznem", "'HUF'")
-                c_ert = _col(cat, "minicrm_projects", "m", "ertek", "0")
-                c_cre = _col(cat, "minicrm_projects", "m", "createdat", "NULL")
-                c_upd = _col(cat, "minicrm_projects", "m", "updatedat", "NULL")
-                c_varh = _col(cat, "minicrm_projects", "m", "varhatozaras", "NULL")
+                c_fel = _col(cat, "minicrm_projects", "m", "felelos_nev", "felelosnev")
+                c_st = _col(cat, "minicrm_projects", "m", "statusz", fallback="''")
+                c_for = _col(cat, "minicrm_projects", "m", "forras", fallback="'direct'")
+                c_penz = _col(cat, "minicrm_projects", "m", "penznem", fallback="'HUF'")
+                c_ert = _col(cat, "minicrm_projects", "m", "ertek", fallback="0")
+                c_cdat = _col(cat, "minicrm_projects", "m", "created_at", "createdat", fallback="NULL")
+                c_udat = _col(cat, "minicrm_projects", "m", "updated_at", "updatedat", fallback="NULL")
+                c_varh = _col(cat, "minicrm_projects", "m", "varhato_zaras", "varhatozaras", fallback="NULL")
 
                 parts.append(
                     f"""
@@ -980,13 +990,13 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_for} AS VARCHAR)), ''), 'direct')) AS VARCHAR) AS lead_source,
                         CAST(UPPER(COALESCE(CAST({c_penz} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
                         CAST(ROUND(COALESCE(TRY_CAST({c_ert} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
-                        TRY_CAST({c_cre} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
-                        TRY_CAST({c_upd} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
+                        TRY_CAST({c_cdat} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
+                        TRY_CAST({c_udat} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
                         TRY_CAST({c_varh} AS DATE) AS expected_close_date,
                         CASE
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%megrendel%'
                               OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%elutasít%'
-                                THEN TRY_CAST({c_upd} AS DATE)
+                                THEN TRY_CAST({c_udat} AS DATE)
                             ELSE NULL
                         END AS closed_date,
                         NULL::VARCHAR AS lost_reason,
@@ -1017,9 +1027,9 @@ def run_silver_transformation() -> dict[str, int]:
             if "product_cogs" in cat:
                 c_tnev = _col(cat, "product_cogs", "c", "termek_nev")
                 c_besz = _col(cat, "product_cogs", "c", "beszallito")
-                c_dev = _col(cat, "product_cogs", "c", "devizanem", "'HUF'")
-                c_erv = _col(cat, "product_cogs", "c", "ervenyes_ettol", "DATE '2020-01-01'")
-                c_ing = _col(cat, "product_cogs", "c", "ingested_at", "NOW()")
+                c_dev = _col(cat, "product_cogs", "c", "devizanem", fallback="'HUF'")
+                c_erv = _col(cat, "product_cogs", "c", "ervenyes_ettol", fallback="DATE '2020-01-01'")
+                c_ing = _col(cat, "product_cogs", "c", "ingested_at", fallback="NOW()")
 
                 parts.append(
                     f"""
@@ -1067,8 +1077,5 @@ def run_silver_transformation() -> dict[str, int]:
             logger.info("[SILVER-DUCKDB] Transzformáció kész: %s", summary)
             return summary
 
-        except Exception as exc:
-            logger.exception("[SILVER-DUCKDB] Hiba a Silver transzformáció során: %s", exc)
-            raise
         finally:
             con.close()
