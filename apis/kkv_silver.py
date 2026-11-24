@@ -1,4 +1,4 @@
-# 2026.11.24  15.00
+# 2026.11.24  17.00
 import logging
 import os
 import threading
@@ -28,6 +28,22 @@ VALUES ('HUF', 1.0000), ('EUR', 402.0000), ('USD', 375.0000)
 ON CONFLICT (currency) DO NOTHING;
 """
 
+INIT_FX_STATEMENTS = [
+    "CREATE SCHEMA IF NOT EXISTS silver;",
+    """
+    CREATE TABLE IF NOT EXISTS silver.fx_rates (
+        currency        TEXT PRIMARY KEY,
+        rate_to_huf     NUMERIC(12, 4) NOT NULL,
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    """,
+    """
+    INSERT INTO silver.fx_rates (currency, rate_to_huf)
+    VALUES ('HUF', 1.0000), ('EUR', 402.0000), ('USD', 375.0000)
+    ON CONFLICT (currency) DO NOTHING;
+    """,
+]
+
 
 def _load_bronze_catalog(con: duckdb.DuckDBPyConnection) -> dict[str, set[str]]:
     rows = con.execute("SELECT table_name, column_name FROM duckdb_columns() WHERE database_name = 'pg' AND schema_name = 'bronze_api'").fetchall()
@@ -52,7 +68,10 @@ def _build_silver_table(
     index_col: str | None = None,
 ) -> int:
     select_sql = " UNION ALL ".join(union_parts) if union_parts else empty_fallback_sql
-    con.execute(f"CREATE OR REPLACE TABLE pg.silver.{table_name} AS {select_sql};")
+
+    # DuckDB postgres catalog nem támogatja a CREATE OR REPLACE TABLE-t -> DROP + CREATE
+    con.execute(f"CALL postgres_execute('pg', 'DROP TABLE IF EXISTS silver.{table_name} CASCADE;');")
+    con.execute(f"CREATE TABLE pg.silver.{table_name} AS {select_sql};")
 
     if index_col:
         con.execute(
@@ -70,15 +89,19 @@ def run_silver_transformation() -> dict[str, int]:
     """
     with _silver_lock:
         Path("/tmp/duckdb_silver_tmp").mkdir(parents=True, exist_ok=True)
+
         con = duckdb.connect(":memory:")
         try:
             con.execute("SET memory_limit = '128MB';")
             con.execute("SET threads = 2;")
             con.execute("SET temp_directory = '/tmp/duckdb_silver_tmp';")
+            con.execute("INSTALL postgres;")
             con.execute("LOAD postgres;")
             con.execute(f"ATTACH '{PG_ATTACH_DSN}' AS pg (TYPE POSTGRES);")
 
-            con.execute(f"CALL postgres_execute('pg', $${INIT_FX_SQL}$$);")
+            for stmt in INIT_FX_STATEMENTS:
+                con.execute(f"CALL postgres_execute('pg', $${stmt}$$);")
+        
             cat = _load_bronze_catalog(con)
             summary: dict[str, int] = {}
 
