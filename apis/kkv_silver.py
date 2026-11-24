@@ -60,16 +60,9 @@ def _col(catalog: dict[str, set[str]], table: str, alias: str, column: str, fall
     return fallback
 
 
-def _build_silver_table(
-    con: duckdb.DuckDBPyConnection,
-    table_name: str,
-    union_parts: list[str],
-    empty_fallback_sql: str,
-    index_col: str | None = None,
-) -> int:
+def _build_silver_table(con: duckdb.DuckDBPyConnection, table_name: str, union_parts: list[str], empty_fallback_sql: str, index_col: str | None = None) -> int:
     select_sql = " UNION ALL ".join(union_parts) if union_parts else empty_fallback_sql
 
-    # DuckDB postgres catalog nem támogatja a CREATE OR REPLACE TABLE-t -> DROP + CREATE
     con.execute(f"CALL postgres_execute('pg', 'DROP TABLE IF EXISTS silver.{table_name} CASCADE;');")
     con.execute(f"CREATE TABLE pg.silver.{table_name} AS {select_sql};")
 
