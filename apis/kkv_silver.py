@@ -1,4 +1,4 @@
-# 2026.11.24  12.00
+# 2026.11.24  15.00
 import logging
 import os
 import threading
@@ -18,159 +18,22 @@ PG_ATTACH_DSN = (
     f"port={os.getenv('POSTGRES_PORT', '5432')}"
 )
 
-SILVER_DDL_SQL = """
+INIT_FX_SQL = """
 CREATE SCHEMA IF NOT EXISTS silver;
 
-CREATE TABLE IF NOT EXISTS silver.fx_rates (currency TEXT PRIMARY KEY, rate_to_huf NUMERIC(12, 4) NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS silver.fx_rates (
+    currency        TEXT PRIMARY KEY,
+    rate_to_huf     NUMERIC(12, 4) NOT NULL,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 INSERT INTO silver.fx_rates (currency, rate_to_huf)
 VALUES ('HUF', 1.0000), ('EUR', 402.0000), ('USD', 375.0000)
 ON CONFLICT (currency) DO NOTHING;
-
-CREATE TABLE IF NOT EXISTS silver.ad_spend_daily (
-    channel                 TEXT NOT NULL,
-    source_system           TEXT NOT NULL,
-    account_id              TEXT NOT NULL,
-    campaign_id             TEXT NOT NULL,
-    campaign_name           TEXT,
-    adgroup_id              TEXT NOT NULL,
-    adgroup_name            TEXT,
-    spend_date              DATE NOT NULL,
-    original_currency       TEXT NOT NULL,
-    spend_original          NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    spend_huf               NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    impressions             BIGINT NOT NULL DEFAULT 0,
-    clicks                  BIGINT NOT NULL DEFAULT 0,
-    video_views             BIGINT NOT NULL DEFAULT 0,
-    conversions             NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    conversion_value_huf    NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    refreshed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (channel, account_id, campaign_id, adgroup_id, spend_date)
-);
-CREATE INDEX IF NOT EXISTS idx_silver_ads_date ON silver.ad_spend_daily (spend_date);
-
-CREATE TABLE IF NOT EXISTS silver.orders (
-    source_system           TEXT NOT NULL,
-    order_id                TEXT NOT NULL,
-    order_number            TEXT,
-    order_created_at        TIMESTAMPTZ NOT NULL,
-    order_date              DATE NOT NULL,
-    order_status            TEXT NOT NULL,
-    raw_status              TEXT,
-    payment_status          TEXT NOT NULL,
-    payment_method          TEXT,
-    shipping_method         TEXT,
-    currency                TEXT NOT NULL DEFAULT 'HUF',
-    net_total_huf           NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    tax_total_huf           NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    gross_total_huf         NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    shipping_gross_huf      NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    discount_gross_huf      NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    customer_email          TEXT,
-    customer_name           TEXT,
-    customer_tax_number     TEXT,
-    customer_city           TEXT,
-    utm_source              TEXT NOT NULL DEFAULT 'direct',
-    utm_medium              TEXT NOT NULL DEFAULT 'none',
-    utm_campaign            TEXT,
-    refreshed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (source_system, order_id)
-);
-CREATE INDEX IF NOT EXISTS idx_silver_orders_date ON silver.orders (order_date);
-
-CREATE TABLE IF NOT EXISTS silver.order_items (
-    source_system           TEXT NOT NULL,
-    order_id                TEXT NOT NULL,
-    line_item_id            TEXT NOT NULL,
-    order_date              DATE NOT NULL,
-    order_status            TEXT NOT NULL,
-    sku                     TEXT NOT NULL,
-    product_name            TEXT,
-    quantity                NUMERIC(12, 3) NOT NULL DEFAULT 0,
-    unit_net_huf            NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    unit_gross_huf          NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    line_net_huf            NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    line_gross_huf          NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    refreshed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (source_system, order_id, line_item_id)
-);
-CREATE INDEX IF NOT EXISTS idx_silver_order_items_sku_date ON silver.order_items (sku, order_date);
-
-CREATE TABLE IF NOT EXISTS silver.invoices (
-    source_system           TEXT NOT NULL,
-    invoice_id              TEXT NOT NULL,
-    invoice_number          TEXT NOT NULL,
-    invoice_type            TEXT NOT NULL,
-    is_cancelled            BOOLEAN NOT NULL DEFAULT FALSE,
-    invoice_date            DATE NOT NULL,
-    fulfillment_date        DATE NOT NULL,
-    due_date                DATE,
-    paid_date               DATE,
-    payment_status          TEXT NOT NULL,
-    payment_method          TEXT,
-    currency                TEXT NOT NULL DEFAULT 'HUF',
-    net_total_huf           NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    vat_total_huf           NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    gross_total_huf         NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    partner_name            TEXT,
-    partner_tax_number      TEXT,
-    refreshed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (source_system, invoice_id)
-);
-CREATE INDEX IF NOT EXISTS idx_silver_invoices_fulfillment ON silver.invoices (fulfillment_date);
-
-CREATE TABLE IF NOT EXISTS silver.invoice_items (
-    source_system           TEXT NOT NULL,
-    invoice_id              TEXT NOT NULL,
-    line_idx                INTEGER NOT NULL,
-    fulfillment_date        DATE NOT NULL,
-    sku                     TEXT NOT NULL,
-    item_name               TEXT,
-    quantity                NUMERIC(12, 3) NOT NULL DEFAULT 0,
-    net_amount_huf          NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    gross_amount_huf        NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    refreshed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (source_system, invoice_id, line_idx)
-);
-CREATE INDEX IF NOT EXISTS idx_silver_inv_items_sku ON silver.invoice_items (sku, fulfillment_date);
-
-CREATE TABLE IF NOT EXISTS silver.crm_deals (
-    source_system           TEXT NOT NULL,
-    deal_id                 TEXT NOT NULL,
-    deal_name               TEXT,
-    company_name            TEXT,
-    contact_name            TEXT,
-    owner_name              TEXT,
-    deal_status             TEXT NOT NULL,
-    raw_stage               TEXT,
-    win_probability         NUMERIC(5, 2),
-    lead_source             TEXT NOT NULL DEFAULT 'direct',
-    currency                TEXT NOT NULL DEFAULT 'HUF',
-    amount_huf              NUMERIC(14, 2) NOT NULL DEFAULT 0,
-    created_at              TIMESTAMPTZ,
-    updated_at              TIMESTAMPTZ,
-    expected_close_date     DATE,
-    closed_date             DATE,
-    lost_reason             TEXT,
-    refreshed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (source_system, deal_id)
-);
-CREATE INDEX IF NOT EXISTS idx_silver_crm_status_date ON silver.crm_deals (deal_status, created_at);
-
-CREATE TABLE IF NOT EXISTS silver.product_cogs (
-    sku                     TEXT NOT NULL,
-    product_name            TEXT,
-    cogs_net_huf            NUMERIC(14, 2) NOT NULL,
-    supplier                TEXT,
-    valid_from              DATE NOT NULL,
-    valid_to                DATE NOT NULL,
-    refreshed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (sku, valid_from)
-);
 """
 
 
 def _load_bronze_catalog(con: duckdb.DuckDBPyConnection) -> dict[str, set[str]]:
-    """Lekérdezi a létező bronze_api táblákat és azok oszlopkészletét."""
     rows = con.execute(
         """
         SELECT table_name, column_name
@@ -186,28 +49,34 @@ def _load_bronze_catalog(con: duckdb.DuckDBPyConnection) -> dict[str, set[str]]:
 
 
 def _col(catalog: dict[str, set[str]], table: str, alias: str, column: str, fallback: str = "NULL") -> str:
-    """Visszaadja az oszlophivatkozást, vagy a fallback értéket, ha a dlt még nem hozta létre az oszlopot."""
     if column in catalog.get(table, set()):
         return f"{alias}.{column}"
     return fallback
 
 
-def _replace_silver_table(con: duckdb.DuckDBPyConnection, table_name: str, union_parts: list[str]) -> int:
-    """Kiüríti és újratölti a cél Silver táblát, majd visszaadja a betöltött sorok számát."""
-    con.execute(f"CALL postgres_execute('pg', 'TRUNCATE TABLE silver.{table_name};');")
-    if not union_parts:
-        return 0
+def _build_silver_table(
+    con: duckdb.DuckDBPyConnection,
+    table_name: str,
+    union_parts: list[str],
+    empty_fallback_sql: str,
+    index_col: str | None = None,
+) -> int:
+    select_sql = " UNION ALL ".join(union_parts) if union_parts else empty_fallback_sql
+    con.execute(f"CREATE OR REPLACE TABLE pg.silver.{table_name} AS {select_sql};")
 
-    query = " UNION ALL ".join(union_parts)
-    con.execute(f"INSERT INTO pg.silver.{table_name} {query}")
-    count_row = con.execute(f"SELECT COUNT(*) FROM pg.silver.{table_name}").fetchone()
-    return int(count_row[0]) if count_row else 0
+    if index_col:
+        con.execute(
+            f"CALL postgres_execute('pg', 'CREATE INDEX IF NOT EXISTS idx_silver_{table_name}_{index_col} ON silver.{table_name} ({index_col});');"
+        )
+
+    row = con.execute(f"SELECT COUNT(*) FROM pg.silver.{table_name}").fetchone()
+    return int(row[0]) if row else 0
 
 
 def run_silver_transformation() -> dict[str, int]:
     """
-    DuckDB alapú Bronze -> Silver transzformáció.
-    A 20+ nyers bronze_api táblából 7 egységes, típusos, HUF-ra váltott silver táblát épít.
+    DuckDB CTAS alapú Bronze -> Silver transzformáció.
+    A nyers bronze_api táblákból 7 egységes, típusos, HUF-ra váltott silver táblát épít.
     """
     with _silver_lock:
         Path("/tmp/duckdb_silver_tmp").mkdir(parents=True, exist_ok=True)
@@ -219,10 +88,7 @@ def run_silver_transformation() -> dict[str, int]:
             con.execute("LOAD postgres;")
             con.execute(f"ATTACH '{PG_ATTACH_DSN}' AS pg (TYPE POSTGRES);")
 
-            # 1. Sémák és táblák biztosítása PostgreSQL-ben
-            con.execute(f"CALL postgres_execute('pg', $${SILVER_DDL_SQL}$$);")
-
-            # 2. Aktuális Bronze katalógus beolvasása
+            con.execute(f"CALL postgres_execute('pg', $${INIT_FX_SQL}$$);")
             cat = _load_bronze_catalog(con)
             summary: dict[str, int] = {}
 
@@ -231,9 +97,6 @@ def run_silver_transformation() -> dict[str, int]:
             # ----------------------------------------------------------------
             parts: list[str] = []
             if "meta_ads_insights" in cat:
-                has_actions = "meta_ads_insights__actions" in cat
-                has_values = "meta_ads_insights__action_values" in cat
-
                 actions_cte = (
                     """
                     SELECT _dlt_parent_id, COALESCE(SUM(TRY_CAST(value AS DOUBLE)), 0) AS purchases
@@ -241,7 +104,7 @@ def run_silver_transformation() -> dict[str, int]:
                     WHERE action_type = 'purchase'
                     GROUP BY _dlt_parent_id
                     """
-                    if has_actions
+                    if "meta_ads_insights__actions" in cat
                     else "SELECT NULL::VARCHAR AS _dlt_parent_id, 0.0 AS purchases WHERE FALSE"
                 )
                 values_cte = (
@@ -251,7 +114,7 @@ def run_silver_transformation() -> dict[str, int]:
                     WHERE action_type = 'purchase'
                     GROUP BY _dlt_parent_id
                     """
-                    if has_values
+                    if "meta_ads_insights__action_values" in cat
                     else "SELECT NULL::VARCHAR AS _dlt_parent_id, 0.0 AS purchase_value WHERE FALSE"
                 )
 
@@ -268,26 +131,26 @@ def run_silver_transformation() -> dict[str, int]:
                     WITH meta_act AS ({actions_cte}),
                          meta_val AS ({values_cte})
                     SELECT
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_pub} AS VARCHAR), '')) IN ('facebook', 'instagram')
                                 THEN LOWER(CAST({c_pub} AS VARCHAR))
                             ELSE 'meta_other'
-                        END AS channel,
-                        'meta' AS source_system,
-                        COALESCE(CAST({c_acc} AS VARCHAR), '0') AS account_id,
-                        COALESCE(CAST({c_cid} AS VARCHAR), '0') AS campaign_id,
+                        END AS VARCHAR) AS channel,
+                        CAST('meta' AS VARCHAR) AS source_system,
+                        CAST(COALESCE(CAST({c_acc} AS VARCHAR), '0') AS VARCHAR) AS account_id,
+                        CAST(COALESCE(CAST({c_cid} AS VARCHAR), '0') AS VARCHAR) AS campaign_id,
                         CAST({c_cname} AS VARCHAR) AS campaign_name,
-                        COALESCE(CAST({c_aid} AS VARCHAR), '0') AS adgroup_id,
+                        CAST(COALESCE(CAST({c_aid} AS VARCHAR), '0') AS VARCHAR) AS adgroup_id,
                         CAST({c_aname} AS VARCHAR) AS adgroup_name,
                         TRY_CAST(m.date_start AS DATE) AS spend_date,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS original_currency,
-                        COALESCE(TRY_CAST(m.spend AS DECIMAL(14, 2)), 0) AS spend_original,
-                        ROUND(COALESCE(TRY_CAST(m.spend AS DECIMAL(14, 2)), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS spend_huf,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS original_currency,
+                        CAST(COALESCE(TRY_CAST(m.spend AS DOUBLE), 0) AS DECIMAL(14, 2)) AS spend_original,
+                        CAST(ROUND(COALESCE(TRY_CAST(m.spend AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS spend_huf,
                         COALESCE(TRY_CAST(m.impressions AS BIGINT), 0) AS impressions,
                         COALESCE(TRY_CAST(m.clicks AS BIGINT), 0) AS clicks,
                         0::BIGINT AS video_views,
-                        COALESCE(TRY_CAST(act.purchases AS DECIMAL(12, 2)), 0) AS conversions,
-                        ROUND(COALESCE(val.purchase_value, 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS conversion_value_huf,
+                        CAST(COALESCE(act.purchases, 0) AS DECIMAL(12, 2)) AS conversions,
+                        CAST(ROUND(COALESCE(val.purchase_value, 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS conversion_value_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.meta_ads_insights m
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
@@ -312,26 +175,26 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        CASE
+                        CAST(CASE
                             WHEN UPPER(COALESCE(CAST({c_type} AS VARCHAR), '')) IN ('VIDEO', 'DEMAND_GEN')
                                 THEN 'youtube'
                             ELSE 'google_ads'
-                        END AS channel,
-                        'google_ads' AS source_system,
-                        COALESCE(CAST({c_acc} AS VARCHAR), '0') AS account_id,
-                        COALESCE(CAST({c_cid} AS VARCHAR), '0') AS campaign_id,
+                        END AS VARCHAR) AS channel,
+                        CAST('google_ads' AS VARCHAR) AS source_system,
+                        CAST(COALESCE(CAST({c_acc} AS VARCHAR), '0') AS VARCHAR) AS account_id,
+                        CAST(COALESCE(CAST({c_cid} AS VARCHAR), '0') AS VARCHAR) AS campaign_id,
                         CAST({c_cname} AS VARCHAR) AS campaign_name,
-                        COALESCE(CAST({c_aid} AS VARCHAR), '0') AS adgroup_id,
+                        CAST(COALESCE(CAST({c_aid} AS VARCHAR), '0') AS VARCHAR) AS adgroup_id,
                         CAST({c_aname} AS VARCHAR) AS adgroup_name,
                         TRY_CAST(g.segments__date AS DATE) AS spend_date,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS original_currency,
-                        ROUND(COALESCE(TRY_CAST(g.metrics__cost_micros AS DOUBLE), 0) / 1000000.0, 2) AS spend_original,
-                        ROUND((COALESCE(TRY_CAST(g.metrics__cost_micros AS DOUBLE), 0) / 1000000.0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS spend_huf,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS original_currency,
+                        CAST(ROUND(COALESCE(TRY_CAST(g.metrics__cost_micros AS DOUBLE), 0) / 1000000.0, 2) AS DECIMAL(14, 2)) AS spend_original,
+                        CAST(ROUND((COALESCE(TRY_CAST(g.metrics__cost_micros AS DOUBLE), 0) / 1000000.0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS spend_huf,
                         COALESCE(TRY_CAST(g.metrics__impressions AS BIGINT), 0) AS impressions,
                         COALESCE(TRY_CAST(g.metrics__clicks AS BIGINT), 0) AS clicks,
                         COALESCE(TRY_CAST({c_vviews} AS BIGINT), 0) AS video_views,
-                        COALESCE(TRY_CAST({c_conv} AS DECIMAL(12, 2)), 0) AS conversions,
-                        ROUND(COALESCE(TRY_CAST({c_cval} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS conversion_value_huf,
+                        CAST(COALESCE(TRY_CAST({c_conv} AS DOUBLE), 0) AS DECIMAL(12, 2)) AS conversions,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_cval} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS conversion_value_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.google_ads_insights g
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
@@ -353,22 +216,22 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'tiktok' AS channel,
-                        'tiktok' AS source_system,
-                        COALESCE(CAST({c_acc} AS VARCHAR), '0') AS account_id,
-                        COALESCE(CAST({c_cid} AS VARCHAR), '0') AS campaign_id,
+                        CAST('tiktok' AS VARCHAR) AS channel,
+                        CAST('tiktok' AS VARCHAR) AS source_system,
+                        CAST(COALESCE(CAST({c_acc} AS VARCHAR), '0') AS VARCHAR) AS account_id,
+                        CAST(COALESCE(CAST({c_cid} AS VARCHAR), '0') AS VARCHAR) AS campaign_id,
                         CAST({c_cname} AS VARCHAR) AS campaign_name,
-                        COALESCE(CAST({c_aid} AS VARCHAR), '0') AS adgroup_id,
+                        CAST(COALESCE(CAST({c_aid} AS VARCHAR), '0') AS VARCHAR) AS adgroup_id,
                         CAST({c_aname} AS VARCHAR) AS adgroup_name,
                         TRY_CAST(LEFT(CAST(t.dimensions__stat_time_day AS VARCHAR), 10) AS DATE) AS spend_date,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'EUR')) AS original_currency,
-                        COALESCE(TRY_CAST(t.metrics__spend AS DECIMAL(14, 2)), 0) AS spend_original,
-                        ROUND(COALESCE(TRY_CAST(t.metrics__spend AS DECIMAL(14, 2)), 0) * COALESCE(fx.rate_to_huf, 402.0), 2) AS spend_huf,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'EUR')) AS VARCHAR) AS original_currency,
+                        CAST(COALESCE(TRY_CAST(t.metrics__spend AS DOUBLE), 0) AS DECIMAL(14, 2)) AS spend_original,
+                        CAST(ROUND(COALESCE(TRY_CAST(t.metrics__spend AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 402.0), 2) AS DECIMAL(14, 2)) AS spend_huf,
                         COALESCE(TRY_CAST(t.metrics__impressions AS BIGINT), 0) AS impressions,
                         COALESCE(TRY_CAST(t.metrics__clicks AS BIGINT), 0) AS clicks,
                         0::BIGINT AS video_views,
-                        COALESCE(TRY_CAST({c_cpay} AS DECIMAL(12, 2)), TRY_CAST({c_conv} AS DECIMAL(12, 2)), 0) AS conversions,
-                        ROUND(COALESCE(TRY_CAST({c_cval} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 402.0), 2) AS conversion_value_huf,
+                        CAST(COALESCE(TRY_CAST({c_cpay} AS DOUBLE), TRY_CAST({c_conv} AS DOUBLE), 0) AS DECIMAL(12, 2)) AS conversions,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_cval} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 402.0), 2) AS DECIMAL(14, 2)) AS conversion_value_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.tiktok_ads_insights t
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'EUR'))
@@ -376,7 +239,18 @@ def run_silver_transformation() -> dict[str, int]:
                     """
                 )
 
-            summary["ad_spend_daily"] = _replace_silver_table(con, "ad_spend_daily", parts)
+            empty_ads = """
+                SELECT
+                    NULL::VARCHAR AS channel, NULL::VARCHAR AS source_system, NULL::VARCHAR AS account_id,
+                    NULL::VARCHAR AS campaign_id, NULL::VARCHAR AS campaign_name, NULL::VARCHAR AS adgroup_id,
+                    NULL::VARCHAR AS adgroup_name, NULL::DATE AS spend_date, NULL::VARCHAR AS original_currency,
+                    0::DECIMAL(14, 2) AS spend_original, 0::DECIMAL(14, 2) AS spend_huf,
+                    0::BIGINT AS impressions, 0::BIGINT AS clicks, 0::BIGINT AS video_views,
+                    0::DECIMAL(12, 2) AS conversions, 0::DECIMAL(14, 2) AS conversion_value_huf,
+                    NOW() AS refreshed_at
+                WHERE FALSE
+            """
+            summary["ad_spend_daily"] = _build_silver_table(con, "ad_spend_daily", parts, empty_ads, "spend_date")
 
             # ----------------------------------------------------------------
             # 2. SILVER.ORDERS
@@ -400,38 +274,38 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'shopify' AS source_system,
+                        CAST('shopify' AS VARCHAR) AS source_system,
                         CAST(o.id AS VARCHAR) AS order_id,
                         CAST(o.name AS VARCHAR) AS order_number,
                         TRY_CAST(o.created_at AS TIMESTAMPTZ) AS order_created_at,
                         CAST(TRY_CAST(o.created_at AS TIMESTAMPTZ) AT TIME ZONE 'Europe/Budapest' AS DATE) AS order_date,
-                        CASE
+                        CAST(CASE
                             WHEN {c_canc} IS NOT NULL OR CAST({c_fin} AS VARCHAR) = 'voided' THEN 'cancelled'
                             WHEN CAST({c_fin} AS VARCHAR) = 'refunded' THEN 'refunded'
                             WHEN CAST({c_ful} AS VARCHAR) = 'fulfilled' AND CAST({c_fin} AS VARCHAR) = 'paid' THEN 'completed'
                             ELSE 'pending'
-                        END AS order_status,
-                        COALESCE(CAST({c_fin} AS VARCHAR), '') || '/' || COALESCE(CAST({c_ful} AS VARCHAR), 'unfulfilled') AS raw_status,
-                        CASE
+                        END AS VARCHAR) AS order_status,
+                        CAST(COALESCE(CAST({c_fin} AS VARCHAR), '') || '/' || COALESCE(CAST({c_ful} AS VARCHAR), 'unfulfilled') AS VARCHAR) AS raw_status,
+                        CAST(CASE
                             WHEN CAST({c_fin} AS VARCHAR) IN ('paid', 'partially_paid') THEN 'paid'
                             WHEN CAST({c_fin} AS VARCHAR) = 'refunded' THEN 'refunded'
                             ELSE 'unpaid'
-                        END AS payment_status,
+                        END AS VARCHAR) AS payment_status,
                         CAST({c_src} AS VARCHAR) AS payment_method,
-                        'Shipping' AS shipping_method,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND((COALESCE(TRY_CAST(o.total_price AS DOUBLE), 0) - COALESCE(TRY_CAST({c_tax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS net_total_huf,
-                        ROUND(COALESCE(TRY_CAST({c_tax} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS tax_total_huf,
-                        ROUND(COALESCE(TRY_CAST(o.total_price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS gross_total_huf,
-                        ROUND((COALESCE(TRY_CAST(o.total_price AS DOUBLE), 0) - COALESCE(TRY_CAST({c_sub} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS shipping_gross_huf,
-                        ROUND(COALESCE(TRY_CAST({c_disc} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS discount_gross_huf,
-                        LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS customer_email,
-                        COALESCE(NULLIF(TRIM(CAST({c_comp} AS VARCHAR)), ''), CAST({c_bname} AS VARCHAR)) AS customer_name,
+                        CAST('Shipping' AS VARCHAR) AS shipping_method,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND((COALESCE(TRY_CAST(o.total_price AS DOUBLE), 0) - COALESCE(TRY_CAST({c_tax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_tax} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS tax_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(o.total_price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_total_huf,
+                        CAST(ROUND((COALESCE(TRY_CAST(o.total_price AS DOUBLE), 0) - COALESCE(TRY_CAST({c_sub} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS shipping_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_disc} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS discount_gross_huf,
+                        CAST(LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS VARCHAR) AS customer_email,
+                        CAST(COALESCE(NULLIF(TRIM(CAST({c_comp} AS VARCHAR)), ''), CAST({c_bname} AS VARCHAR)) AS VARCHAR) AS customer_name,
                         NULL::VARCHAR AS customer_tax_number,
                         CAST({c_city} AS VARCHAR) AS customer_city,
-                        LOWER(COALESCE(NULLIF(regexp_extract(COALESCE(CAST({c_land} AS VARCHAR), ''), 'utm_source=([^&]+)', 1), ''), 'direct')) AS utm_source,
-                        LOWER(COALESCE(NULLIF(regexp_extract(COALESCE(CAST({c_land} AS VARCHAR), ''), 'utm_medium=([^&]+)', 1), ''), 'none')) AS utm_medium,
-                        NULLIF(regexp_extract(COALESCE(CAST({c_land} AS VARCHAR), ''), 'utm_campaign=([^&]+)', 1), '') AS utm_campaign,
+                        CAST(LOWER(COALESCE(NULLIF(regexp_extract(COALESCE(CAST({c_land} AS VARCHAR), ''), 'utm_source=([^&]+)', 1), ''), 'direct')) AS VARCHAR) AS utm_source,
+                        CAST(LOWER(COALESCE(NULLIF(regexp_extract(COALESCE(CAST({c_land} AS VARCHAR), ''), 'utm_medium=([^&]+)', 1), ''), 'none')) AS VARCHAR) AS utm_medium,
+                        CAST(NULLIF(regexp_extract(COALESCE(CAST({c_land} AS VARCHAR), ''), 'utm_campaign=([^&]+)', 1), '') AS VARCHAR) AS utm_campaign,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.shopify_orders o
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
@@ -455,35 +329,35 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'unas' AS source_system,
+                        CAST('unas' AS VARCHAR) AS source_system,
                         CAST(u.key AS VARCHAR) AS order_id,
                         CAST(u.key AS VARCHAR) AS order_number,
                         TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S') AT TIME ZONE 'Europe/Budapest' AS order_created_at,
                         CAST(TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S') AS DATE) AS order_date,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%töröl%'
                               OR LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%sztornó%' THEN 'cancelled'
                             WHEN LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%visszaküld%' THEN 'refunded'
                             WHEN LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%teljesít%' THEN 'completed'
                             ELSE 'pending'
-                        END AS order_status,
+                        END AS VARCHAR) AS order_status,
                         CAST(u.status AS VARCHAR) AS raw_status,
-                        CASE WHEN LOWER(COALESCE(CAST({c_pstat} AS VARCHAR), '')) = 'paid' THEN 'paid' ELSE 'unpaid' END AS payment_status,
+                        CAST(CASE WHEN LOWER(COALESCE(CAST({c_pstat} AS VARCHAR), '')) = 'paid' THEN 'paid' ELSE 'unpaid' END AS VARCHAR) AS payment_status,
                         CAST({c_pname} AS VARCHAR) AS payment_method,
                         CAST({c_sname} AS VARCHAR) AS shipping_method,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND(COALESCE(TRY_CAST(u.sum_price_net AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS net_total_huf,
-                        ROUND((COALESCE(TRY_CAST(u.sum_price_gross AS DOUBLE), 0) - COALESCE(TRY_CAST(u.sum_price_net AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS tax_total_huf,
-                        ROUND(COALESCE(TRY_CAST(u.sum_price_gross AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS gross_total_huf,
-                        ROUND(COALESCE(TRY_CAST({c_scost} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS shipping_gross_huf,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND(COALESCE(TRY_CAST(u.sum_price_net AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_total_huf,
+                        CAST(ROUND((COALESCE(TRY_CAST(u.sum_price_gross AS DOUBLE), 0) - COALESCE(TRY_CAST(u.sum_price_net AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS tax_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(u.sum_price_gross AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_scost} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS shipping_gross_huf,
                         0::DECIMAL(14, 2) AS discount_gross_huf,
-                        LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS customer_email,
+                        CAST(LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS VARCHAR) AS customer_email,
                         CAST({c_cname} AS VARCHAR) AS customer_name,
-                        NULLIF(TRIM(CAST({c_taxn} AS VARCHAR)), '') AS customer_tax_number,
+                        CAST(NULLIF(TRIM(CAST({c_taxn} AS VARCHAR)), '') AS VARCHAR) AS customer_tax_number,
                         CAST({c_city} AS VARCHAR) AS customer_city,
-                        LOWER(COALESCE(NULLIF(TRIM(CAST({c_usrc} AS VARCHAR)), ''), 'direct')) AS utm_source,
-                        LOWER(COALESCE(NULLIF(TRIM(CAST({c_umed} AS VARCHAR)), ''), 'none')) AS utm_medium,
-                        NULLIF(TRIM(CAST({c_ucmp} AS VARCHAR)), '') AS utm_campaign,
+                        CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_usrc} AS VARCHAR)), ''), 'direct')) AS VARCHAR) AS utm_source,
+                        CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_umed} AS VARCHAR)), ''), 'none')) AS VARCHAR) AS utm_medium,
+                        CAST(NULLIF(TRIM(CAST({c_ucmp} AS VARCHAR)), '') AS VARCHAR) AS utm_campaign,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.unas_orders u
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
@@ -513,35 +387,35 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'shoprenter' AS source_system,
+                        CAST('shoprenter' AS VARCHAR) AS source_system,
                         CAST(s.id AS VARCHAR) AS order_id,
-                        COALESCE(CAST({c_inv} AS VARCHAR), CAST({c_inn} AS VARCHAR)) AS order_number,
+                        CAST(COALESCE(CAST({c_inv} AS VARCHAR), CAST({c_inn} AS VARCHAR)) AS VARCHAR) AS order_number,
                         TRY_CAST(s.datecreated AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS order_created_at,
                         TRY_CAST(s.datecreated AS DATE) AS order_date,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sztornó%'
                               OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%töröl%' THEN 'cancelled'
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%vissza%' THEN 'refunded'
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%teljesít%' THEN 'completed'
                             ELSE 'pending'
-                        END AS order_status,
+                        END AS VARCHAR) AS order_status,
                         CAST({c_st} AS VARCHAR) AS raw_status,
-                        CASE WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%teljesít%' THEN 'paid' ELSE 'unpaid' END AS payment_status,
+                        CAST(CASE WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%teljesít%' THEN 'paid' ELSE 'unpaid' END AS VARCHAR) AS payment_status,
                         CAST({c_pm} AS VARCHAR) AS payment_method,
                         CAST({c_sm} AS VARCHAR) AS shipping_method,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND(COALESCE(TRY_CAST({c_tnet} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS net_total_huf,
-                        ROUND(COALESCE(TRY_CAST({c_ttax} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS tax_total_huf,
-                        ROUND(COALESCE(TRY_CAST(s.total AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS gross_total_huf,
-                        ROUND(COALESCE(TRY_CAST({c_stot} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS shipping_gross_huf,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_tnet} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_ttax} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS tax_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(s.total AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_stot} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS shipping_gross_huf,
                         0::DECIMAL(14, 2) AS discount_gross_huf,
-                        LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS customer_email,
-                        COALESCE(NULLIF(TRIM(CAST({c_pcomp} AS VARCHAR)), ''), TRIM(COALESCE(CAST({c_lname} AS VARCHAR), '') || ' ' || COALESCE(CAST({c_fname} AS VARCHAR), ''))) AS customer_name,
-                        NULLIF(TRIM(CAST({c_taxn} AS VARCHAR)), '') AS customer_tax_number,
+                        CAST(LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS VARCHAR) AS customer_email,
+                        CAST(COALESCE(NULLIF(TRIM(CAST({c_pcomp} AS VARCHAR)), ''), TRIM(COALESCE(CAST({c_lname} AS VARCHAR), '') || ' ' || COALESCE(CAST({c_fname} AS VARCHAR), ''))) AS VARCHAR) AS customer_name,
+                        CAST(NULLIF(TRIM(CAST({c_taxn} AS VARCHAR)), '') AS VARCHAR) AS customer_tax_number,
                         CAST({c_city} AS VARCHAR) AS customer_city,
-                        LOWER(COALESCE(NULLIF(TRIM(CAST({c_usrc} AS VARCHAR)), ''), 'direct')) AS utm_source,
-                        LOWER(COALESCE(NULLIF(TRIM(CAST({c_umed} AS VARCHAR)), ''), 'none')) AS utm_medium,
-                        NULLIF(TRIM(CAST({c_ucmp} AS VARCHAR)), '') AS utm_campaign,
+                        CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_usrc} AS VARCHAR)), ''), 'direct')) AS VARCHAR) AS utm_source,
+                        CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_umed} AS VARCHAR)), ''), 'none')) AS VARCHAR) AS utm_medium,
+                        CAST(NULLIF(TRIM(CAST({c_ucmp} AS VARCHAR)), '') AS VARCHAR) AS utm_campaign,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.shoprenter_orders s
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
@@ -549,7 +423,6 @@ def run_silver_transformation() -> dict[str, int]:
                 )
 
             if "woocommerce_orders" in cat:
-                has_wc_meta = "woocommerce_orders__meta_data" in cat
                 wc_meta_cte = (
                     """
                     SELECT
@@ -561,7 +434,7 @@ def run_silver_transformation() -> dict[str, int]:
                     FROM pg.bronze_api.woocommerce_orders__meta_data
                     GROUP BY _dlt_parent_id
                     """
-                    if has_wc_meta
+                    if "woocommerce_orders__meta_data" in cat
                     else "SELECT NULL::VARCHAR AS _dlt_parent_id, NULL::VARCHAR AS tax_number, NULL::VARCHAR AS utm_source, NULL::VARCHAR AS utm_medium, NULL::VARCHAR AS utm_campaign WHERE FALSE"
                 )
 
@@ -582,38 +455,38 @@ def run_silver_transformation() -> dict[str, int]:
                     f"""
                     WITH wc_meta AS ({wc_meta_cte})
                     SELECT
-                        'woocommerce' AS source_system,
+                        CAST('woocommerce' AS VARCHAR) AS source_system,
                         CAST(w.id AS VARCHAR) AS order_id,
                         CAST({c_num} AS VARCHAR) AS order_number,
                         TRY_CAST(w.date_created AS TIMESTAMPTZ) AS order_created_at,
                         CAST(TRY_CAST(w.date_created AS TIMESTAMPTZ) AT TIME ZONE 'Europe/Budapest' AS DATE) AS order_date,
-                        CASE
+                        CAST(CASE
                             WHEN CAST(w.status AS VARCHAR) IN ('cancelled', 'failed', 'trash') THEN 'cancelled'
                             WHEN CAST(w.status AS VARCHAR) = 'refunded' THEN 'refunded'
                             WHEN CAST(w.status AS VARCHAR) = 'completed' THEN 'completed'
                             ELSE 'pending'
-                        END AS order_status,
+                        END AS VARCHAR) AS order_status,
                         CAST(w.status AS VARCHAR) AS raw_status,
-                        CASE
+                        CAST(CASE
                             WHEN CAST(w.status AS VARCHAR) = 'completed' THEN 'paid'
                             WHEN CAST(w.status AS VARCHAR) = 'refunded' THEN 'refunded'
                             ELSE 'unpaid'
-                        END AS payment_status,
+                        END AS VARCHAR) AS payment_status,
                         CAST({c_pm} AS VARCHAR) AS payment_method,
-                        'Shipping' AS shipping_method,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND((COALESCE(TRY_CAST(w.total AS DOUBLE), 0) - COALESCE(TRY_CAST({c_ttax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS net_total_huf,
-                        ROUND(COALESCE(TRY_CAST({c_ttax} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS tax_total_huf,
-                        ROUND(COALESCE(TRY_CAST(w.total AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS gross_total_huf,
-                        ROUND((COALESCE(TRY_CAST({c_stot} AS DOUBLE), 0) + COALESCE(TRY_CAST({c_stax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS shipping_gross_huf,
-                        ROUND(COALESCE(TRY_CAST({c_disc} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS discount_gross_huf,
-                        LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS customer_email,
-                        COALESCE(NULLIF(TRIM(CAST({c_comp} AS VARCHAR)), ''), TRIM(COALESCE(CAST({c_lname} AS VARCHAR), '') || ' ' || COALESCE(CAST({c_fname} AS VARCHAR), ''))) AS customer_name,
-                        NULLIF(TRIM(meta.tax_number), '') AS customer_tax_number,
+                        CAST('Shipping' AS VARCHAR) AS shipping_method,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND((COALESCE(TRY_CAST(w.total AS DOUBLE), 0) - COALESCE(TRY_CAST({c_ttax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_ttax} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS tax_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(w.total AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_total_huf,
+                        CAST(ROUND((COALESCE(TRY_CAST({c_stot} AS DOUBLE), 0) + COALESCE(TRY_CAST({c_stax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS shipping_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_disc} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS discount_gross_huf,
+                        CAST(LOWER(TRIM(CAST({c_mail} AS VARCHAR))) AS VARCHAR) AS customer_email,
+                        CAST(COALESCE(NULLIF(TRIM(CAST({c_comp} AS VARCHAR)), ''), TRIM(COALESCE(CAST({c_lname} AS VARCHAR), '') || ' ' || COALESCE(CAST({c_fname} AS VARCHAR), ''))) AS VARCHAR) AS customer_name,
+                        CAST(NULLIF(TRIM(meta.tax_number), '') AS VARCHAR) AS customer_tax_number,
                         CAST({c_city} AS VARCHAR) AS customer_city,
-                        LOWER(COALESCE(NULLIF(TRIM(meta.utm_source), ''), 'direct')) AS utm_source,
-                        LOWER(COALESCE(NULLIF(TRIM(meta.utm_medium), ''), 'none')) AS utm_medium,
-                        NULLIF(TRIM(meta.utm_campaign), '') AS utm_campaign,
+                        CAST(LOWER(COALESCE(NULLIF(TRIM(meta.utm_source), ''), 'direct')) AS VARCHAR) AS utm_source,
+                        CAST(LOWER(COALESCE(NULLIF(TRIM(meta.utm_medium), ''), 'none')) AS VARCHAR) AS utm_medium,
+                        CAST(NULLIF(TRIM(meta.utm_campaign), '') AS VARCHAR) AS utm_campaign,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.woocommerce_orders w
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
@@ -621,7 +494,21 @@ def run_silver_transformation() -> dict[str, int]:
                     """
                 )
 
-            summary["orders"] = _replace_silver_table(con, "orders", parts)
+            empty_orders = """
+                SELECT
+                    NULL::VARCHAR AS source_system, NULL::VARCHAR AS order_id, NULL::VARCHAR AS order_number,
+                    NULL::TIMESTAMPTZ AS order_created_at, NULL::DATE AS order_date, NULL::VARCHAR AS order_status,
+                    NULL::VARCHAR AS raw_status, NULL::VARCHAR AS payment_status, NULL::VARCHAR AS payment_method,
+                    NULL::VARCHAR AS shipping_method, NULL::VARCHAR AS currency,
+                    0::DECIMAL(14, 2) AS net_total_huf, 0::DECIMAL(14, 2) AS tax_total_huf,
+                    0::DECIMAL(14, 2) AS gross_total_huf, 0::DECIMAL(14, 2) AS shipping_gross_huf,
+                    0::DECIMAL(14, 2) AS discount_gross_huf, NULL::VARCHAR AS customer_email,
+                    NULL::VARCHAR AS customer_name, NULL::VARCHAR AS customer_tax_number, NULL::VARCHAR AS customer_city,
+                    NULL::VARCHAR AS utm_source, NULL::VARCHAR AS utm_medium, NULL::VARCHAR AS utm_campaign,
+                    NOW() AS refreshed_at
+                WHERE FALSE
+            """
+            summary["orders"] = _build_silver_table(con, "orders", parts, empty_orders, "order_date")
 
             # ----------------------------------------------------------------
             # 3. SILVER.ORDER_ITEMS
@@ -637,23 +524,23 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'shopify' AS source_system,
+                        CAST('shopify' AS VARCHAR) AS source_system,
                         CAST(o.id AS VARCHAR) AS order_id,
                         CAST(li.id AS VARCHAR) AS line_item_id,
                         CAST(TRY_CAST(o.created_at AS TIMESTAMPTZ) AT TIME ZONE 'Europe/Budapest' AS DATE) AS order_date,
-                        CASE
+                        CAST(CASE
                             WHEN {c_canc} IS NOT NULL OR CAST({c_fin} AS VARCHAR) = 'voided' THEN 'cancelled'
                             WHEN CAST({c_fin} AS VARCHAR) = 'refunded' THEN 'refunded'
                             WHEN CAST({c_ful} AS VARCHAR) = 'fulfilled' AND CAST({c_fin} AS VARCHAR) = 'paid' THEN 'completed'
                             ELSE 'pending'
-                        END AS order_status,
-                        UPPER(COALESCE(NULLIF(TRIM(CAST(li.sku AS VARCHAR)), ''), 'UNKNOWN')) AS sku,
+                        END AS VARCHAR) AS order_status,
+                        CAST(UPPER(COALESCE(NULLIF(TRIM(CAST(li.sku AS VARCHAR)), ''), 'UNKNOWN')) AS VARCHAR) AS sku,
                         CAST(li.title AS VARCHAR) AS product_name,
-                        COALESCE(TRY_CAST(li.quantity AS DECIMAL(12, 3)), 0) AS quantity,
-                        ROUND((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) / 1.27) * COALESCE(fx.rate_to_huf, 1.0), 2) AS unit_net_huf,
-                        ROUND(COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS unit_gross_huf,
-                        ROUND((((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(TRY_CAST(li.quantity AS DOUBLE), 0)) - COALESCE(TRY_CAST({c_disc} AS DOUBLE), 0)) / 1.27) * COALESCE(fx.rate_to_huf, 1.0), 2) AS line_net_huf,
-                        ROUND(((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(TRY_CAST(li.quantity AS DOUBLE), 0)) - COALESCE(TRY_CAST({c_disc} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS line_gross_huf,
+                        CAST(COALESCE(TRY_CAST(li.quantity AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
+                        CAST(ROUND((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) / 1.27) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_net_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
+                        CAST(ROUND((((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(TRY_CAST(li.quantity AS DOUBLE), 0)) - COALESCE(TRY_CAST({c_disc} AS DOUBLE), 0)) / 1.27) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_net_huf,
+                        CAST(ROUND(((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(TRY_CAST(li.quantity AS DOUBLE), 0)) - COALESCE(TRY_CAST({c_disc} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.shopify_orders__line_items li
                     JOIN pg.bronze_api.shopify_orders o ON o._dlt_id = li._dlt_parent_id
@@ -668,24 +555,24 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'unas' AS source_system,
+                        CAST('unas' AS VARCHAR) AS source_system,
                         CAST(u.key AS VARCHAR) AS order_id,
                         CAST({c_itid} AS VARCHAR) AS line_item_id,
                         CAST(TRY_STRPTIME(CAST(u.date AS VARCHAR), '%Y.%m.%d %H:%M:%S') AS DATE) AS order_date,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%töröl%'
                               OR LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%sztornó%' THEN 'cancelled'
                             WHEN LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%visszaküld%' THEN 'refunded'
                             WHEN LOWER(COALESCE(CAST(u.status AS VARCHAR), '')) LIKE '%teljesít%' THEN 'completed'
                             ELSE 'pending'
-                        END AS order_status,
-                        UPPER(COALESCE(NULLIF(TRIM(CAST(it.sku AS VARCHAR)), ''), 'UNKNOWN')) AS sku,
+                        END AS VARCHAR) AS order_status,
+                        CAST(UPPER(COALESCE(NULLIF(TRIM(CAST(it.sku AS VARCHAR)), ''), 'UNKNOWN')) AS VARCHAR) AS sku,
                         CAST(it.name AS VARCHAR) AS product_name,
-                        COALESCE(TRY_CAST(it.quantity AS DECIMAL(12, 3)), 0) AS quantity,
-                        ROUND(COALESCE(TRY_CAST(it.price_net AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS unit_net_huf,
-                        ROUND(COALESCE(TRY_CAST(it.price_gross AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS unit_gross_huf,
-                        ROUND(COALESCE(TRY_CAST(it.price_net AS DOUBLE), 0) * COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS line_net_huf,
-                        ROUND(COALESCE(TRY_CAST(it.price_gross AS DOUBLE), 0) * COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS line_gross_huf,
+                        CAST(COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
+                        CAST(ROUND(COALESCE(TRY_CAST(it.price_net AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_net_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(it.price_gross AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(it.price_net AS DOUBLE), 0) * COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_net_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(it.price_gross AS DOUBLE), 0) * COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.unas_orders__items it
                     JOIN pg.bronze_api.unas_orders u ON u._dlt_id = it._dlt_parent_id
@@ -700,24 +587,24 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'shoprenter' AS source_system,
+                        CAST('shoprenter' AS VARCHAR) AS source_system,
                         CAST(s.id AS VARCHAR) AS order_id,
                         CAST(op.id AS VARCHAR) AS line_item_id,
                         TRY_CAST(s.datecreated AS DATE) AS order_date,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sztornó%'
                               OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%töröl%' THEN 'cancelled'
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%vissza%' THEN 'refunded'
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%teljesít%' THEN 'completed'
                             ELSE 'pending'
-                        END AS order_status,
-                        UPPER(COALESCE(NULLIF(TRIM(CAST(op.sku AS VARCHAR)), ''), 'UNKNOWN')) AS sku,
+                        END AS VARCHAR) AS order_status,
+                        CAST(UPPER(COALESCE(NULLIF(TRIM(CAST(op.sku AS VARCHAR)), ''), 'UNKNOWN')) AS VARCHAR) AS sku,
                         CAST(op.name AS VARCHAR) AS product_name,
-                        COALESCE(TRY_CAST(op.quantity AS DECIMAL(12, 3)), 0) AS quantity,
-                        ROUND(COALESCE(TRY_CAST(op.price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS unit_net_huf,
-                        ROUND(COALESCE(TRY_CAST(op.gross_price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS unit_gross_huf,
-                        ROUND(COALESCE(TRY_CAST(op.price AS DOUBLE), 0) * COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS line_net_huf,
-                        ROUND(COALESCE(TRY_CAST(op.gross_price AS DOUBLE), 0) * COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS line_gross_huf,
+                        CAST(COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
+                        CAST(ROUND(COALESCE(TRY_CAST(op.price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_net_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(op.gross_price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(op.price AS DOUBLE), 0) * COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_net_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(op.gross_price AS DOUBLE), 0) * COALESCE(TRY_CAST(op.quantity AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.shoprenter_orders__orderproducts op
                     JOIN pg.bronze_api.shoprenter_orders s ON s._dlt_id = op._dlt_parent_id
@@ -732,23 +619,23 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'woocommerce' AS source_system,
+                        CAST('woocommerce' AS VARCHAR) AS source_system,
                         CAST(w.id AS VARCHAR) AS order_id,
                         CAST(li.id AS VARCHAR) AS line_item_id,
                         CAST(TRY_CAST(w.date_created AS TIMESTAMPTZ) AT TIME ZONE 'Europe/Budapest' AS DATE) AS order_date,
-                        CASE
+                        CAST(CASE
                             WHEN CAST(w.status AS VARCHAR) IN ('cancelled', 'failed', 'trash') THEN 'cancelled'
                             WHEN CAST(w.status AS VARCHAR) = 'refunded' THEN 'refunded'
                             WHEN CAST(w.status AS VARCHAR) = 'completed' THEN 'completed'
                             ELSE 'pending'
-                        END AS order_status,
-                        UPPER(COALESCE(NULLIF(TRIM(CAST(li.sku AS VARCHAR)), ''), 'UNKNOWN')) AS sku,
+                        END AS VARCHAR) AS order_status,
+                        CAST(UPPER(COALESCE(NULLIF(TRIM(CAST(li.sku AS VARCHAR)), ''), 'UNKNOWN')) AS VARCHAR) AS sku,
                         CAST(li.name AS VARCHAR) AS product_name,
-                        COALESCE(TRY_CAST(li.quantity AS DECIMAL(12, 3)), 0) AS quantity,
-                        ROUND(COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS unit_net_huf,
-                        ROUND((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * 1.27) * COALESCE(fx.rate_to_huf, 1.0), 2) AS unit_gross_huf,
-                        ROUND(COALESCE(TRY_CAST(li.total AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS line_net_huf,
-                        ROUND((COALESCE(TRY_CAST(li.total AS DOUBLE), 0) + COALESCE(TRY_CAST({c_ltax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS line_gross_huf,
+                        CAST(COALESCE(TRY_CAST(li.quantity AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
+                        CAST(ROUND(COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_net_huf,
+                        CAST(ROUND((COALESCE(TRY_CAST(li.price AS DOUBLE), 0) * 1.27) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS unit_gross_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(li.total AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_net_huf,
+                        CAST(ROUND((COALESCE(TRY_CAST(li.total AS DOUBLE), 0) + COALESCE(TRY_CAST({c_ltax} AS DOUBLE), 0)) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS line_gross_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.woocommerce_orders__line_items li
                     JOIN pg.bronze_api.woocommerce_orders w ON w._dlt_id = li._dlt_parent_id
@@ -756,7 +643,17 @@ def run_silver_transformation() -> dict[str, int]:
                     """
                 )
 
-            summary["order_items"] = _replace_silver_table(con, "order_items", parts)
+            empty_order_items = """
+                SELECT
+                    NULL::VARCHAR AS source_system, NULL::VARCHAR AS order_id, NULL::VARCHAR AS line_item_id,
+                    NULL::DATE AS order_date, NULL::VARCHAR AS order_status, NULL::VARCHAR AS sku,
+                    NULL::VARCHAR AS product_name, 0::DECIMAL(12, 3) AS quantity,
+                    0::DECIMAL(14, 2) AS unit_net_huf, 0::DECIMAL(14, 2) AS unit_gross_huf,
+                    0::DECIMAL(14, 2) AS line_net_huf, 0::DECIMAL(14, 2) AS line_gross_huf,
+                    NOW() AS refreshed_at
+                WHERE FALSE
+            """
+            summary["order_items"] = _build_silver_table(con, "order_items", parts, empty_order_items, "order_date")
 
             # ----------------------------------------------------------------
             # 4. SILVER.INVOICES
@@ -778,31 +675,31 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'billingo' AS source_system,
+                        CAST('billingo' AS VARCHAR) AS source_system,
                         CAST(b.id AS VARCHAR) AS invoice_id,
                         CAST(b.invoice_number AS VARCHAR) AS invoice_number,
-                        CASE
+                        CAST(CASE
                             WHEN COALESCE(TRY_CAST({c_canc} AS BOOLEAN), FALSE) OR CAST({c_type} AS VARCHAR) = 'cancellation' THEN 'cancellation'
                             WHEN CAST({c_type} AS VARCHAR) = 'proforma' THEN 'proforma'
                             ELSE 'invoice'
-                        END AS invoice_type,
-                        (COALESCE(TRY_CAST({c_canc} AS BOOLEAN), FALSE) OR CAST({c_type} AS VARCHAR) = 'cancellation') AS is_cancelled,
+                        END AS VARCHAR) AS invoice_type,
+                        CAST((COALESCE(TRY_CAST({c_canc} AS BOOLEAN), FALSE) OR CAST({c_type} AS VARCHAR) = 'cancellation') AS BOOLEAN) AS is_cancelled,
                         TRY_CAST(b.invoice_date AS DATE) AS invoice_date,
                         COALESCE(TRY_CAST({c_ful} AS DATE), TRY_CAST(b.invoice_date AS DATE)) AS fulfillment_date,
                         TRY_CAST({c_due} AS DATE) AS due_date,
                         TRY_CAST({c_paid} AS DATE) AS paid_date,
-                        CASE
+                        CAST(CASE
                             WHEN CAST({c_pstat} AS VARCHAR) = 'paid' THEN 'paid'
                             WHEN TRY_CAST({c_due} AS DATE) < CURRENT_DATE THEN 'overdue'
                             ELSE 'open'
-                        END AS payment_status,
+                        END AS VARCHAR) AS payment_status,
                         CAST({c_pm} AS VARCHAR) AS payment_method,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND(COALESCE(TRY_CAST(b.net_total AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS net_total_huf,
-                        ROUND((COALESCE(TRY_CAST(b.gross_total AS DOUBLE), 0) - COALESCE(TRY_CAST(b.net_total AS DOUBLE), 0)) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS vat_total_huf,
-                        ROUND(COALESCE(TRY_CAST(b.gross_total AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS gross_total_huf,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND(COALESCE(TRY_CAST(b.net_total AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_total_huf,
+                        CAST(ROUND((COALESCE(TRY_CAST(b.gross_total AS DOUBLE), 0) - COALESCE(TRY_CAST(b.net_total AS DOUBLE), 0)) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS vat_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(b.gross_total AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_total_huf,
                         CAST({c_pname} AS VARCHAR) AS partner_name,
-                        NULLIF(TRIM(CAST({c_ptax} AS VARCHAR)), '') AS partner_tax_number,
+                        CAST(NULLIF(TRIM(CAST({c_ptax} AS VARCHAR)), '') AS VARCHAR) AS partner_tax_number,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.billingo_documents b
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF'))
@@ -824,38 +721,49 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'szamlazzhu' AS source_system,
+                        CAST('szamlazzhu' AS VARCHAR) AS source_system,
                         CAST(s.szamlaszam AS VARCHAR) AS invoice_id,
                         CAST(s.szamlaszam AS VARCHAR) AS invoice_number,
-                        CASE
+                        CAST(CASE
                             WHEN UPPER(COALESCE(CAST({c_tip} AS VARCHAR), '')) = 'SS' THEN 'cancellation'
                             WHEN UPPER(COALESCE(CAST({c_tip} AS VARCHAR), '')) = 'D' THEN 'proforma'
                             ELSE 'invoice'
-                        END AS invoice_type,
-                        (UPPER(COALESCE(CAST({c_tip} AS VARCHAR), '')) = 'SS') AS is_cancelled,
+                        END AS VARCHAR) AS invoice_type,
+                        CAST((UPPER(COALESCE(CAST({c_tip} AS VARCHAR), '')) = 'SS') AS BOOLEAN) AS is_cancelled,
                         TRY_CAST(s.kelt AS DATE) AS invoice_date,
                         COALESCE(TRY_CAST({c_telj} AS DATE), TRY_CAST(s.kelt AS DATE)) AS fulfillment_date,
                         TRY_CAST({c_fhat} AS DATE) AS due_date,
                         TRY_CAST({c_kdat} AS DATE) AS paid_date,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_fiz} AS VARCHAR), 'false')) = 'true' THEN 'paid'
                             WHEN TRY_CAST({c_fhat} AS DATE) < CURRENT_DATE THEN 'overdue'
                             ELSE 'open'
-                        END AS payment_status,
+                        END AS VARCHAR) AS payment_status,
                         CAST({c_fmod} AS VARCHAR) AS payment_method,
-                        UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND(COALESCE(TRY_CAST(s.netto AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS net_total_huf,
-                        ROUND(COALESCE(TRY_CAST(s.afa AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS vat_total_huf,
-                        ROUND(COALESCE(TRY_CAST(s.brutto AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS gross_total_huf,
+                        CAST(UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND(COALESCE(TRY_CAST(s.netto AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(s.afa AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS vat_total_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(s.brutto AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_total_huf,
                         CAST({c_vnev} AS VARCHAR) AS partner_name,
-                        NULLIF(TRIM(CAST({c_vado} AS VARCHAR)), '') AS partner_tax_number,
+                        CAST(NULLIF(TRIM(CAST({c_vado} AS VARCHAR)), '') AS VARCHAR) AS partner_tax_number,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.szamlazzhu_invoices s
                     LEFT JOIN pg.silver.fx_rates fx ON fx.currency = UPPER(COALESCE(CAST({c_dev} AS VARCHAR), 'HUF'))
                     """
                 )
 
-            summary["invoices"] = _replace_silver_table(con, "invoices", parts)
+            empty_invoices = """
+                SELECT
+                    NULL::VARCHAR AS source_system, NULL::VARCHAR AS invoice_id, NULL::VARCHAR AS invoice_number,
+                    NULL::VARCHAR AS invoice_type, FALSE AS is_cancelled, NULL::DATE AS invoice_date,
+                    NULL::DATE AS fulfillment_date, NULL::DATE AS due_date, NULL::DATE AS paid_date,
+                    NULL::VARCHAR AS payment_status, NULL::VARCHAR AS payment_method, NULL::VARCHAR AS currency,
+                    0::DECIMAL(14, 2) AS net_total_huf, 0::DECIMAL(14, 2) AS vat_total_huf,
+                    0::DECIMAL(14, 2) AS gross_total_huf, NULL::VARCHAR AS partner_name,
+                    NULL::VARCHAR AS partner_tax_number, NOW() AS refreshed_at
+                WHERE FALSE
+            """
+            summary["invoices"] = _build_silver_table(con, "invoices", parts, empty_invoices, "fulfillment_date")
 
             # ----------------------------------------------------------------
             # 5. SILVER.INVOICE_ITEMS
@@ -868,21 +776,21 @@ def run_silver_transformation() -> dict[str, int]:
                 c_rate = _col(cat, "billingo_documents", "b", "conversion_rate", "NULL")
 
                 parts.append(
-                    f"""
+                    rf"""
                     SELECT
-                        'billingo' AS source_system,
+                        CAST('billingo' AS VARCHAR) AS source_system,
                         CAST(b.id AS VARCHAR) AS invoice_id,
                         CAST(ROW_NUMBER() OVER (PARTITION BY b.id ORDER BY it._dlt_id) AS INTEGER) AS line_idx,
                         COALESCE(TRY_CAST({c_ful} AS DATE), TRY_CAST(b.invoice_date AS DATE)) AS fulfillment_date,
-                        UPPER(COALESCE(
+                        CAST(UPPER(COALESCE(
                             NULLIF(regexp_extract(COALESCE(CAST(it.name AS VARCHAR), ''), '^\[([^\]]+)\]', 1), ''),
                             NULLIF(CAST({c_pid} AS VARCHAR), ''),
                             'UNKNOWN'
-                        )) AS sku,
+                        )) AS VARCHAR) AS sku,
                         CAST(it.name AS VARCHAR) AS item_name,
-                        COALESCE(TRY_CAST(it.quantity AS DECIMAL(12, 3)), 0) AS quantity,
-                        ROUND(COALESCE(TRY_CAST(it.net_amount AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS net_amount_huf,
-                        ROUND(COALESCE(TRY_CAST(it.gross_amount AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS gross_amount_huf,
+                        CAST(COALESCE(TRY_CAST(it.quantity AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
+                        CAST(ROUND(COALESCE(TRY_CAST(it.net_amount AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_amount_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(it.gross_amount AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_rate} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_amount_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.billingo_documents__items it
                     JOIN pg.bronze_api.billingo_documents b ON b._dlt_id = it._dlt_parent_id
@@ -899,15 +807,15 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'szamlazzhu' AS source_system,
+                        CAST('szamlazzhu' AS VARCHAR) AS source_system,
                         CAST(s.szamlaszam AS VARCHAR) AS invoice_id,
                         CAST(ROW_NUMBER() OVER (PARTITION BY s.szamlaszam ORDER BY t._dlt_id) AS INTEGER) AS line_idx,
                         COALESCE(TRY_CAST({c_telj} AS DATE), TRY_CAST(s.kelt AS DATE)) AS fulfillment_date,
-                        UPPER(COALESCE(NULLIF(TRIM(CAST({c_azon} AS VARCHAR)), ''), 'UNKNOWN')) AS sku,
+                        CAST(UPPER(COALESCE(NULLIF(TRIM(CAST({c_azon} AS VARCHAR)), ''), 'UNKNOWN')) AS VARCHAR) AS sku,
                         CAST(t.megnevezes AS VARCHAR) AS item_name,
-                        COALESCE(TRY_CAST(t.mennyiseg AS DECIMAL(12, 3)), 0) AS quantity,
-                        ROUND(COALESCE(TRY_CAST(t.netto AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS net_amount_huf,
-                        ROUND(COALESCE(TRY_CAST(t.brutto AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS gross_amount_huf,
+                        CAST(COALESCE(TRY_CAST(t.mennyiseg AS DOUBLE), 0) AS DECIMAL(12, 3)) AS quantity,
+                        CAST(ROUND(COALESCE(TRY_CAST(t.netto AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS net_amount_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST(t.brutto AS DOUBLE), 0) * COALESCE(NULLIF(TRY_CAST({c_arf} AS DOUBLE), 0), fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS gross_amount_huf,
                         NOW() AS refreshed_at
                     FROM pg.bronze_api.szamlazzhu_invoices__tetelek t
                     JOIN pg.bronze_api.szamlazzhu_invoices s ON s._dlt_id = t._dlt_parent_id
@@ -915,7 +823,15 @@ def run_silver_transformation() -> dict[str, int]:
                     """
                 )
 
-            summary["invoice_items"] = _replace_silver_table(con, "invoice_items", parts)
+            empty_inv_items = """
+                SELECT
+                    NULL::VARCHAR AS source_system, NULL::VARCHAR AS invoice_id, 0::INTEGER AS line_idx,
+                    NULL::DATE AS fulfillment_date, NULL::VARCHAR AS sku, NULL::VARCHAR AS item_name,
+                    0::DECIMAL(12, 3) AS quantity, 0::DECIMAL(14, 2) AS net_amount_huf,
+                    0::DECIMAL(14, 2) AS gross_amount_huf, NOW() AS refreshed_at
+                WHERE FALSE
+            """
+            summary["invoice_items"] = _build_silver_table(con, "invoice_items", parts, empty_inv_items, "fulfillment_date")
 
             # ----------------------------------------------------------------
             # 6. SILVER.CRM_DEALS
@@ -938,22 +854,22 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'hubspot' AS source_system,
+                        CAST('hubspot' AS VARCHAR) AS source_system,
                         CAST(h.id AS VARCHAR) AS deal_id,
                         CAST({c_dname} AS VARCHAR) AS deal_name,
-                        SPLIT_PART(COALESCE(CAST({c_dname} AS VARCHAR), ''), ' - ', 1) AS company_name,
+                        CAST(SPLIT_PART(COALESCE(CAST({c_dname} AS VARCHAR), ''), ' - ', 1) AS VARCHAR) AS company_name,
                         NULL::VARCHAR AS contact_name,
                         CAST({c_owner} AS VARCHAR) AS owner_name,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_stage} AS VARCHAR), '')) = 'closedwon' THEN 'won'
                             WHEN LOWER(COALESCE(CAST({c_stage} AS VARCHAR), '')) = 'closedlost' THEN 'lost'
                             ELSE 'open'
-                        END AS deal_status,
+                        END AS VARCHAR) AS deal_status,
                         CAST({c_stage} AS VARCHAR) AS raw_stage,
-                        ROUND(COALESCE(TRY_CAST({c_prob} AS DOUBLE), 0) * 100, 2) AS win_probability,
-                        LOWER(COALESCE(NULLIF(TRIM(CAST({c_src} AS VARCHAR)), ''), 'direct')) AS lead_source,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND(COALESCE(TRY_CAST({c_amt} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS amount_huf,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_prob} AS DOUBLE), 0) * 100, 2) AS DECIMAL(5, 2)) AS win_probability,
+                        CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_src} AS VARCHAR)), ''), 'direct')) AS VARCHAR) AS lead_source,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_amt} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
                         COALESCE(TRY_CAST({c_cdat} AS TIMESTAMPTZ), TRY_CAST(h.createdat AS TIMESTAMPTZ)) AS created_at,
                         COALESCE(TRY_CAST({c_udat} AS TIMESTAMPTZ), TRY_CAST(h.updatedat AS TIMESTAMPTZ)) AS updated_at,
                         CAST(TRY_CAST({c_cldat} AS TIMESTAMPTZ) AS DATE) AS expected_close_date,
@@ -985,22 +901,22 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'pipedrive' AS source_system,
+                        CAST('pipedrive' AS VARCHAR) AS source_system,
                         CAST(p.id AS VARCHAR) AS deal_id,
                         CAST(p.title AS VARCHAR) AS deal_name,
                         CAST({c_org} AS VARCHAR) AS company_name,
                         CAST({c_per} AS VARCHAR) AS contact_name,
                         CAST({c_usr} AS VARCHAR) AS owner_name,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST(p.status AS VARCHAR), '')) = 'won' THEN 'won'
                             WHEN LOWER(COALESCE(CAST(p.status AS VARCHAR), '')) = 'lost' THEN 'lost'
                             ELSE 'open'
-                        END AS deal_status,
-                        'stage_' || COALESCE(CAST({c_stg} AS VARCHAR), '0') AS raw_stage,
-                        COALESCE(TRY_CAST({c_prob} AS DECIMAL(5, 2)), 0) AS win_probability,
-                        'direct' AS lead_source,
-                        UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND(COALESCE(TRY_CAST(p.value AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS amount_huf,
+                        END AS VARCHAR) AS deal_status,
+                        CAST('stage_' || COALESCE(CAST({c_stg} AS VARCHAR), '0') AS VARCHAR) AS raw_stage,
+                        CAST(COALESCE(TRY_CAST({c_prob} AS DOUBLE), 0) AS DECIMAL(5, 2)) AS win_probability,
+                        CAST('direct' AS VARCHAR) AS lead_source,
+                        CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND(COALESCE(TRY_CAST(p.value AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
                         TRY_CAST(p.add_time AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
                         TRY_CAST(p.update_time AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
                         TRY_CAST({c_exp} AS DATE) AS expected_close_date,
@@ -1026,28 +942,28 @@ def run_silver_transformation() -> dict[str, int]:
                 parts.append(
                     f"""
                     SELECT
-                        'minicrm' AS source_system,
+                        CAST('minicrm' AS VARCHAR) AS source_system,
                         CAST(m.id AS VARCHAR) AS deal_id,
                         CAST(m.name AS VARCHAR) AS deal_name,
                         CAST({c_ceg} AS VARCHAR) AS company_name,
                         CAST({c_kap} AS VARCHAR) AS contact_name,
                         CAST({c_fel} AS VARCHAR) AS owner_name,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%megrendel%'
                               OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sikeres%' THEN 'won'
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%elutasít%'
                               OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sikertelen%' THEN 'lost'
                             ELSE 'open'
-                        END AS deal_status,
+                        END AS VARCHAR) AS deal_status,
                         CAST({c_st} AS VARCHAR) AS raw_stage,
-                        CASE
+                        CAST(CASE
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%megrendel%' THEN 100.00
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%elutasít%' THEN 0.00
                             ELSE 50.00
-                        END AS win_probability,
-                        LOWER(COALESCE(NULLIF(TRIM(CAST({c_for} AS VARCHAR)), ''), 'direct')) AS lead_source,
-                        UPPER(COALESCE(CAST({c_penz} AS VARCHAR), 'HUF')) AS currency,
-                        ROUND(COALESCE(TRY_CAST({c_ert} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS amount_huf,
+                        END AS DECIMAL(5, 2)) AS win_probability,
+                        CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_for} AS VARCHAR)), ''), 'direct')) AS VARCHAR) AS lead_source,
+                        CAST(UPPER(COALESCE(CAST({c_penz} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
+                        CAST(ROUND(COALESCE(TRY_CAST({c_ert} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
                         TRY_CAST(m.createdat AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
                         TRY_CAST(m.updatedat AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
                         TRY_CAST({c_varh} AS DATE) AS expected_close_date,
@@ -1065,7 +981,18 @@ def run_silver_transformation() -> dict[str, int]:
                     """
                 )
 
-            summary["crm_deals"] = _replace_silver_table(con, "crm_deals", parts)
+            empty_crm = """
+                SELECT
+                    NULL::VARCHAR AS source_system, NULL::VARCHAR AS deal_id, NULL::VARCHAR AS deal_name,
+                    NULL::VARCHAR AS company_name, NULL::VARCHAR AS contact_name, NULL::VARCHAR AS owner_name,
+                    NULL::VARCHAR AS deal_status, NULL::VARCHAR AS raw_stage, 0::DECIMAL(5, 2) AS win_probability,
+                    NULL::VARCHAR AS lead_source, NULL::VARCHAR AS currency, 0::DECIMAL(14, 2) AS amount_huf,
+                    NULL::TIMESTAMPTZ AS created_at, NULL::TIMESTAMPTZ AS updated_at,
+                    NULL::DATE AS expected_close_date, NULL::DATE AS closed_date,
+                    NULL::VARCHAR AS lost_reason, NOW() AS refreshed_at
+                WHERE FALSE
+            """
+            summary["crm_deals"] = _build_silver_table(con, "crm_deals", parts, empty_crm, "deal_status")
 
             # ----------------------------------------------------------------
             # 7. SILVER.PRODUCT_COGS
@@ -1082,9 +1009,9 @@ def run_silver_transformation() -> dict[str, int]:
                     f"""
                     WITH ranked AS (
                         SELECT
-                            UPPER(TRIM(CAST(c.sku AS VARCHAR))) AS sku,
+                            CAST(UPPER(TRIM(CAST(c.sku AS VARCHAR))) AS VARCHAR) AS sku,
                             CAST({c_tnev} AS VARCHAR) AS product_name,
-                            ROUND(COALESCE(TRY_CAST(c.beszerzesi_netto_ar AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS cogs_net_huf,
+                            CAST(ROUND(COALESCE(TRY_CAST(c.beszerzesi_netto_ar AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS cogs_net_huf,
                             CAST({c_besz} AS VARCHAR) AS supplier,
                             COALESCE(TRY_CAST({c_erv} AS DATE), DATE '2020-01-01') AS valid_from,
                             ROW_NUMBER() OVER (
@@ -1112,7 +1039,14 @@ def run_silver_transformation() -> dict[str, int]:
                     """
                 )
 
-            summary["product_cogs"] = _replace_silver_table(con, "product_cogs", parts)
+            empty_cogs = """
+                SELECT
+                    NULL::VARCHAR AS sku, NULL::VARCHAR AS product_name, 0::DECIMAL(14, 2) AS cogs_net_huf,
+                    NULL::VARCHAR AS supplier, NULL::DATE AS valid_from, NULL::DATE AS valid_to,
+                    NOW() AS refreshed_at
+                WHERE FALSE
+            """
+            summary["product_cogs"] = _build_silver_table(con, "product_cogs", parts, empty_cogs, "sku")
 
             logger.info("[SILVER-DUCKDB] Transzformáció kész: %s", summary)
             return summary
