@@ -6,20 +6,16 @@ from pathlib import Path
 
 import duckdb
 
-logger = logging.getLogger("silver_transformation")
+logger = logging.getLogger("uvicorn.error")
 
 _silver_lock = threading.Lock()
 
-def _dsn_value(value: str) -> str:
-    """libpq conninfo value: single-quoted, with backslash and quote escaped."""
-    return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
-
 PG_ATTACH_DSN = (
-    f"dbname={_dsn_value(os.getenv('POSTGRES_DB', 'n8n'))} "
-    f"user={_dsn_value(os.getenv('POSTGRES_USER', 'sql_admin'))} "
-    f"password={_dsn_value(os.getenv('POSTGRES_PASSWORD', 'sql_pass'))} "
-    f"host={_dsn_value(os.getenv('POSTGRES_HOST', 'postgresql'))} "
-    f"port={_dsn_value(os.getenv('POSTGRES_PORT', '5432'))}"
+    f"dbname={os.getenv('POSTGRES_DB', 'n8n')} "
+    f"user={os.getenv('POSTGRES_USER', 'sql_admin')} "
+    f"password={os.getenv('POSTGRES_PASSWORD', 'sql_pass')} "
+    f"host={os.getenv('POSTGRES_HOST', 'postgres')} "
+    f"port={os.getenv('POSTGRES_PORT', '5432')}"
 )
 
 INIT_FX_STATEMENTS = [
@@ -40,7 +36,14 @@ INIT_FX_STATEMENTS = [
 
 
 def _load_bronze_catalog(con: duckdb.DuckDBPyConnection) -> dict[str, set[str]]:
-    rows = con.execute("SELECT table_name, column_name FROM duckdb_columns() WHERE database_name = 'pg' AND schema_name = 'bronze_api'").fetchall()
+    """Lekérdezi a létező bronze_api táblákat és azok oszlopkészletét."""
+    rows = con.execute(
+        """
+        SELECT table_name, column_name
+        FROM duckdb_columns()
+        WHERE database_name = 'pg' AND schema_name = 'bronze_api'
+        """
+    ).fetchall()
 
     catalog: dict[str, set[str]] = {}
     for tbl, col_name in rows:
@@ -49,15 +52,21 @@ def _load_bronze_catalog(con: duckdb.DuckDBPyConnection) -> dict[str, set[str]]:
 
 
 def _col(catalog: dict[str, set[str]], table: str, alias: str, column: str, fallback: str = "NULL") -> str:
+    """Visszaadja az oszlophivatkozást, vagy a fallback értéket, ha a dlt még nem hozta létre az oszlopot."""
     if column in catalog.get(table, set()):
         return f"{alias}.{column}"
     return fallback
 
 
-def _build_silver_table(con: duckdb.DuckDBPyConnection, table_name: str, union_parts: list[str], empty_fallback_sql: str, index_col: str | None = None) -> int:
-    # Each branch is wrapped in a subquery: branches that start with a WITH clause
-    # (Meta, WooCommerce) are not valid directly inside a UNION ALL.
-    select_sql = " UNION ALL ".join(f"SELECT * FROM ({part})" for part in union_parts) if union_parts else empty_fallback_sql
+def _build_silver_table(
+    con: duckdb.DuckDBPyConnection,
+    table_name: str,
+    union_parts: list[str],
+    empty_fallback_sql: str,
+    index_col: str | None = None,
+) -> int:
+    """Újraépíti a cél Silver táblát (DROP + CREATE) és visszaadja a betöltött sorok számát."""
+    select_sql = " UNION ALL ".join(union_parts) if union_parts else empty_fallback_sql
 
     con.execute(f"CALL postgres_execute('pg', 'DROP TABLE IF EXISTS silver.{table_name} CASCADE;');")
     con.execute(f"CREATE TABLE pg.silver.{table_name} AS {select_sql};")
@@ -78,21 +87,18 @@ def run_silver_transformation() -> dict[str, int]:
     """
     with _silver_lock:
         Path("/tmp/duckdb_silver_tmp").mkdir(parents=True, exist_ok=True)
-
         con = duckdb.connect(":memory:")
         try:
             con.execute("SET memory_limit = '128MB';")
             con.execute("SET threads = 2;")
-            # Naive local timestamps (WooCommerce) and CURRENT_DATE must not depend on the container's TZ.
-            con.execute("SET TimeZone = 'Europe/Budapest';")
             con.execute("SET temp_directory = '/tmp/duckdb_silver_tmp';")
             con.execute("INSTALL postgres;")
             con.execute("LOAD postgres;")
-            con.execute(f"ATTACH '{PG_ATTACH_DSN.replace(chr(39), chr(39) * 2)}' AS pg (TYPE POSTGRES);")
+            con.execute(f"ATTACH '{PG_ATTACH_DSN}' AS pg (TYPE POSTGRES);")
 
             for stmt in INIT_FX_STATEMENTS:
                 con.execute(f"CALL postgres_execute('pg', $${stmt}$$);")
-        
+
             cat = _load_bronze_catalog(con)
             summary: dict[str, int] = {}
 
@@ -850,10 +856,10 @@ def run_silver_transformation() -> dict[str, int]:
                 c_src = _col(cat, "hubspot_deals", "h", "properties__hs_analytics_source", "'direct'")
                 c_curr = _col(cat, "hubspot_deals", "h", "properties__deal_currency_code", "'HUF'")
                 c_amt = _col(cat, "hubspot_deals", "h", "properties__amount", "0")
-                c_hcr = _col(cat, "hubspot_deals", "h", "createdat")
-                c_hup = _col(cat, "hubspot_deals", "h", "updatedat")
-                c_cdat = _col(cat, "hubspot_deals", "h", "properties__createdate", c_hcr)
-                c_udat = _col(cat, "hubspot_deals", "h", "properties__hs_lastmodifieddate", c_hup)
+                c_h_created = _col(cat, "hubspot_deals", "h", "createdat", "NULL")
+                c_h_updated = _col(cat, "hubspot_deals", "h", "updatedat", "NULL")
+                c_cdat = _col(cat, "hubspot_deals", "h", "properties__createdate", c_h_created)
+                c_udat = _col(cat, "hubspot_deals", "h", "properties__hs_lastmodifieddate", c_h_updated)
                 c_cldat = _col(cat, "hubspot_deals", "h", "properties__closedate", "NULL")
                 c_lost = _col(cat, "hubspot_deals", "h", "properties__closed_lost_reason")
 
@@ -876,8 +882,8 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_src} AS VARCHAR)), ''), 'direct')) AS VARCHAR) AS lead_source,
                         CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
                         CAST(ROUND(COALESCE(TRY_CAST({c_amt} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
-                        COALESCE(TRY_CAST({c_cdat} AS TIMESTAMPTZ), TRY_CAST({c_hcr} AS TIMESTAMPTZ)) AS created_at,
-                        COALESCE(TRY_CAST({c_udat} AS TIMESTAMPTZ), TRY_CAST({c_hup} AS TIMESTAMPTZ)) AS updated_at,
+                        COALESCE(TRY_CAST({c_cdat} AS TIMESTAMPTZ), TRY_CAST({c_h_created} AS TIMESTAMPTZ)) AS created_at,
+                        COALESCE(TRY_CAST({c_udat} AS TIMESTAMPTZ), TRY_CAST({c_h_updated} AS TIMESTAMPTZ)) AS updated_at,
                         CAST(TRY_CAST({c_cldat} AS TIMESTAMPTZ) AS DATE) AS expected_close_date,
                         CASE
                             WHEN LOWER(COALESCE(CAST({c_stage} AS VARCHAR), '')) IN ('closedwon', 'closedlost')
@@ -899,6 +905,8 @@ def run_silver_transformation() -> dict[str, int]:
                 c_stg = _col(cat, "pipedrive_deals", "p", "stage_id", "'0'")
                 c_prob = _col(cat, "pipedrive_deals", "p", "probability", "0")
                 c_curr = _col(cat, "pipedrive_deals", "p", "currency", "'HUF'")
+                c_add = _col(cat, "pipedrive_deals", "p", "add_time", "NULL")
+                c_upd = _col(cat, "pipedrive_deals", "p", "update_time", "NULL")
                 c_exp = _col(cat, "pipedrive_deals", "p", "expected_close_date", "NULL")
                 c_won = _col(cat, "pipedrive_deals", "p", "won_time", "NULL")
                 c_lost_t = _col(cat, "pipedrive_deals", "p", "lost_time", "NULL")
@@ -923,8 +931,8 @@ def run_silver_transformation() -> dict[str, int]:
                         CAST('direct' AS VARCHAR) AS lead_source,
                         CAST(UPPER(COALESCE(CAST({c_curr} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
                         CAST(ROUND(COALESCE(TRY_CAST(p.value AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
-                        TRY_CAST(p.add_time AS TIMESTAMP) AT TIME ZONE 'UTC' AS created_at,
-                        TRY_CAST(p.update_time AS TIMESTAMP) AT TIME ZONE 'UTC' AS updated_at,
+                        TRY_CAST({c_add} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
+                        TRY_CAST({c_upd} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
                         TRY_CAST({c_exp} AS DATE) AS expected_close_date,
                         COALESCE(TRY_CAST({c_won} AS DATE), TRY_CAST({c_lost_t} AS DATE)) AS closed_date,
                         CAST({c_lost_r} AS VARCHAR) AS lost_reason,
@@ -943,6 +951,8 @@ def run_silver_transformation() -> dict[str, int]:
                 c_for = _col(cat, "minicrm_projects", "m", "forras", "'direct'")
                 c_penz = _col(cat, "minicrm_projects", "m", "penznem", "'HUF'")
                 c_ert = _col(cat, "minicrm_projects", "m", "ertek", "0")
+                c_cre = _col(cat, "minicrm_projects", "m", "createdat", "NULL")
+                c_upd = _col(cat, "minicrm_projects", "m", "updatedat", "NULL")
                 c_varh = _col(cat, "minicrm_projects", "m", "varhatozaras", "NULL")
 
                 parts.append(
@@ -963,24 +973,20 @@ def run_silver_transformation() -> dict[str, int]:
                         END AS VARCHAR) AS deal_status,
                         CAST({c_st} AS VARCHAR) AS raw_stage,
                         CAST(CASE
-                            WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%megrendel%'
-                              OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sikeres%' THEN 100.00
-                            WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%elutasít%'
-                              OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sikertelen%' THEN 0.00
+                            WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%megrendel%' THEN 100.00
+                            WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%elutasít%' THEN 0.00
                             ELSE 50.00
                         END AS DECIMAL(5, 2)) AS win_probability,
                         CAST(LOWER(COALESCE(NULLIF(TRIM(CAST({c_for} AS VARCHAR)), ''), 'direct')) AS VARCHAR) AS lead_source,
                         CAST(UPPER(COALESCE(CAST({c_penz} AS VARCHAR), 'HUF')) AS VARCHAR) AS currency,
                         CAST(ROUND(COALESCE(TRY_CAST({c_ert} AS DOUBLE), 0) * COALESCE(fx.rate_to_huf, 1.0), 2) AS DECIMAL(14, 2)) AS amount_huf,
-                        TRY_CAST(m.createdat AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
-                        TRY_CAST(m.updatedat AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
+                        TRY_CAST({c_cre} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS created_at,
+                        TRY_CAST({c_upd} AS TIMESTAMP) AT TIME ZONE 'Europe/Budapest' AS updated_at,
                         TRY_CAST({c_varh} AS DATE) AS expected_close_date,
                         CASE
                             WHEN LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%megrendel%'
-                              OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sikeres%'
                               OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%elutasít%'
-                              OR LOWER(COALESCE(CAST({c_st} AS VARCHAR), '')) LIKE '%sikertelen%'
-                                THEN TRY_CAST(m.updatedat AS DATE)
+                                THEN TRY_CAST({c_upd} AS DATE)
                             ELSE NULL
                         END AS closed_date,
                         NULL::VARCHAR AS lost_reason,
@@ -1061,5 +1067,8 @@ def run_silver_transformation() -> dict[str, int]:
             logger.info("[SILVER-DUCKDB] Transzformáció kész: %s", summary)
             return summary
 
+        except Exception as exc:
+            logger.exception("[SILVER-DUCKDB] Hiba a Silver transzformáció során: %s", exc)
+            raise
         finally:
             con.close()
