@@ -11,21 +11,17 @@ logger = logging.getLogger("silver_transformation")
 _silver_lock = threading.Lock()
 
 PG_ATTACH_DSN = (
-    f"dbname={os.getenv('POSTGRES_DB', 'n8n')} "
-    f"user={os.getenv('POSTGRES_USER', 'sql_admin')} "
-    f"password={os.getenv('POSTGRES_PASSWORD', 'sql_pass')} "
-    f"host={os.getenv('POSTGRES_HOST', 'postgres')} "
+    f"dbname={os.getenv('POSTGRES_DB', 'n8n')}"
+    f"user={os.getenv('POSTGRES_USER', 'sql_admin')}"
+    f"password={os.getenv('POSTGRES_PASSWORD', 'sql_pass')}"
+    f"host={os.getenv('POSTGRES_HOST', 'postgres')}"
     f"port={os.getenv('POSTGRES_PORT', '5432')}"
 )
 
 INIT_FX_SQL = """
 CREATE SCHEMA IF NOT EXISTS silver;
 
-CREATE TABLE IF NOT EXISTS silver.fx_rates (
-    currency        TEXT PRIMARY KEY,
-    rate_to_huf     NUMERIC(12, 4) NOT NULL,
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+CREATE TABLE IF NOT EXISTS silver.fx_rates (currency TEXT PRIMARY KEY, rate_to_huf NUMERIC(12, 4) NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 
 INSERT INTO silver.fx_rates (currency, rate_to_huf)
 VALUES ('HUF', 1.0000), ('EUR', 402.0000), ('USD', 375.0000)
@@ -34,13 +30,7 @@ ON CONFLICT (currency) DO NOTHING;
 
 
 def _load_bronze_catalog(con: duckdb.DuckDBPyConnection) -> dict[str, set[str]]:
-    rows = con.execute(
-        """
-        SELECT table_name, column_name
-        FROM duckdb_columns()
-        WHERE database_name = 'pg' AND schema_name = 'bronze_api'
-        """
-    ).fetchall()
+    rows = con.execute("SELECT table_name, column_name FROM duckdb_columns() WHERE database_name = 'pg' AND schema_name = 'bronze_api'").fetchall()
 
     catalog: dict[str, set[str]] = {}
     for tbl, col_name in rows:
