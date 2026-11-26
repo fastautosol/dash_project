@@ -1,4 +1,4 @@
-# 2026.11.21  11.00
+# 2026.11.26  18.00
 import asyncio
 import math
 import time
@@ -27,7 +27,7 @@ MIN_LEVERAGE       = 20.0
 MIN_TURNOVER       = 500_000.0  # USDT / 24h
 POLL_INTERVAL      = 300
 MARKET_REFRESH_SEC = 3600
-CLEANUP_HOURS      = 240
+CLEANUP_HOURS      = 120
 T_TICKER           = "bybit_tickers"
 
 
