@@ -72,7 +72,7 @@ server = FastAPI(title="Dash Demo App")
 # ----- 4. API routers -----
 server.include_router(azureblob_api.router,    prefix="/api/rest",           tags=["Ingest Azure Blob"])
 server.include_router(ingest_crm_api.router,   prefix="/api/crm",            tags=["Ingest CRM API"])
-server.include_router(finance_api.router,      prefix="/api/finance",        tags=["Finance API"])
+server.include_router(kkv_finance_api.router,  prefix="/api/kkv_finance",    tags=["KKV Finance API"])
 server.include_router(ingest_mediaads_api.router, prefix="/api/mediaads",    tags=["Ingest MediaAds API"])
 server.include_router(ingest_webshops_api.router, prefix="/api/webshops",    tags=["Ingest WebShops API"])
 server.include_router(shopify_rag_api.router,   prefix="/api/shopify",       tags=["Shopify RAG"])
