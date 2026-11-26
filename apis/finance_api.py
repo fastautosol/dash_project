@@ -1,25 +1,20 @@
 # 2026.11.23  18.00
-import gzip
-import io
-import json
 import logging
 import math
 import os
 import re
-import tarfile
 import threading
 import unicodedata
-import zipfile
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any
 
 import dlt
 import httpx
-import polars as pl
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
+
+from apis.finance_silver import run_finance_silver_transformation
 
 try:
     from apis.finance_mock import (generate_mock_billingo_documents, generate_mock_product_cogs, generate_mock_szamlazzhu_invoices)
@@ -40,21 +35,22 @@ DB_CONFIG = {
     "database": os.getenv("POSTGRES_DB", "n8n"),
     "username": os.getenv("POSTGRES_USER", "sql_admin"),
     "password": os.getenv("POSTGRES_PASSWORD", "sql_pass"),
-    "connect_timeout": 15}
+    "connect_timeout": 15,
+}
 
 META_COLS = {"data_source_meta", "ingested_at", "_dlt_id", "_dlt_load_id"}
-MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024  # 100 MB limit kicsomagolás után
-SUPPORTED_DATA_EXTS = (".csv", ".xlsx", ".xls", ".json", ".jsonl", ".ndjson")
 
 # --- Táblaszintű zárolás ---
 _locks_guard = threading.Lock()
 _table_locks: dict[str, threading.Lock] = {}
+
 
 def _get_table_lock(table_name: str) -> threading.Lock:
     with _locks_guard:
         if table_name not in _table_locks:
             _table_locks[table_name] = threading.Lock()
         return _table_locks[table_name]
+
 
 def verify_api_key(x_api_key: str | None = Header(default=None)) -> None:
     if x_api_key != INGEST_API_KEY:
@@ -215,144 +211,6 @@ def _fetch_szamlazzhu_by_numbers(agent_key: str, invoice_numbers: list[str]) -> 
     return results
 
 
-# --- Polars + Calamine + JSON + Archívum feldolgozó motor ---
-def _extract_json_records(raw_text: str, is_lines: bool = False) -> list[dict[str, Any]]:
-    if is_lines:
-        items = [json.loads(line) for line in raw_text.splitlines() if line.strip()]
-    else:
-        parsed = json.loads(raw_text)
-        if isinstance(parsed, list):
-            items = parsed
-        elif isinstance(parsed, dict):
-            list_candidates = [v for k, v in parsed.items() if k.lower() in {"data", "items", "records", "results", "rows"} and isinstance(v, list)]
-            if len(list_candidates) == 1:
-                items = list_candidates[0]
-            elif len(parsed) == 1 and isinstance(next(iter(parsed.values())), list):
-                items = next(iter(parsed.values()))
-            else:
-                items = [parsed]
-        else:
-            items = [{"value": parsed}]
-
-    return [item if isinstance(item, dict) else {"value": item} for item in items]
-
-
-def _detect_csv_separator(decoded_text: str) -> str:
-    first_line = decoded_text.splitlines()[0] if decoded_text.strip() else ""
-    counts = {sep: first_line.count(sep) for sep in (";", ",", "\t")}
-    best_sep = max(counts, key=lambda k: counts[k])
-    return best_sep if counts[best_sep] > 0 else ","
-
-
-def _clean_polars_df(df: pl.DataFrame) -> list[dict[str, Any]]:
-    if df.is_empty():
-        return []
-    df = df.filter(~pl.all_horizontal(pl.all().is_null()))
-    float_cols = [col for col, dtype in df.schema.items() if dtype in (pl.Float32, pl.Float64)]
-    if float_cols:
-        df = df.with_columns([pl.col(c).fill_nan(None) for c in float_cols])
-    return df.to_dicts()
-
-
-def _parse_single_file(content: bytes, filename: str, sheet_name: str = "") -> list[dict[str, Any]]:
-    lower_name = filename.lower()
-
-    if lower_name.endswith(".csv"):
-        for enc in ("utf-8-sig", "utf-8", "cp1250", "latin1"):
-            try:
-                text = content.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            raise ValueError(f"Nem támogatott CSV karakterkódolás: {filename}")
-
-        if not text.strip():
-            return []
-
-        sep = _detect_csv_separator(text)
-        df = pl.read_csv(io.BytesIO(text.encode("utf-8")), separator=sep, infer_schema_length=10000, truncate_ragged_lines=True)
-        return _clean_polars_df(df)
-
-    if lower_name.endswith((".xlsx", ".xls")):
-        excel_kwargs: dict[str, Any] = {"engine": "calamine"}
-        clean_sheet = sheet_name.strip()
-        if clean_sheet:
-            if clean_sheet.isdigit():
-                idx = int(clean_sheet)
-                excel_kwargs["sheet_id"] = idx if idx >= 1 else 1
-            else:
-                excel_kwargs["sheet_name"] = clean_sheet
-        else:
-            excel_kwargs["sheet_id"] = 1
-
-        df = pl.read_excel(io.BytesIO(content), **excel_kwargs)
-        return _clean_polars_df(df)
-
-    if lower_name.endswith((".json", ".jsonl", ".ndjson")):
-        for enc in ("utf-8-sig", "utf-8", "cp1250"):
-            try:
-                text = content.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            raise ValueError(f"Nem támogatott JSON karakterkódolás: {filename}")
-        return _extract_json_records(text, is_lines=lower_name.endswith((".jsonl", ".ndjson")))
-
-    raise ValueError(f"Nem támogatott fájlkiterjesztés: {filename}")
-
-
-def _is_ignored_archive_entry(entry_name: str) -> bool:
-    p = Path(entry_name)
-    return ("__MACOSX" in p.parts or p.name.startswith(".") or not p.name.lower().endswith(SUPPORTED_DATA_EXTS))
-
-
-def _parse_uploaded_payload(content: bytes, filename: str, sheet_name: str = "") -> list[dict[str, Any]]:
-    lower_name = filename.lower()
-
-    # ----- .tar / .tar.gz / .tgz archívum -----
-    if lower_name.endswith((".tar", ".tar.gz", ".tgz")):
-        records: list[dict[str, Any]] = []
-        total_unpacked = 0
-        with tarfile.open(fileobj=io.BytesIO(content), mode="r:*") as tf:
-            for member in tf.getmembers():
-                if not member.isfile() or _is_ignored_archive_entry(member.name):
-                    continue
-                total_unpacked += member.size
-                if total_unpacked > MAX_UNCOMPRESSED_BYTES:
-                    raise ValueError("A kicsomagolt archívum mérete meghaladja a 100 MB-os limitet.")
-                extracted = tf.extractfile(member)
-                if extracted:
-                    records.extend(_parse_single_file(extracted.read(), Path(member.name).name, sheet_name))
-        return records
-
-    # ----- Egyedi .gz fájl (pl. export.csv.gz vagy dump.json.gz) -----
-    if lower_name.endswith(".gz"):
-        decompressed = gzip.decompress(content)
-        if len(decompressed) > MAX_UNCOMPRESSED_BYTES:
-            raise ValueError("A kicsomagolt GZIP fájl mérete meghaladja a 100 MB-os limitet.")
-        inner_name = filename[:-3]
-        return _parse_single_file(decompressed, inner_name, sheet_name)
-
-    # ----- .zip archívum -----
-    if lower_name.endswith(".zip"):
-        records = []
-        total_unpacked = 0
-        with zipfile.ZipFile(io.BytesIO(content)) as zf:
-            for info in zf.infolist():
-                if info.is_dir() or _is_ignored_archive_entry(info.filename):
-                    continue
-                total_unpacked += info.file_size
-                if total_unpacked > MAX_UNCOMPRESSED_BYTES:
-                    raise ValueError("A kicsomagolt ZIP mérete meghaladja a 100 MB-os limitet.")
-                records.extend(_parse_single_file(zf.read(info.filename), Path(info.filename).name, sheet_name))
-        return records
-
-    # 4. Közvetlen adatfájl (.csv, .xlsx, .xls, .json, .jsonl, .ndjson)
-    return _parse_single_file(content, filename, sheet_name)
-
-
 # --- Request modellek ---
 class BillingoSyncRequest(BaseModel):
     api_key: str = Field(default_factory=lambda: os.getenv("BILLINGO_API_KEY", ""))
@@ -380,12 +238,14 @@ def _pull_and_ingest_billingo(req: BillingoSyncRequest) -> None:
     except Exception as e:
         logger.exception("[BILLINGO-PULL] Hiba: %s", e)
 
+
 @router.post("/billingo")
 async def sync_billingo(request: BillingoSyncRequest, background_tasks: BackgroundTasks):
     if request.records is None and not request.api_key:
         raise HTTPException(status_code=400, detail="Hiányzó Billingo api_key vagy records.")
     background_tasks.add_task(_pull_and_ingest_billingo, request)
     return {"status": "accepted", "provider": "billingo", "target_table": f"bronze_api.{request.table_name}"}
+
 
 @router.post("/billingo/mock")
 async def sync_billingo_mock(request: FinanceMockRequest, background_tasks: BackgroundTasks):
@@ -404,12 +264,14 @@ def _pull_and_ingest_szamlazzhu(req: SzamlazzHuSyncRequest) -> None:
     except Exception as e:
         logger.exception("[SZAMLAZZHU-PULL] Hiba: %s", e)
 
+
 @router.post("/szamlazzhu")
 async def sync_szamlazzhu(request: SzamlazzHuSyncRequest, background_tasks: BackgroundTasks):
     if request.records is None and (not request.agent_key or not request.invoice_numbers):
         raise HTTPException(status_code=400, detail="Add meg a records listát (webhook/export) vagy az agent_key + invoice_numbers mezőket.")
     background_tasks.add_task(_pull_and_ingest_szamlazzhu, request)
     return {"status": "accepted", "provider": "szamlazz.hu", "target_table": f"bronze_api.{request.table_name}"}
+
 
 @router.post("/szamlazzhu/mock")
 async def sync_szamlazzhu_mock(request: FinanceMockRequest, background_tasks: BackgroundTasks):
@@ -420,41 +282,7 @@ async def sync_szamlazzhu_mock(request: FinanceMockRequest, background_tasks: Ba
     return {"status": "accepted", "generated_records": len(mock_rows), "target_table": "bronze_api.szamlazzhu_invoices", "sample": mock_rows[:2]}
 
 
-# ---------- 3. UNIVERZÁLIS FÁJLFELDOLGOZÓ (Polars + Calamine + JSON + Archívumok) ----------
-@router.post("/upload-file")
-async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...), table_name: str = Form(...), primary_key: str = Form(default=""),
-    write_mode: str = Form(default="merge"), sheet_name: str = Form(default=""), source_label: str = Form(default="file_upload")):
-        
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="Hiányzó fájlnév.")
-
-    content = await file.read()
-    if not content:
-        raise HTTPException(status_code=400, detail="Üres fájl.")
-
-    try:
-        records = _parse_uploaded_payload(content, file.filename, sheet_name)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Fájlfeldolgozási hiba: {e}") from e
-
-    if not records:
-        raise HTTPException(status_code=400, detail="A fájl nem tartalmaz feldolgozható rekordokat.")
-
-    pk_list = [_sanitize_key(col, i) for i, col in enumerate(primary_key.split(",")) if col.strip()]
-    safe_table = _sanitize_key(table_name, 0)
-
-    background_tasks.add_task(run_finance_dlt_ingest, records, f"{source_label}:{file.filename}", safe_table, write_mode, pk_list if pk_list else None)
-
-    return {
-        "status": "accepted",
-        "filename": file.filename,
-        "parsed_rows": len(records),
-        "target_table": f"bronze_api.{safe_table}",
-        "primary_key": pk_list or None,
-        "sample": records[:2]}
-
-
-# ---------- 4. BESZERZÉSI ÁRAK (COGS) MOCK ----------
+# ---------- 3. BESZERZÉSI ÁRAK (COGS) MOCK ----------
 @router.post("/cogs/mock")
 async def sync_cogs_mock(background_tasks: BackgroundTasks):
     if not MOCK_ENABLED:
@@ -462,3 +290,17 @@ async def sync_cogs_mock(background_tasks: BackgroundTasks):
     mock_rows = generate_mock_product_cogs()
     background_tasks.add_task(run_finance_dlt_ingest, mock_rows, "cogs_mock_generator", "product_cogs", "merge", ["sku", "ervenyes_ettol"])
     return {"status": "accepted", "generated_records": len(mock_rows), "target_table": "bronze_api.product_cogs", "sample": mock_rows}
+
+
+# ---------- 4. FINANCE SILVER TRANSZFORMÁCIÓ (DuckDB) ----------
+@router.post("/silver")
+async def trigger_finance_silver(
+    background_tasks: BackgroundTasks,
+    sync: bool = Query(default=False, description="Ha true, megvárja a futást és visszaadja a sorok számát."),
+):
+    if sync:
+        stats = run_finance_silver_transformation()
+        return {"status": "completed", "layer": "silver", "stats": stats}
+
+    background_tasks.add_task(run_finance_silver_transformation)
+    return {"status": "accepted", "layer": "silver"}
