@@ -14,10 +14,10 @@ import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from apis.finance_silver import run_finance_silver_transformation
+from apis.kkv_finance_silver import run_finance_silver_transformation
 
 try:
-    from apis.finance_mock import (generate_mock_billingo_documents, generate_mock_product_cogs, generate_mock_szamlazzhu_invoices)
+    from apis.kkv_finance_mock import (generate_mock_billingo_documents, generate_mock_product_cogs, generate_mock_szamlazzhu_invoices)
     MOCK_ENABLED = True
 except ImportError:
     MOCK_ENABLED = False
