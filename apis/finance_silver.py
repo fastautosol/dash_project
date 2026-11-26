@@ -1,4 +1,4 @@
-# 2026.11.26  14.00
+# 2026.11.26  15.00
 import logging
 import os
 import threading
@@ -346,7 +346,7 @@ def run_finance_silver_transformation() -> dict[str, Any]:
             # 3. SILVER.FINANCE_PARTNERS (Deduplikált partnertörzs)
             # ---------------------------------------------------------
             conn.execute("""
-                CREATE OR REPLACE TABLE pg.silver.finance_partners AS
+                CREATE OR REPLACE TABLE pg.silver.kkv_finance_partners AS
                 WITH ranked_names AS (
                     SELECT
                         partner_key,
@@ -395,15 +395,15 @@ def run_finance_silver_transformation() -> dict[str, Any]:
                 JOIN ranked_names n ON a.partner_key = n.partner_key AND n.rn = 1;
             """)
 
-            inv_cnt = conn.execute("SELECT COUNT(*) FROM pg.silver.finance_invoices").fetchone()[0]
-            itm_cnt = conn.execute("SELECT COUNT(*) FROM pg.silver.finance_invoice_items").fetchone()[0] if item_sources else 0
-            prt_cnt = conn.execute("SELECT COUNT(*) FROM pg.silver.finance_partners").fetchone()[0]
+            inv_cnt = conn.execute("SELECT COUNT(*) FROM pg.silver.kkv_finance_invoices").fetchone()[0]
+            itm_cnt = conn.execute("SELECT COUNT(*) FROM pg.silver.kkv_finance_invoice_items").fetchone()[0] if item_sources else 0
+            prt_cnt = conn.execute("SELECT COUNT(*) FROM pg.silver.kkv_finance_partners").fetchone()[0]
 
             result = {
                 "status": "ok",
-                "silver.finance_invoices": inv_cnt,
-                "silver.finance_invoice_items": itm_cnt,
-                "silver.finance_partners": prt_cnt,
+                "silver.kkv_finance_invoices": inv_cnt,
+                "silver.kkv_finance_invoice_items": itm_cnt,
+                "silver.kkv_finance_partners": prt_cnt,
             }
             logger.info("Finance Silver transzformáció sikeres: %s", result)
             return result
