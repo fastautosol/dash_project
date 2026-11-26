@@ -360,7 +360,7 @@ def run_finance_silver_transformation() -> dict[str, Any]:
                             PARTITION BY partner_key
                             ORDER BY invoice_date DESC NULLS LAST, LENGTH(partner_name) DESC
                         ) AS rn
-                    FROM pg.silver.finance_invoices
+                    FROM pg.silver.kkv_finance_invoices
                 ),
                 agg AS (
                     SELECT
@@ -372,7 +372,7 @@ def run_finance_silver_transformation() -> dict[str, Any]:
                         ROUND(AVG(days_to_pay), 1) AS avg_days_to_pay,
                         MIN(invoice_date) AS first_invoice_date,
                         MAX(invoice_date) AS last_invoice_date
-                    FROM pg.silver.finance_invoices
+                    FROM pg.silver.kkv_finance_invoices
                     GROUP BY partner_key
                 )
                 SELECT
