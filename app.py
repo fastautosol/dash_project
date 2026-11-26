@@ -15,7 +15,6 @@ import apis.opensky_api as opensky_api
 import apis.crucix_api as crucix_api
 import apis.twitter_api as twitter_api
 import apis.eia_api as eia_api
-import apis.ingest_azureblob_api as azureblob_api
 import apis.ingest_mediaads_api as ingest_mediaads_api
 import apis.kkv_webshops_api as kkv_webshops_api
 import apis.kkv_finance_api as kkv_finance_api
@@ -72,7 +71,6 @@ app.layout = html.Div([
 server = FastAPI(title="Dash Demo App")
 
 # ----- 4. API routers -----
-server.include_router(azureblob_api.router,    prefix="/api/rest",           tags=["Ingest Azure Blob"])
 server.include_router(ingest_crm_api.router,   prefix="/api/crm",            tags=["Ingest CRM API"])
 server.include_router(kkv_finance_api.router,  prefix="/api/kkv_finance",    tags=["KKV Finance API"])
 server.include_router(kkv_files_api.router,    prefix="/api/kkv_files",      tags=["KKV FILES API"])
