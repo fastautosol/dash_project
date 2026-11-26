@@ -19,7 +19,7 @@ import apis.ingest_mediaads_api as ingest_mediaads_api
 import apis.ingest_webshops_api as ingest_webshops_api
 import apis.kkv_finance_api as kkv_finance_api
 import apis.ingest_crm_api as ingest_crm_api
-import apis.kkv_api as kkv_api
+import apis.kkv_files_api as kkv_files_api
 import apis.shopify_rag_api as shopify_rag_api
 
 # ----- 1. Initialize Dash -----
@@ -73,10 +73,10 @@ server = FastAPI(title="Dash Demo App")
 server.include_router(azureblob_api.router,    prefix="/api/rest",           tags=["Ingest Azure Blob"])
 server.include_router(ingest_crm_api.router,   prefix="/api/crm",            tags=["Ingest CRM API"])
 server.include_router(kkv_finance_api.router,  prefix="/api/kkv_finance",    tags=["KKV Finance API"])
+server.include_router(kkv_files_api.router,    prefix="/api/kkv_files",      tags=["KKV FILES API"])
 server.include_router(ingest_mediaads_api.router, prefix="/api/mediaads",    tags=["Ingest MediaAds API"])
 server.include_router(ingest_webshops_api.router, prefix="/api/webshops",    tags=["Ingest WebShops API"])
 server.include_router(shopify_rag_api.router,   prefix="/api/shopify",       tags=["Shopify RAG"])
-server.include_router(kkv_api.router,           prefix="/api/kkv",           tags=["KKV API"])
 
 server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tags=["Lufthansa"])
 server.include_router(serper_places.router,     prefix="/api/serper",        tags=["Serper Places"])
