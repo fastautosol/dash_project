@@ -22,7 +22,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTT
 from pydantic import BaseModel, Field
 
 try:
-    from apis.ingest_finance_mock import (generate_mock_billingo_documents, generate_mock_product_cogs, generate_mock_szamlazzhu_invoices)
+    from apis.finance_mock import (generate_mock_billingo_documents, generate_mock_product_cogs, generate_mock_szamlazzhu_invoices)
     MOCK_ENABLED = True
 except ImportError:
     MOCK_ENABLED = False
