@@ -13,7 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
 try:
-    from apis.ingest_webshops_mock import (generate_mock_shopify_orders, generate_mock_shoprenter_orders, generate_mock_unas_orders, generate_mock_woocommerce_orders)
+    from apis.kkv_webshops_mock import (generate_mock_shopify_orders, generate_mock_shoprenter_orders, generate_mock_unas_orders, generate_mock_woocommerce_orders)
     MOCK_ENABLED = True
 except ImportError:
     MOCK_ENABLED = False
