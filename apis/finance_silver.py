@@ -154,7 +154,7 @@ def run_finance_silver_transformation() -> dict[str, Any]:
             union_headers_sql = "\nUNION ALL\n".join(header_sources)
 
             conn.execute(f"""
-                CREATE OR REPLACE TABLE pg.silver.finance_invoices AS
+                CREATE OR REPLACE TABLE pg.silver.kkv_finance_invoices AS
                 WITH unified AS (
                     {union_headers_sql}
                 ),
@@ -295,7 +295,7 @@ def run_finance_silver_transformation() -> dict[str, Any]:
                 """
 
                 conn.execute(f"""
-                    CREATE OR REPLACE TABLE pg.silver.finance_invoice_items AS
+                    CREATE OR REPLACE TABLE pg.silver.kkv_finance_invoice_items AS
                     WITH raw_items AS (
                         {union_items_sql}
                     ),
