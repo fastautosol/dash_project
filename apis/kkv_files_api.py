@@ -1,4 +1,5 @@
 # 2026.11.26  18.00
+import gc
 import gzip
 import io
 import json
@@ -17,6 +18,7 @@ from typing import Any
 
 import dlt
 import polars as pl
+import pyarrow as pa
 from azure.storage.blob import BlobServiceClient
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
@@ -53,8 +55,11 @@ blob_service_client = (
 )
 
 META_COLS = {"data_source_meta", "source_file_name", "archive_member", "ingested_at", "_dlt_id", "_dlt_load_id"}
-MAX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024  # 100 MB limit kicsomagolás után
-SUPPORTED_DATA_EXTS = (".csv", ".xlsx", ".xls", ".json", ".jsonl", ".ndjson", ".parquet")
+MAX_UNCOMPRESSED_BYTES = 150 * 1024 * 1024  # 150 MB limit kicsomagolás után
+ARROW_CHUNK_SIZE = 50_000
+TABULAR_EXTS = (".csv", ".xlsx", ".xls", ".parquet")
+JSON_EXTS = (".json", ".jsonl", ".ndjson")
+SUPPORTED_DATA_EXTS = TABULAR_EXTS + JSON_EXTS
 SUPPORTED_ARCHIVE_EXTS = (".tar", ".tar.gz", ".tgz", ".gz", ".zip")
 ALL_SUPPORTED_EXTS = SUPPORTED_DATA_EXTS + SUPPORTED_ARCHIVE_EXTS
 VALID_WRITE_MODES = {"merge", "append", "replace"}
@@ -116,7 +121,7 @@ def _normalize_value(val: Any) -> Any:
     return val
 
 
-def _prepare_records(
+def _prepare_json_records(
     records: list[dict[str, Any]],
     source_name: str,
     file_name: str,
@@ -135,7 +140,38 @@ def _prepare_records(
     return prepared
 
 
-# --- Polars + Calamine + Parquet + JSON + Archívum feldolgozó motor ---
+def _prepare_arrow_table(
+    table: pa.Table,
+    source_name: str,
+    file_name: str,
+    archive_member: str | None = None,
+) -> pa.Table:
+    """Oszlopszintű névtisztítás és metaadat-csatolás Python dict konverzió nélkül."""
+    if table.num_rows == 0:
+        return table
+
+    new_names: list[str] = []
+    seen: set[str] = set()
+    for idx, col_name in enumerate(table.column_names):
+        clean = _sanitize_key(col_name, idx)
+        if clean in seen:
+            clean = f"{clean}_{idx}"
+        seen.add(clean)
+        new_names.append(clean)
+
+    table = table.rename_columns(new_names)
+
+    n = table.num_rows
+    now_iso = datetime.now(timezone.utc).isoformat()
+    table = table.append_column("data_source_meta", pa.repeat(pa.scalar(source_name, type=pa.string()), n))
+    table = table.append_column("source_file_name", pa.repeat(pa.scalar(file_name, type=pa.string()), n))
+    if archive_member is not None:
+        table = table.append_column("archive_member", pa.repeat(pa.scalar(archive_member, type=pa.string()), n))
+    table = table.append_column("ingested_at", pa.repeat(pa.scalar(now_iso, type=pa.string()), n))
+    return table
+
+
+# --- Polars -> PyArrow & JSON feldolgozó motor ---
 def _extract_json_records(raw_text: str, is_lines: bool = False) -> list[dict[str, Any]]:
     if is_lines:
         items = [json.loads(line) for line in raw_text.splitlines() if line.strip()]
@@ -167,17 +203,19 @@ def _detect_csv_separator(decoded_text: str) -> str:
     return best_sep if counts[best_sep] > 0 else ","
 
 
-def _clean_polars_df(df: pl.DataFrame) -> list[dict[str, Any]]:
+def _polars_to_clean_arrow(df: pl.DataFrame) -> pa.Table:
     if df.is_empty():
-        return []
+        return pa.table({})
     df = df.filter(~pl.all_horizontal(pl.all().is_null()))
     float_cols = [col for col, dtype in df.schema.items() if dtype in (pl.Float32, pl.Float64)]
     if float_cols:
         df = df.with_columns([pl.col(c).fill_nan(None) for c in float_cols])
-    return df.to_dicts()
+    table = df.to_arrow()
+    del df
+    return table
 
 
-def _parse_single_file(content: bytes, filename: str, sheet_name: str = "") -> list[dict[str, Any]]:
+def _parse_tabular_to_arrow(content: bytes, filename: str, sheet_name: str = "") -> pa.Table:
     lower_name = filename.lower()
 
     if lower_name.endswith(".csv"):
@@ -191,19 +229,22 @@ def _parse_single_file(content: bytes, filename: str, sheet_name: str = "") -> l
             raise ValueError(f"Nem támogatott CSV karakterkódolás: {filename}")
 
         if not text.strip():
-            return []
+            return pa.table({})
 
         sep = _detect_csv_separator(text)
+        utf8_bytes = text.encode("utf-8")
+        del text
         df = pl.read_csv(
-            io.BytesIO(text.encode("utf-8")),
+            io.BytesIO(utf8_bytes),
             separator=sep,
             infer_schema_length=10000,
             truncate_ragged_lines=True,
         )
-        return _clean_polars_df(df)
+        del utf8_bytes
+        return _polars_to_clean_arrow(df)
 
     if lower_name.endswith((".xlsx", ".xls")):
-        excel_kwargs: dict[str, Any] = {"engine": "calamine"}
+        excel_kwargs: dict[str, Any] = {"engine": "calamine", "infer_schema_length": None}
         clean_sheet = sheet_name.strip()
         if clean_sheet:
             if clean_sheet.isdigit():
@@ -215,24 +256,57 @@ def _parse_single_file(content: bytes, filename: str, sheet_name: str = "") -> l
             excel_kwargs["sheet_id"] = 1
 
         df = pl.read_excel(io.BytesIO(content), **excel_kwargs)
-        return _clean_polars_df(df)
+        return _polars_to_clean_arrow(df)
 
     if lower_name.endswith(".parquet"):
         df = pl.read_parquet(io.BytesIO(content))
-        return _clean_polars_df(df)
+        return _polars_to_clean_arrow(df)
 
-    if lower_name.endswith((".json", ".jsonl", ".ndjson")):
-        for enc in ("utf-8-sig", "utf-8", "cp1250", "latin1"):
-            try:
-                text = content.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            raise ValueError(f"Nem támogatott JSON karakterkódolás: {filename}")
-        return _extract_json_records(text, is_lines=lower_name.endswith((".jsonl", ".ndjson")))
+    raise ValueError(f"Nem táblázatos fájlkiterjesztés: {filename}")
 
-    raise ValueError(f"Nem támogatott fájlkiterjesztés: {filename}")
+
+def _parse_json_bytes(content: bytes, filename: str) -> list[dict[str, Any]]:
+    lower_name = filename.lower()
+    for enc in ("utf-8-sig", "utf-8", "cp1250", "latin1"):
+        try:
+            text = content.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        raise ValueError(f"Nem támogatott JSON karakterkódolás: {filename}")
+    return _extract_json_records(text, is_lines=lower_name.endswith((".jsonl", ".ndjson")))
+
+
+def _iter_single_file_batches(
+    content: bytes,
+    inner_filename: str,
+    source_name: str,
+    outer_filename: str,
+    archive_member: str | None = None,
+    sheet_name: str = "",
+) -> Iterator[pa.Table | list[dict[str, Any]]]:
+    lower_name = inner_filename.lower()
+
+    if lower_name.endswith(TABULAR_EXTS):
+        table = _parse_tabular_to_arrow(content, inner_filename, sheet_name)
+        if table.num_rows > 0:
+            table = _prepare_arrow_table(table, source_name, outer_filename, archive_member)
+            for batch in table.to_batches(max_chunksize=ARROW_CHUNK_SIZE):
+                yield pa.Table.from_batches([batch])
+        del table
+        gc.collect()
+        return
+
+    if lower_name.endswith(JSON_EXTS):
+        raw_rows = _parse_json_bytes(content, inner_filename)
+        if raw_rows:
+            for i in range(0, len(raw_rows), ARROW_CHUNK_SIZE):
+                chunk = raw_rows[i : i + ARROW_CHUNK_SIZE]
+                yield _prepare_json_records(chunk, source_name, outer_filename, archive_member)
+        return
+
+    raise ValueError(f"Nem támogatott fájlkiterjesztés: {inner_filename}")
 
 
 def _is_ignored_archive_entry(entry_name: str) -> bool:
@@ -245,8 +319,8 @@ def _iter_parsed_batches(
     filename: str,
     source_name: str,
     sheet_name: str = "",
-) -> Iterator[list[dict[str, Any]]]:
-    """Fájlonként vagy archívum-tagként előkészített rekordkötegeket (batch) ad vissza."""
+) -> Iterator[pa.Table | list[dict[str, Any]]]:
+    """Streaming kötegeket (Arrow Table vagy JSON dict lista) ad vissza memóriakímélő módon."""
     lower_name = filename.lower()
 
     # ----- .tar / .tar.gz / .tgz archívum -----
@@ -258,23 +332,26 @@ def _iter_parsed_batches(
                     continue
                 total_unpacked += member.size
                 if total_unpacked > MAX_UNCOMPRESSED_BYTES:
-                    raise ValueError("A kicsomagolt archívum mérete meghaladja a 100 MB-os limitet.")
+                    raise ValueError("A kicsomagolt archívum mérete meghaladja a 150 MB-os limitet.")
                 extracted = tf.extractfile(member)
                 if extracted:
-                    raw_rows = _parse_single_file(extracted.read(), Path(member.name).name, sheet_name)
-                    if raw_rows:
-                        yield _prepare_records(raw_rows, source_name, filename, archive_member=member.name)
+                    member_bytes = extracted.read()
+                    yield from _iter_single_file_batches(
+                        member_bytes, Path(member.name).name, source_name, filename, member.name, sheet_name
+                    )
+                    del member_bytes
         return
 
-    # ----- Egyedi .gz fájl (pl. export.csv.gz vagy dump.json.gz) -----
+    # ----- Egyedi .gz fájl -----
     if lower_name.endswith(".gz"):
         decompressed = gzip.decompress(content)
         if len(decompressed) > MAX_UNCOMPRESSED_BYTES:
-            raise ValueError("A kicsomagolt GZIP fájl mérete meghaladja a 100 MB-os limitet.")
+            raise ValueError("A kicsomagolt GZIP fájl mérete meghaladja a 150 MB-os limitet.")
         inner_name = filename[:-3]
-        raw_rows = _parse_single_file(decompressed, inner_name, sheet_name)
-        if raw_rows:
-            yield _prepare_records(raw_rows, source_name, filename, archive_member=inner_name)
+        yield from _iter_single_file_batches(
+            decompressed, inner_name, source_name, filename, inner_name, sheet_name
+        )
+        del decompressed
         return
 
     # ----- .zip archívum -----
@@ -286,21 +363,21 @@ def _iter_parsed_batches(
                     continue
                 total_unpacked += info.file_size
                 if total_unpacked > MAX_UNCOMPRESSED_BYTES:
-                    raise ValueError("A kicsomagolt ZIP mérete meghaladja a 100 MB-os limitet.")
-                raw_rows = _parse_single_file(zf.read(info.filename), Path(info.filename).name, sheet_name)
-                if raw_rows:
-                    yield _prepare_records(raw_rows, source_name, filename, archive_member=info.filename)
+                    raise ValueError("A kicsomagolt ZIP mérete meghaladja a 150 MB-os limitet.")
+                member_bytes = zf.read(info.filename)
+                yield from _iter_single_file_batches(
+                    member_bytes, Path(info.filename).name, source_name, filename, info.filename, sheet_name
+                )
+                del member_bytes
         return
 
-    # ----- Közvetlen adatfájl (.csv, .xlsx, .xls, .json, .jsonl, .ndjson, .parquet) -----
-    raw_rows = _parse_single_file(content, filename, sheet_name)
-    if raw_rows:
-        yield _prepare_records(raw_rows, source_name, filename)
+    # ----- Közvetlen adatfájl -----
+    yield from _iter_single_file_batches(content, filename, source_name, filename, None, sheet_name)
 
 
 # --- Közös DLT betöltő motor (bronze_api) ---
 def run_files_dlt_ingest(
-    batches: Iterator[list[dict[str, Any]]] | list[list[dict[str, Any]]],
+    batches: Iterator[pa.Table | list[dict[str, Any]]],
     source_label: str,
     table_name: str,
     write_disposition: str = "merge",
@@ -337,8 +414,9 @@ def run_files_dlt_ingest(
             def file_resource():
                 nonlocal total_rows
                 for batch in batches:
-                    if batch:
-                        total_rows += len(batch)
+                    batch_len = batch.num_rows if isinstance(batch, pa.Table) else len(batch)
+                    if batch_len > 0:
+                        total_rows += batch_len
                         yield batch
 
             info = pipeline.run(file_resource())
@@ -354,6 +432,8 @@ def run_files_dlt_ingest(
     except Exception as e:
         logger.exception("[FILES-DLT] HIBA (%s -> bronze_api.%s): %s", source_label, safe_table, e)
         raise
+    finally:
+        gc.collect()
 
 
 # --- Request modellek ---
@@ -361,13 +441,32 @@ class AzureBlobRequest(BaseModel):
     blob_name: str = Field(default="Online_Retail.xlsx")
     table_name: str = Field(default="online_retail")
     source_name: str = Field(default="azure_external_catalog")
-    write_disposition: str = Field(default="replace")  # "replace", "append" vagy "merge"
+    write_disposition: str = Field(default="replace")
     primary_key: list[str] | str | None = None
     container_name: str = Field(default=DEFAULT_CONTAINER)
     sheet_name: str = Field(default="")
 
 
 # ---------- 1. HTTP FÁJLFELTÖLTÉS (/upload) ----------
+def _ingest_uploaded_bytes(
+    content: bytes,
+    filename: str,
+    source_label: str,
+    table_name: str,
+    write_mode: str,
+    pk_list: list[str] | None,
+    sheet_name: str,
+) -> None:
+    try:
+        batches = _iter_parsed_batches(content, filename, source_label, sheet_name)
+        run_files_dlt_ingest(batches, f"{source_label}:{filename}", table_name, write_mode, pk_list)
+    except Exception as e:
+        logger.exception("[UPLOAD-DLT] HIBA (%s): %s", filename, e)
+    finally:
+        del content
+        gc.collect()
+
+
 @router.post("/upload")
 async def upload_file(
     background_tasks: BackgroundTasks,
@@ -392,39 +491,32 @@ async def upload_file(
     if not content:
         raise HTTPException(status_code=400, detail="Üres fájl.")
 
-    try:
-        batches = list(_iter_parsed_batches(content, file.filename, source_label, sheet_name))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Fájlfeldolgozási hiba: {e}") from e
-
-    total_rows = sum(len(b) for b in batches)
-    if total_rows == 0:
-        raise HTTPException(status_code=400, detail="A fájl nem tartalmaz feldolgozható rekordokat.")
-
     safe_table = _sanitize_key(table_name, 0)
     pk_list = _normalize_primary_key(primary_key)
 
     background_tasks.add_task(
-        run_files_dlt_ingest,
-        batches,
-        f"{source_label}:{file.filename}",
+        _ingest_uploaded_bytes,
+        content,
+        file.filename,
+        source_label,
         safe_table,
         clean_mode,
         pk_list,
+        sheet_name,
     )
 
     return {
         "status": "accepted",
         "filename": file.filename,
-        "parsed_rows": total_rows,
+        "bytes": len(content),
         "target_table": f"bronze_api.{safe_table}",
         "primary_key": pk_list,
-        "sample": batches[0][:2],
     }
 
 
 # ---------- 2. AZURE BLOB STORAGE BETÖLTŐ (/azure-blob) ----------
 def _download_and_ingest_azure_blob(req: AzureBlobRequest) -> None:
+    raw_bytes: bytes | None = None
     try:
         logger.info("[AZURE-DLT] Letöltés indul: %s/%s -> bronze_api.%s", req.container_name, req.blob_name, req.table_name)
         blob_client = blob_service_client.get_blob_client(container=req.container_name, blob=req.blob_name)
@@ -440,6 +532,10 @@ def _download_and_ingest_azure_blob(req: AzureBlobRequest) -> None:
         )
     except Exception as e:
         logger.exception("[AZURE-DLT] HIBA (%s): %s", req.blob_name, e)
+    finally:
+        if raw_bytes is not None:
+            del raw_bytes
+        gc.collect()
 
 
 @router.post("/azure-blob")
