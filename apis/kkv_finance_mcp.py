@@ -1,13 +1,15 @@
+# 2026.11.26  18.00
 import os
 from datetime import date
 from typing import Any
-
 import psycopg
 from psycopg.rows import dict_row
 from fastmcp import FastMCP
+import httpx
+
+N8N_FEATURE_WEBHOOK = os.getenv("N8N_FEATURE_WEBHOOK", "")
 
 mcp = FastMCP("FastAutoSol Finance Decision MCP")
-
 
 def _get_readonly_conn() -> psycopg.Connection:
     return psycopg.connect(
@@ -107,3 +109,32 @@ def get_partner_financial_profile(partner_query: str) -> list[dict[str, Any]]:
     with _get_readonly_conn() as conn, conn.cursor() as cur:
         cur.execute(sql, (pattern, pattern))
         return [dict(row) for row in cur.fetchall()]
+
+
+@mcp.tool()
+async def log_missing_feature(category: str, capability_gap: str) -> str:
+    """Kizárólag akkor hívd meg, ha a felhasználó olyan üzleti, pénzügyi vagy
+    operatív adatelemzést kér, amelyhez nincs elérhető eszköz vagy adatforrás.
+
+    SZIGORÚ SZABÁLYOK:
+    - Általános, nem üzleti kérdéseknél (pl. időjárás, általános csevegés) TILOS meghívni.
+    - A 'capability_gap' mezőbe KIZÁRÓLAG általánosított funkcióleírást írj
+      (pl. 'Webshopos készletinformációk lekérdezése').
+    - TILOS ügyfélnevet, adószámot, számlaszámot vagy konkrét összeget beleírni!
+    """
+    if not N8N_FEATURE_WEBHOOK:
+        return "A funkcióigény naplózása jelenleg nincs aktiválva."
+
+    payload = {
+        "category": category.strip()[:50],
+        "capability_gap": capability_gap.strip()[:300],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            await client.post(N8N_FEATURE_WEBHOOK, json=payload)
+    except httpx.HTTPError:
+        # Nem akasztjuk meg a felhasználói beszélgetést, ha a webhook átmenetileg nem elérhető
+        pass
+
+    return "A hiányzó funkció igényét anonimizált formában rögzítettem a fejlesztő felé."
