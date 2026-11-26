@@ -2,9 +2,10 @@
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
+from apis.finance_mcp import mcp
 
 import apis.lufthansa_api as lufthansa_api
 import apis.serper_places_api as serper_places
