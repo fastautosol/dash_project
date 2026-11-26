@@ -67,7 +67,8 @@ app.layout = html.Div([
     }),
 ])
 
-
+#mcp_app = mcp.http_app(path="/")
+#app = FastAPI(title="FastAutoSol Data & MCP Platform", lifespan=mcp_app.lifespan)
 server = FastAPI(title="Dash Demo App")
 
 # ----- 4. API routers -----
@@ -96,3 +97,6 @@ def health():
 # ----- 6. Mount Dash, after layout is set and assets are mounted -----
 server.mount("/app_assets", StaticFiles(directory="app_assets"), name="app_assets")
 server.mount("/", WSGIMiddleware(app.server))
+
+#app.include_router(finance_router, prefix="/ingest/finance", tags=["Ingest"])
+#app.mount("/mcp", mcp_app)
