@@ -18,6 +18,7 @@ import apis.ingest_azureblob_api as azureblob_api
 import apis.ingest_mediaads_api as ingest_mediaads_api
 import apis.ingest_webshops_api as ingest_webshops_api
 import apis.finance_api as finance_api
+import apis.finance_silver_api as finance_silver_api
 import apis.ingest_crm_api as ingest_crm_api
 import apis.kkv_api as kkv_api
 import apis.shopify_rag_api as shopify_rag_api
