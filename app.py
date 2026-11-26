@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.wsgi import WSGIMiddleware
-from apis.finance_mcp import mcp
+from apis.kkv_finance_mcp import mcp
 
 import apis.lufthansa_api as lufthansa_api
 import apis.serper_places_api as serper_places
@@ -17,7 +17,7 @@ import apis.twitter_api as twitter_api
 import apis.eia_api as eia_api
 import apis.ingest_azureblob_api as azureblob_api
 import apis.ingest_mediaads_api as ingest_mediaads_api
-import apis.ingest_webshops_api as ingest_webshops_api
+import apis.kkv_webshops_api as kkv_webshops_api
 import apis.kkv_finance_api as kkv_finance_api
 import apis.ingest_crm_api as ingest_crm_api
 import apis.kkv_files_api as kkv_files_api
@@ -76,8 +76,8 @@ server.include_router(azureblob_api.router,    prefix="/api/rest",           tag
 server.include_router(ingest_crm_api.router,   prefix="/api/crm",            tags=["Ingest CRM API"])
 server.include_router(kkv_finance_api.router,  prefix="/api/kkv_finance",    tags=["KKV Finance API"])
 server.include_router(kkv_files_api.router,    prefix="/api/kkv_files",      tags=["KKV FILES API"])
+server.include_router(kkv_webshops_api.router, prefix="/api/kkv_webshops",   tags=["KKV WebShops API"])
 server.include_router(ingest_mediaads_api.router, prefix="/api/mediaads",    tags=["Ingest MediaAds API"])
-server.include_router(ingest_webshops_api.router, prefix="/api/webshops",    tags=["Ingest WebShops API"])
 server.include_router(shopify_rag_api.router,   prefix="/api/shopify",       tags=["Shopify RAG"])
 
 server.include_router(lufthansa_api.router,     prefix="/api/lufthansa",     tags=["Lufthansa"])
