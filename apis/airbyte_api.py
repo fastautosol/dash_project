@@ -32,7 +32,7 @@ SYNC_LOCK = threading.Lock()
 
 # --- Opcionális POST paraméter sémák (n8n HTTP Request body-hoz) ---
 class GoogleAdsSyncParams(BaseModel):
-    start_date: str = "2026-01-01"
+    start_date: str = "2026-10-01"
     customer_id: Optional[str] = None
     streams: Optional[list[str]] = None
 
