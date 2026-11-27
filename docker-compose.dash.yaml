@@ -1,11 +1,51 @@
 services:
-  media-dash-app:
+  demo-dash-app:
     build:
       context: .
       dockerfile: Dockerfile.dash
     image: custom-dash-app:latest
+    container_name: demo-dash-app
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - airbyte-data:/airbyte-data
+    environment:
+      APP_MODULE: app:server
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-n8n}
+      DB_USER: ${SERVICE_USER_POSTGRES}
+      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      CRUCIX_API_URL: http://crucix:3117/api/data
+      PYTHONUNBUFFERED: "1"
+      TZ: ${TZ:-Europe/Berlin}
+      UVICORN_WORKERS: 1
+      UV_CACHE_DIR: /airbyte-data/uv-cache
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    mem_limit: 2000m
+    cpus: 1.0
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+    networks:
+      - n8n-shared-net
+
+  media-dash-app:
+    image: custom-dash-app:latest
+    pull_policy: never
     container_name: media-dash-app
     restart: unless-stopped
+    depends_on:
+      - demo-dash-app
     expose:
       - "8000"
     environment:
@@ -24,53 +64,18 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
-    mem_limit: 1000m
+    mem_limit: 500m
     cpus: 0.5
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "5m"
+        max-file: "1"
     networks:
       - n8n-shared-net
 
-  demo-dash-app:
-    image: custom-dash-app:latest
-    pull_policy: never
-    container_name: demo-dash-app
-    restart: unless-stopped
-    depends_on:
-      - media-dash-app
-    expose:
-      - "8000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      APP_MODULE: app:server
-      DB_HOST: postgresql
-      DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-n8n}
-      DB_USER: ${SERVICE_USER_POSTGRES}
-      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
-      CRUCIX_API_URL: http://crucix:3117/api/data
-      PYTHONUNBUFFERED: "1"
-      TZ: ${TZ:-Europe/Berlin}
-      UVICORN_WORKERS: 1
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
-      interval: 5s
-      timeout: 5s
-      start_period: 10s
-      retries: 3
-    mem_limit: 1500m
-    cpus: 1.0
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - n8n-shared-net
+volumes:
+  airbyte-data:
 
 networks:
   n8n-shared-net:
