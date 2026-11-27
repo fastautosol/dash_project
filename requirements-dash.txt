@@ -13,6 +13,7 @@ ccxt
 SQLAlchemy
 psycopg[binary]
 pyarrow
+airbyte
 psutil
 httpx
 google-api-python-client
