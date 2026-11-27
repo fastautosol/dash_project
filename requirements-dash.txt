@@ -32,3 +32,4 @@ gridstatus
 azure-storage-blob
 fastexcel
 asyncpg
+a2wsgi
