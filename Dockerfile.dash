@@ -3,12 +3,19 @@ FROM python:3.14.3-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY requirements-dash.txt .
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-dash.txt
+
+# Izolált Python 3.12 környezet a PyAirbyte-nak (verzióütközés nélkül)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    pip install --no-cache-dir uv && \
+    uv venv --python 3.12 /opt/airbyte-venv && \
+    uv pip install --python /opt/airbyte-venv/bin/python airbyte "dlt[postgres]" pyarrow
 
 COPY apis/ apis/
 COPY app_assets/ app_assets/
@@ -22,4 +29,4 @@ EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -fsS http://localhost:8000/health || exit 1
 
-CMD ["sh", "-c", "exec gunicorn ${APP_MODULE:-app:server} -k uvicorn.workers.UvicornWorker --workers=${UVICORN_WORKERS:-1} --threads=${GUNICORN_THREADS:-4} --timeout=${GUNICORN_TIMEOUT:-120} --graceful-timeout=5 --bind 0.0.0.0:8000"]
+CMD ["sh", "-c", "exec gunicorn ${APP_MODULE:-app:server} -k uvicorn.workers.UvicornWorker --workers=${UVICORN_WORKERS:-1} --threads=${GUNICORN_THREADS:-4} --timeout=${UVICORN_TIMEOUT:-120} --graceful-timeout=5 --bind 0.0.0.0:8000"]
