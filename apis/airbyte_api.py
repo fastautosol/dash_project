@@ -136,44 +136,29 @@ def sync_shopify_task(params: ShopifySyncParams) -> None:
     all_streams = {
         "orders": {"disposition": "merge", "primary_key": "id"},
         "products": {"disposition": "merge", "primary_key": "id"},
-        "customers": {"disposition": "merge", "primary_key": "id"},
-    }
+        "customers": {"disposition": "merge", "primary_key": "id"}}
+    
     selected = {k: v for k, v in all_streams.items() if not params.streams or k in params.streams}
 
     config = {
         "shop": shop,
-        "credentials": {
-            "auth_method": "api_password",
-            "api_password": SHOPIFY_ACCESS_TOKEN,
-        },
-        "start_date": params.start_date,
-    }
+        "credentials": {"auth_method": "api_password", "api_password": SHOPIFY_ACCESS_TOKEN},
+        "start_date": params.start_date}
     _run_hybrid_sync("raw_shopify", "source-shopify", config, selected)
 
 
 # --- API Végpontok ---
 @router.post("/google_ads_sync")
-async def trigger_google_ads_sync(
-    background_tasks: BackgroundTasks,
-    params: GoogleAdsSyncParams = Body(default_factory=GoogleAdsSyncParams),
-):
+async def trigger_google_ads_sync(background_tasks: BackgroundTasks, params: GoogleAdsSyncParams = Body(default_factory=GoogleAdsSyncParams)):
     background_tasks.add_task(sync_google_ads_task, params)
     return {"status": "google_ads_sync_started", "start_date": params.start_date}
 
-
 @router.post("/meta_ads_sync")
-async def trigger_meta_ads_sync(
-    background_tasks: BackgroundTasks,
-    params: MetaAdsSyncParams = Body(default_factory=MetaAdsSyncParams),
-):
+async def trigger_meta_ads_sync(background_tasks: BackgroundTasks, params: MetaAdsSyncParams = Body(default_factory=MetaAdsSyncParams)):
     background_tasks.add_task(sync_meta_ads_task, params)
     return {"status": "meta_ads_sync_started", "start_date": params.start_date}
 
-
 @router.post("/shopify_sync")
-async def trigger_shopify_sync(
-    background_tasks: BackgroundTasks,
-    params: ShopifySyncParams = Body(default_factory=ShopifySyncParams),
-):
+async def trigger_shopify_sync(background_tasks: BackgroundTasks, params: ShopifySyncParams = Body(default_factory=ShopifySyncParams)):
     background_tasks.add_task(sync_shopify_task, params)
     return {"status": "shopify_sync_started", "start_date": params.start_date}
