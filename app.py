@@ -76,7 +76,7 @@ server.include_router(ingest_crm_api.router,   prefix="/api/crm",            tag
 server.include_router(kkv_finance_api.router,  prefix="/api/kkv_finance",    tags=["KKV Finance API"])
 server.include_router(kkv_files_api.router,    prefix="/api/kkv_files",      tags=["KKV FILES API"])
 server.include_router(kkv_webshops_api.router, prefix="/api/kkv_webshops",   tags=["KKV WebShops API"])
-server.include_router(airbyte_api.router,      prefix="/api/airbyte",        tags=["AIRBYTE API"])
+server.include_router(airbyte_api.router,      prefix="/api/airbyte",        tags=["Airbyte API"])
 server.include_router(ingest_mediaads_api.router, prefix="/api/mediaads",    tags=["Ingest MediaAds API"])
 server.include_router(shopify_rag_api.router,   prefix="/api/shopify",       tags=["Shopify RAG"])
 
@@ -100,3 +100,6 @@ server.mount("/", WSGIMiddleware(app.server))
 
 #app.include_router(finance_router, prefix="/ingest/finance", tags=["Ingest"])
 #app.mount("/mcp", mcp_app)
+
+#from airbyte_api import router as airbyte_router
+#app.include_router(airbyte_router, prefix="/api/etl", tags=["Airbyte ETL"])
