@@ -1,10 +1,10 @@
-# 2026.11.26  18.00
+# 2026.11.27  8.00
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.wsgi import WSGIMiddleware
+from a2wsgi import WSGIMiddleware
 from apis.kkv_finance_mcp import mcp
 
 import apis.lufthansa_api as lufthansa_api
