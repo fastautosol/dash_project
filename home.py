@@ -1,10 +1,10 @@
-# 2026.09.11  18.00
+# 2026.11.27  8.00
 import dash
 from dash import html
 import dash_bootstrap_components as dbc
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.wsgi import WSGIMiddleware
+from a2wsgi import WSGIMiddleware
 
 # ----- Dash App -----
 app = dash.Dash(__name__, use_pages=True, pages_folder="model_pages", suppress_callback_exceptions=True,
