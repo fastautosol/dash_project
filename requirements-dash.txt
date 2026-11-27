@@ -19,7 +19,7 @@ google-api-python-client
 isodate
 dlt[postgres]
 pydantic
-pydantic-ai
+pydantic-ai-slim[mistral]
 requests
 scikit-learn
 bs4
