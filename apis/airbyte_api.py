@@ -31,6 +31,7 @@ SYNC_LOCK = threading.Lock()
 
 # --- Izolált Python 3.12-ben futó inline ETL kód ---
 INLINE_WORKER_CODE = textwrap.dedent(r"""
+    #from itertools import batched
     import json, os, sys
     import airbyte as ab
     import dlt
@@ -52,7 +53,9 @@ INLINE_WORKER_CODE = textwrap.dedent(r"""
     read_result = source.read(cache=cache)
 
     def iter_batches(stream_name):
-        yield from read_result[stream_name].to_arrow().to_batches(max_chunk_size=10_000)
+        #yield from read_result[stream_name].to_arrow().to_batches(max_chunk_size=10_000)
+        for chunk in batched(read_result[stream_name], 10_000):
+            yield list(chunk)
 
     resources = [
         dlt.resource(iter_batches(name), name=name, write_disposition=meta["disposition"], primary_key=meta["primary_key"])
