@@ -1,4 +1,4 @@
-# 2026.09.11  18.00
+# 2026.11.28  18.00
 import dash
 from dash import html, dcc, callback, Input, Output, State, MATCH, ALL, ctx, no_update
 import dash_bootstrap_components as dbc
@@ -6,67 +6,140 @@ from model_pages.models import MODELS_BY_SLUG
 
 dash.register_page(__name__, path_template="/model/<model_slug>", name="Model Profile")
 
+
 def layout(model_slug=None, **kwargs):
     model = MODELS_BY_SLUG.get(model_slug)
 
     if model is None:
         return dbc.Container([
             html.H3("Model not found", className="text-light text-center mt-5"),
-            html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back"],  href="/",  className="back-btn-modern"), className="mb-2"),
         ], className="py-3")
 
     if model["photos"]:
         thumbnails = [
             dbc.Col(
-                html.Img(src=photo, id={ "type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
-                    style={"width": "100%",  "aspectRatio": "3 / 4",  "objectFit": "cover", "objectPosition": "top", "borderRadius": "10px", "cursor": "pointer",
-                        "boxShadow": "0 20px 30px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.2)"},
-                ), xs=6, sm=4, md=2, className="mb-3") for i, photo in enumerate(model["photos"])
+                html.Img(
+                    src=photo,
+                    id={"type": "model-thumb", "model": model_slug, "index": i}, n_clicks=0,
+                    style={"width": "100%", "aspectRatio": "3 / 4", "objectFit": "cover", "objectPosition": "top", "borderRadius": "10px", "cursor": "pointer",
+                        "boxShadow": "0 20px 30px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.2)"}), xs=6, sm=4, md=2, className="mb-3")
+            for i, photo in enumerate(model["photos"])
         ]
     else:
         thumbnails = [dbc.Col(html.P("No photos uploaded yet", className="text-muted text-center py-5"), width=12)]
 
     return dbc.Container(
         [
-           html.Div(
-            [html.Div(dcc.Link([html.I(className="fa-solid fa-arrow-left me-2"), "Back"], href="/", className="back-btn-modern")),
-            html.Div(html.H2(model["name"], className="text-light fw-bold mb-0 name-header"), style={"textAlign": "center", "overflow": "hidden"}),
-            html.Div(), 
-            ], className="px-2 py-3", style={"display": "grid", "gridTemplateColumns": "1fr auto 1fr", "alignItems": "center", "gap": "10px"}),
-
+            html.Div(
+                html.H2(model["name"], className="text-light fw-bold mb-0 name-header"), className="px-2 py-3 text-center"),
             html.Div(
                 [
-                html.P(model["niche"], className="text-info mb-1"),
-                html.Div(    
-                    html.A(f"{model['name']}'s exclusive content",  href=model["fanvue"], id="fanvue-link-btn",
-                        target="_blank", rel="noopener noreferrer", className="btn btn-info btn-lg fw-bold", style={"width": "80%"}), className="text-center"),                                     
-                ], className="text-center pb-4",
+                    html.P(model["niche"], className="text-info mb-1"),
+                    html.Div(
+                        html.A(
+                            f"{model['name']}'s exclusive content",
+                            href=model["fanvue"],
+                            id="fanvue-link-btn",
+                            target="_blank",
+                            rel="noopener noreferrer",
+                            className="btn btn-info btn-lg fw-bold",
+                            style={"width": "80%"},
+                        ),
+                        className="text-center",
+                    ),
+                ],
+                className="text-center pb-4",
             ),
-
             # --- VIDEO PREVIEW STRIP (5 clips, link out to Fanvue with Filmstrip effect) ---
             html.Div(
-                [html.A(
-                        [html.Img(src=vid, style={"width": "200px", "height": "150px", "objectFit": "cover", "borderRadius": "4px", "display": "block"}),
-                        html.I(className="fa-solid fa-play", style={"position": "absolute", "top": "50%", "left": "50%", "transform": "translate(-50%, -50%)",
-                            "color": "white", "fontSize": "25px", "textShadow": "0 0 6px rgba(0,0,0,0.8)", "pointerEvents": "none"})], 
-                        href=model["fanvue"], target="_blank", rel="noopener noreferrer", 
-                        className="filmstrip-item", style={"position": "relative", "display": "inline-block", "cursor": "pointer"})
+                [
+                    html.A(
+                        [
+                            html.Img(
+                                src=vid,
+                                style={
+                                    "width": "200px",
+                                    "height": "150px",
+                                    "objectFit": "cover",
+                                    "borderRadius": "4px",
+                                    "display": "block",
+                                },
+                            ),
+                            html.I(
+                                className="fa-solid fa-play",
+                                style={
+                                    "position": "absolute",
+                                    "top": "50%",
+                                    "left": "50%",
+                                    "transform": "translate(-50%, -50%)",
+                                    "color": "white",
+                                    "fontSize": "25px",
+                                    "textShadow": "0 0 6px rgba(0,0,0,0.8)",
+                                    "pointerEvents": "none",
+                                },
+                            ),
+                        ],
+                        href=model["fanvue"],
+                        target="_blank",
+                        rel="noopener noreferrer",
+                        className="filmstrip-item",
+                        style={"position": "relative", "display": "inline-block", "cursor": "pointer"},
+                    )
                     for vid in model["video_thumbs"]
-                ], className="d-flex justify-content-center gap-3 flex-wrap mb-5 filmstrip-effect",
-            ) if model["video_thumbs"] else None,
-
+                ],
+                className="d-flex justify-content-center gap-3 flex-wrap mb-5 filmstrip-effect",
+            )
+            if model["video_thumbs"]
+            else None,
             dbc.Row(thumbnails, className="g-4"),
-
             dbc.Modal(
-                [dbc.ModalHeader( dbc.ModalTitle(model["name"]), close_button=True),
-                dbc.ModalBody(
-                    [html.Img(id={ "type": "model-modal-img","model": model_slug}, style={"width": "100%", "maxHeight": "100vh", "objectFit": "contain", "borderRadius": "10px"}),
-                    html.Hr(),
-                    html.Div([html.I(className="fa-solid fa-heart text-danger me-2"), html.Span("12.5K Likes", className="fw-bold")], className="mb-3"),
-                    html.Div([html.Strong(model["name"], className="text-info me-2"), html.Span(id={"type": "model-modal-caption", "model": model_slug})], className="mb-3"),
-                    html.Div([dbc.Badge("#travel", color="info", className="me-1"), dbc.Badge("#aiinfluencer", color="secondary", className="me-1"), dbc.Badge("#lifestyle", color="primary")])]),
-                ], id={"type": "model-modal", "model": model_slug}, size="xl", is_open=False, centered=True),
-        ], fluid=True, className="px-3 py-1")
+                [
+                    dbc.ModalHeader(dbc.ModalTitle(model["name"]), close_button=True),
+                    dbc.ModalBody(
+                        [
+                            html.Img(
+                                id={"type": "model-modal-img", "model": model_slug},
+                                style={
+                                    "width": "100%",
+                                    "maxHeight": "100vh",
+                                    "objectFit": "contain",
+                                    "borderRadius": "10px",
+                                },
+                            ),
+                            html.Hr(),
+                            html.Div(
+                                [
+                                    html.I(className="fa-solid fa-heart text-danger me-2"),
+                                    html.Span("12.5K Likes", className="fw-bold"),
+                                ],
+                                className="mb-3",
+                            ),
+                            html.Div(
+                                [
+                                    html.Strong(model["name"], className="text-info me-2"),
+                                    html.Span(id={"type": "model-modal-caption", "model": model_slug}),
+                                ],
+                                className="mb-3",
+                            ),
+                            html.Div(
+                                [
+                                    dbc.Badge("#travel", color="info", className="me-1"),
+                                    dbc.Badge("#aiinfluencer", color="secondary", className="me-1"),
+                                    dbc.Badge("#lifestyle", color="primary"),
+                                ]
+                            ),
+                        ]
+                    ),
+                ],
+                id={"type": "model-modal", "model": model_slug},
+                size="xl",
+                is_open=False,
+                centered=True,
+            ),
+        ],
+        fluid=True,
+        className="px-3 py-1",
+    )
 
 
 # --- EREDETI FOTÓ MODAL CALLBACK ---
