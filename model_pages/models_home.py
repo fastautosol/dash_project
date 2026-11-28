@@ -46,8 +46,7 @@ layout = dbc.Container([
 
     dbc.Row(
         dbc.Col([
-            html.H2("FastAutoSol Creator Network", className="text-light fw-bold"),
-            html.P("Empowering brand sponsorships through high-engagement virtual AI models and creators", className="text-muted lead"),
+            html.H2("FastAutoSol AI Creator Network", className="text-light fw-bold"),
             html.A("Chat privately with our models and exclusive content on Fanvue", href="https://www.fanvue.com/fastmedia.aimodels", target="_blank",
                 rel="noopener noreferrer", className="text-info mb-1 d-block"),  
         ], className="text-center py-4"), className="mb-4"),
